@@ -1,0 +1,293 @@
+/* ================================================
+   RentBridge Theme — Module 3
+   Navy + Emerald, Fraunces + Manrope typography
+   ================================================ */
+
+/* ---- Design tokens (CSS variables) ---- */
+:root {
+    --rb-navy:        #0F2C52;
+    --rb-navy-dark:   #0A2240;
+    --rb-emerald:     #2E8B57;
+    --rb-emerald-dark:#1F6D45;
+    --rb-cream:       #FAF8F3;
+    --rb-text:        #0E1B2C;
+    --rb-text-soft:   #4B5A6E;
+    --rb-line:        #E5E7EB;
+}
+
+/* ---- Body ---- */
+body {
+    font-family: 'Manrope', system-ui, sans-serif;
+    color: var(--rb-text);
+    background: #fff;
+}
+
+/* ---- Headings use Fraunces ---- */
+h1, h2, h3, h4, h5 {
+    font-family: 'Fraunces', Georgia, serif;
+    color: var(--rb-navy);
+    font-weight: 600;
+    letter-spacing: -0.015em;
+}
+
+/* ================================================
+   BUTTONS — uniform hover behavior
+   All buttons invert to white background + navy text on hover
+   ================================================ */
+
+/* Shared base style for all buttons */
+.btn-primary,
+.btn-success,
+.btn-outline-light {
+    border-radius: 999px;
+    padding: 0.55rem 1.4rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+/* Default colors */
+.btn-primary {
+    background: var(--rb-navy);
+    border-color: var(--rb-navy);
+    color: #fff;
+}
+
+.btn-success {
+    background: var(--rb-emerald);
+    border-color: var(--rb-emerald);
+    color: #fff;
+}
+
+.btn-outline-light {
+    background: transparent;
+    border-color: rgba(255, 255, 255, 0.4);
+    color: #fff;
+}
+
+/* Hover — all three invert to white bg + navy text */
+.btn-primary:hover,
+.btn-success:hover,
+.btn-outline-light:hover {
+    background: var(--rb-cream);
+    border-color: var(--rb-navy);
+    color: var(--rb-navy);
+}
+
+/* ================================================
+   NAVBAR
+   ================================================ */
+.rb-navbar {
+    background: var(--rb-navy);
+    padding: 1rem 0;
+}
+
+.rb-navbar .navbar-brand {
+    font-family: 'Fraunces', serif;
+    font-size: 1.6rem;
+    font-weight: 600;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: transform 0.2s ease;     /* smooth animation */
+}
+
+.rb-navbar .navbar-brand:hover {
+    color: #fff;                         /* keep white, no underline */
+    text-decoration: none;
+    transform: translateY(-2px);         /* subtle lift on hover */
+}
+
+.rb-navbar .navbar-brand:hover .brand-mark {
+    transform: rotate(0deg);             /* unrotate the R on hover */
+    background: #fff;                    /* swap to white */
+    color: var(--rb-emerald);            /* R becomes green */
+}
+
+.rb-navbar .navbar-brand .brand-mark {
+    width: 30px;
+    height: 30px;
+    background: var(--rb-emerald);
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 700;
+    font-size: 1rem;
+    transform: rotate(-6deg);
+	transition: all 0.3s ease;  
+}
+
+.rb-navbar .nav-link {
+    color: rgba(255, 255, 255, 0.78);
+    font-weight: 500;
+    padding: 0.5rem 1rem !important;
+}
+
+.rb-navbar .nav-link:hover {
+    color: #fff;
+}
+
+.rb-navbar .navbar-toggler {
+    border-color: rgba(255, 255, 255, 0.25);
+}
+
+.rb-navbar .navbar-toggler-icon {
+    filter: invert(1) brightness(2);
+}
+/* ================================================
+   ROLE PICKER CARDS
+   ================================================ */
+.role-pick {
+    transition: all 0.2s ease;
+    border-color: var(--rb-line) !important;
+}
+.role-pick:hover {
+    border-color: var(--rb-navy) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 14px 30px -14px rgba(15, 44, 82, 0.18);
+}
+
+.rb-role-icon {
+    width: 44px;
+    height: 44px;
+    background: #E4F2EA;
+    color: var(--rb-emerald);
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+}
+
+/* ================================================
+   PROPERTY CARDS (listing grid)
+   ================================================ */
+.rb-card {
+    background: #fff;
+    border: 1px solid var(--rb-line);
+    border-radius: 18px;
+    overflow: hidden;
+    transition: all 0.25s ease;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    color: inherit;
+}
+.rb-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 20px 40px -15px rgba(15, 44, 82, 0.18);
+    border-color: var(--rb-navy);
+    text-decoration: none;
+    color: inherit;
+}
+
+.rb-card__media {
+    aspect-ratio: 4/3;
+    background: linear-gradient(135deg, #E6ECF4, #E4F2EA);
+    position: relative;
+    overflow: hidden;
+}
+.rb-card__media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.rb-card__badge {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    background: rgba(15, 44, 82, 0.92);
+    color: #fff;
+    padding: 0.35rem 0.8rem;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    backdrop-filter: blur(4px);
+}
+
+.rb-card__body {
+    padding: 1.4rem;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.rb-card__title {
+    font-family: 'Fraunces', serif;
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: var(--rb-navy);
+    margin: 0 0 0.3rem;
+    line-height: 1.2;
+}
+
+.rb-card__meta {
+    color: var(--rb-text-soft);
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.rb-card__price {
+    margin-top: auto;
+    padding-top: 1rem;
+    border-top: 1px dashed var(--rb-line);
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+}
+.rb-card__price strong {
+    font-family: 'Fraunces', serif;
+    font-size: 1.4rem;
+    color: var(--rb-emerald-dark);
+    font-weight: 600;
+}
+.rb-card__price span {
+    color: var(--rb-text-soft);
+    font-size: 0.85rem;
+}
+
+/* Pagination accent */
+.page-item.active .page-link {
+    background: var(--rb-navy);
+    border-color: var(--rb-navy);
+}
+.page-link {
+    color: var(--rb-navy);
+}
+
+/* Ghost button (for "Clear filters") */
+.btn-ghost {
+    background: transparent;
+    color: var(--rb-navy);
+    border: 1px solid var(--rb-line);
+    border-radius: 999px;
+    padding: 0.55rem 1.4rem;
+    font-weight: 600;
+}
+.btn-ghost:hover {
+    background: var(--rb-cream);
+    border-color: var(--rb-navy);
+    color: var(--rb-navy);
+}
+
+/* Background utilities */
+.bg-navy {
+    background: var(--rb-navy) !important;
+    color: #fff;
+}
+
+.text-emerald {
+    color: var(--rb-emerald) !important;
+}
+
+.text-white-50 {
+    color: rgba(255, 255, 255, 0.7) !important;
+}
