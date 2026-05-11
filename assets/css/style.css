@@ -375,3 +375,14 @@ h1, h2, h3, h4, h5 {
 .booking-row--urgent {
     border-left: 4px solid #D4A017 !important;
 }
+
+.text-emerald-dark { color: var(--rb-emerald-dark) !important; }
+
+/* Code style for contract IDs */
+code {
+    background: rgba(15,44,82,.06);
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    font-family: 'Menlo', monospace;
+    font-size: 0.9em;
+}

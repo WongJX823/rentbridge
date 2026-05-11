@@ -77,6 +77,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $pdo->commit();
 
+                 // ▶ Auto-create contract (Module 9.1)
+                require_once __DIR__ . '/../includes/contracts.php';
+                $contractId = create_contract_from_booking($caseId);
+
+                // Notify student + landlord
+                notify(
+                    (int)$case['student_id'],
+                    'agent_accepted',
+                    'Your UTeM agent is on the case!',
+                    'Agent has accepted to witness your tenancy for "' . $case['property_title'] . '". '
+                        . ($contractId ? 'Your contract is now ready to sign.' : ''),
+                    $contractId
+                        ? '/rentbridge/contracts/view.php?id=' . $contractId
+                        : '/rentbridge/student/bookings.php'
+                );
+                
                 // Notify student + landlord
                 notify(
                     (int)$case['student_id'],
