@@ -361,3 +361,17 @@ h1, h2, h3, h4, h5 {
     color: var(--rb-text-soft);
     font-size: 0.88rem;
 }
+
+/* ================================================
+   BOOKING LIST ROWS
+   ================================================ */
+.booking-row {
+    transition: all 0.2s ease;
+}
+.booking-row:hover {
+    box-shadow: 0 10px 30px -10px rgba(15, 44, 82, 0.15);
+    transform: translateY(-2px);
+}
+.booking-row--urgent {
+    border-left: 4px solid #D4A017 !important;
+}
