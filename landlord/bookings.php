@@ -9,12 +9,15 @@ $stmt = $pdo->prepare("
            p.city        AS property_city,
            s.full_name   AS student_name,
            s.matric_no   AS student_matric,
+           a.full_name   AS agent_name,
+           a.department  AS agent_department,
            (SELECT image_path FROM property_images
              WHERE property_id = p.id
              ORDER BY is_primary DESC, id ASC LIMIT 1) AS image_path
       FROM bookings b
       JOIN properties p ON p.id = b.property_id
       JOIN students   s ON s.user_id = b.student_id
+      LEFT JOIN agents a ON a.user_id = b.agent_id
      WHERE b.landlord_id = ?
      ORDER BY (b.status = 'pending_landlord') DESC,
               b.created_at DESC
@@ -149,6 +152,28 @@ foreach ($bookings as $b) {
             <?php endforeach; ?>
         </div>
     <?php endif; ?>
+    <!-- Agent assignment status -->
+                                <?php if ($b['status'] === 'pending_agent' || $b['status'] === 'agent_assigned'
+                                        || $b['status'] === 'contract_pending' || $b['status'] === 'active'): ?>
+                                    <div class="small mt-3 p-2 rounded-3" style="background:var(--rb-cream); border:1px solid var(--rb-line);">
+                                        <?php if (!empty($b['agent_name'])): ?>
+                                            <i class="bi bi-person-badge text-emerald-dark"></i>
+                                            <strong>Witness agent:</strong>
+                                            <?= e($b['agent_name']) ?>
+                                            <span class="text-secondary">
+                                                · <?= e($b['agent_department']) ?>
+                                            </span>
+                                            <?php if ($b['status'] === 'pending_agent'): ?>
+                                                <span class="badge bg-warning text-dark ms-1">🟡 awaiting confirmation</span>
+                                            <?php else: ?>
+                                                <span class="badge bg-success ms-1">✓ confirmed</span>
+                                            <?php endif; ?>
+                                        <?php elseif ($b['status'] === 'pending_agent'): ?>
+                                            <i class="bi bi-search text-secondary"></i>
+                                            <span class="text-secondary">Looking for a UTeM staff agent…</span>
+                                        <?php endif; ?>
+                                    </div>
+                                <?php endif; ?>
 </div>
 
 </body>

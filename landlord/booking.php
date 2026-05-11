@@ -21,11 +21,15 @@ $stmt = $pdo->prepare("
            s.full_name   AS student_name,
            s.matric_no   AS student_matric,
            s.phone       AS student_phone,
+           a.full_name   AS agent_name,
+           a.department  AS agent_department,
+           a.staff_id    AS agent_staff_id,
            u.email       AS student_email
       FROM bookings b
       JOIN properties p ON p.id = b.property_id
       JOIN students   s ON s.user_id = b.student_id
       JOIN users      u ON u.id = b.student_id
+       LEFT JOIN agents a ON a.user_id = b.agent_id
      WHERE b.id = ? AND b.landlord_id = ?
      LIMIT 1
 ");
@@ -214,6 +218,40 @@ $months  = max(1, (int)round(($endTs - $startTs) / (30.44 * 86400)));
                         </div>
                     </div>
                 </div>
+
+                <!-- Witness Agent card -->
+<?php if (!empty($booking['agent_name'])): ?>
+<div class="col-12">
+    <div class="bg-white border rounded-3 p-4">
+        <h6 class="text-secondary text-uppercase small mb-3">Witness Agent</h6>
+        <div class="d-flex gap-3 align-items-center">
+            <div class="rounded-circle bg-light d-flex align-items-center justify-content-center"
+                 style="width:48px; height:48px;">
+                <i class="bi bi-person-badge text-secondary fs-4"></i>
+            </div>
+            <div class="flex-grow-1">
+                <h5 class="mb-0"><?= e($booking['agent_name']) ?></h5>
+                <small class="text-secondary">
+                    UTeM Staff ID: <?= e($booking['agent_staff_id']) ?>
+                    · <?= e($booking['agent_department']) ?>
+                </small>
+            </div>
+            <?php if ($booking['status'] === 'pending_agent'): ?>
+                <span class="badge bg-warning text-dark">🟡 awaiting confirmation</span>
+            <?php elseif (in_array($booking['status'], ['agent_assigned','contract_pending','active'])): ?>
+                <span class="badge bg-success">✓ confirmed</span>
+            <?php endif; ?>
+        </div>
+    </div>
+</div>
+<?php elseif ($booking['status'] === 'pending_agent'): ?>
+<div class="col-12">
+    <div class="bg-white border rounded-3 p-4 text-center text-secondary">
+        <i class="bi bi-search fs-3"></i>
+        <p class="mb-0 mt-2">Looking for a UTeM staff agent…</p>
+    </div>
+</div>
+<?php endif; ?>
 
                 <!-- Tenancy terms -->
                 <div class="col-12">

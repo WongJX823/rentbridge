@@ -65,7 +65,6 @@ $pendingCases = (int)$pendingStmt->fetchColumn();
 
 <a href="/rentbridge/auth/logout.php" class="btn btn-outline-dark mt-4">Sign out</a>
 
-        <a href="../auth/logout.php" class="btn btn-outline-dark">Sign out</a>
     </div>
 </body>
 </html>
