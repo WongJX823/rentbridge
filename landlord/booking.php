@@ -59,7 +59,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->beginTransaction();
 
             if ($action === 'approve') {
-                // Move to pending_agent — system will assign agent in Module 8.3
                 $stmt = $pdo->prepare(
                     'UPDATE bookings
                         SET status            = "pending_agent",
@@ -77,8 +76,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 );
 
                 $pdo->commit();
-                set_flash('success', 'Booking approved. The system will now assign a UTeM agent.');
 
+                // ▶ Trigger agent auto-assignment (FYP centerpiece)
+                require_once __DIR__ . '/../includes/bookings.php';
+                $assignedAgentId = auto_assign_agent($bookingId);
+
+                if ($assignedAgentId) {
+                    set_flash('success', 'Booking approved! Agent auto-assigned. Student notified.');
+                } else {
+                    set_flash('info', 'Booking approved, but no available agent right now. Admin has been notified to assign manually.');
+                }
                 // TODO Module 8.3: trigger auto_assign_agent($bookingId)
                 // For now, we'll do that in the next sub-module.
 
