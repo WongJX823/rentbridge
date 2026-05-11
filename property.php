@@ -172,7 +172,7 @@ $photos = $stmt->fetchAll();
                 <hr>
 
                 <?php if (is_logged_in() && current_role() === 'student'): ?>
-                    <a href="#" class="btn btn-success w-100 mb-2">
+                    <a href="/rentbridge/bookings/new.php?property_id=<?= (int)$prop['id'] ?>" class="btn btn-success w-100 mb-2">
                         <i class="bi bi-calendar-check me-1"></i> Request to book
                     </a>
                     <a href="#" class="btn btn-ghost w-100">

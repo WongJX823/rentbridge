@@ -196,3 +196,37 @@ function password_strength_score(string $password): int {
 
     return min($score, 100);
 }
+/* ============================================================
+ *  Notifications (dashboard banner; email channel coming later)
+ * ============================================================ */
+
+/**
+ * Create a notification for a user.
+ * Currently writes to the database only.
+ * In a later module we'll add an email channel here.
+ */
+function notify(int $userId, string $type, string $title, string $message = '', ?string $linkUrl = null): void {
+    try {
+        $stmt = db()->prepare(
+            'INSERT INTO notifications (user_id, type, title, message, link_url)
+             VALUES (?, ?, ?, ?, ?)'
+        );
+        $stmt->execute([$userId, $type, $title, $message, $linkUrl]);
+    } catch (Throwable $e) {
+        // Notifications failing should NEVER break the calling action.
+        // Log silently in a future module.
+    }
+}
+
+/**
+ * Count unread notifications (for the badge in the navbar).
+ */
+function unread_notifications_count(int $userId): int {
+    try {
+        $stmt = db()->prepare('SELECT COUNT(*) FROM notifications WHERE user_id = ? AND is_read = 0');
+        $stmt->execute([$userId]);
+        return (int)$stmt->fetchColumn();
+    } catch (Throwable $e) {
+        return 0;
+    }
+}

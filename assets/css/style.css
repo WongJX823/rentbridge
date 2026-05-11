@@ -323,3 +323,41 @@ h1, h2, h3, h4, h5 {
 .rb-pw-hint.fair    { color: #B7791F; }
 .rb-pw-hint.good    { color: var(--rb-emerald-dark); }
 .rb-pw-hint.strong  { color: var(--rb-emerald-dark); font-weight: 600; }
+
+/* ================================================
+   DURATION RADIO CARDS (booking form)
+   ================================================ */
+.duration-card {
+    display: block;
+    border: 2px solid var(--rb-line);
+    border-radius: 14px;
+    padding: 1rem 1.2rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    background: #fff;
+    margin: 0;
+}
+.duration-card:hover {
+    border-color: var(--rb-navy);
+}
+.duration-card.selected {
+    border-color: var(--rb-emerald);
+    background: var(--rb-cream);
+    box-shadow: 0 0 0 3px rgba(46, 139, 87, 0.1);
+}
+.duration-card input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+.duration-card__label {
+    font-family: 'Fraunces', serif;
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--rb-navy);
+    margin-bottom: 0.2rem;
+}
+.duration-card__sub {
+    color: var(--rb-text-soft);
+    font-size: 0.88rem;
+}

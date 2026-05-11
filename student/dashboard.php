@@ -23,12 +23,26 @@ $me = $stmt->fetch();
         <h1>Welcome, <em><?= e($me['full_name']) ?>.</em></h1>
         <p class="text-secondary">Student dashboard · <?= e($me['matric_no']) ?></p>
 
-        <div class="alert alert-info mt-4">
-            <i class="bi bi-info-circle"></i>
-            This is your dashboard. Listings + booking features coming in the next module.
+        <div class="row g-3 mt-4">
+            <div class="col-md-6">
+                <a href="/rentbridge/listings.php" class="d-block bg-white rounded-3 border p-4 text-decoration-none text-dark h-100">
+                    <i class="bi bi-search display-6 text-emerald"></i>
+                    <h5 class="mt-2 mb-1">Browse listings</h5>
+                    <p class="text-secondary mb-0 small">Find your next home near campus.</p>
+                </a>
+            </div>
+            <div class="col-md-6">
+                <a href="/rentbridge/student/bookings.php" class="d-block bg-white rounded-3 border p-4 text-decoration-none text-dark h-100">
+                    <i class="bi bi-calendar-check display-6 text-emerald"></i>
+                    <h5 class="mt-2 mb-1">My bookings</h5>
+                    <p class="text-secondary mb-0 small">View your booking history and status.</p>
+                </a>
+            </div>
         </div>
 
-        <a href="../auth/logout.php" class="btn btn-outline-dark">Sign out</a>
+    <a href="../auth/logout.php" class="btn btn-outline-dark mt-4">Sign out</a>
+
+        
     </div>
 </body>
 </html>
