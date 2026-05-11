@@ -291,3 +291,35 @@ h1, h2, h3, h4, h5 {
 .text-white-50 {
     color: rgba(255, 255, 255, 0.7) !important;
 }
+/* ================================================
+   PASSWORD STRENGTH METER
+   ================================================ */
+.rb-pw-meter {
+    height: 4px;
+    background: var(--rb-line);
+    border-radius: 2px;
+    overflow: hidden;
+}
+.rb-pw-meter__bar {
+    height: 100%;
+    width: 0;
+    background: var(--rb-line);
+    transition: width 0.25s ease, background-color 0.25s ease;
+}
+
+/* Strength levels (set by JS via class) */
+.rb-pw-meter__bar.weak    { background: #DC3545; width: 25%; }
+.rb-pw-meter__bar.fair    { background: #F59E0B; width: 50%; }
+.rb-pw-meter__bar.good    { background: #3FA56A; width: 75%; }
+.rb-pw-meter__bar.strong  { background: var(--rb-emerald-dark); width: 100%; }
+
+.rb-pw-hint {
+    display: block;
+    color: var(--rb-text-soft);
+    font-size: 0.78rem;
+    margin-top: 0.3rem;
+}
+.rb-pw-hint.weak    { color: #DC3545; }
+.rb-pw-hint.fair    { color: #B7791F; }
+.rb-pw-hint.good    { color: var(--rb-emerald-dark); }
+.rb-pw-hint.strong  { color: var(--rb-emerald-dark); font-weight: 600; }

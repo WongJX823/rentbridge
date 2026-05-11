@@ -29,8 +29,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($old['phone'] === '')
         $errors['phone'] = 'Phone number is required.';
 
-    if (strlen($password) < 6)
-        $errors['password'] = 'Password must be at least 6 characters.';
+        $pwError = validate_password($password);
+    if ($pwError !== null)
+        $errors['password'] = $pwError;
 
     if ($password !== $confirm)
         $errors['password_confirm'] = 'Passwords do not match.';
@@ -182,22 +183,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
 
                     <div class="row g-3 mb-4">
-                        <div class="col-sm-6">
-                            <label class="form-label fw-semibold">Password</label>
-                            <input type="password" name="password" class="form-control <?= isset($errors['password']) ? 'is-invalid' : '' ?>"
-                                   placeholder="At least 6 characters" required>
-                            <?php if (isset($errors['password'])): ?>
-                                <div class="invalid-feedback"><?= e($errors['password']) ?></div>
-                            <?php endif; ?>
+                            <div class="col-sm-6">
+                                <label class="form-label fw-semibold">Password</label>
+                                <input type="password" name="password" id="pw-input"
+                                    class="form-control <?= isset($errors['password']) ? 'is-invalid' : '' ?>"
+                                    placeholder="Min 8 chars, 3 of: aA1@" required>
+                                <div id="pw-meter" class="rb-pw-meter mt-1" aria-hidden="true">
+                                    <div class="rb-pw-meter__bar"></div>
+                                </div>
+                                <small id="pw-hint" class="rb-pw-hint">Use 8+ characters with letters, numbers and symbols.</small>
+                                <?php if (isset($errors['password'])): ?>
+                                    <div class="invalid-feedback d-block"><?= e($errors['password']) ?></div>
+                                <?php endif; ?>
+                            </div>
+                            <div class="col-sm-6">
+                                <label class="form-label fw-semibold">Confirm password</label>
+                                <input type="password" name="password_confirm"
+                                       class="form-control <?= isset($errors['password_confirm']) ? 'is-invalid' : '' ?>"
+                                       required>
+                                <?php if (isset($errors['password_confirm'])): ?>
+                                    <div class="invalid-feedback"><?= e($errors['password_confirm']) ?></div>
+                                <?php endif; ?>
+                            </div>
                         </div>
-                        <div class="col-sm-6">
-                            <label class="form-label fw-semibold">Confirm password</label>
-                            <input type="password" name="password_confirm" class="form-control <?= isset($errors['password_confirm']) ? 'is-invalid' : '' ?>" required>
-                            <?php if (isset($errors['password_confirm'])): ?>
-                                <div class="invalid-feedback"><?= e($errors['password_confirm']) ?></div>
-                            <?php endif; ?>
-                        </div>
-                    </div>
 
                     <button type="submit" class="btn btn-primary w-100">
                         Create account <i class="bi bi-arrow-right ms-1"></i>
@@ -212,6 +220,85 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
     </div>
 </div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+(function () {
+    const input = document.getElementById('pw-input');
+    const bar   = document.querySelector('#pw-meter .rb-pw-meter__bar');
+    const hint  = document.getElementById('pw-hint');
+    if (!input || !bar || !hint) return;
 
+    // List mirrors PHP's COMMON_PASSWORDS (top offenders)
+    const common = new Set([
+        'password','password1','password123','password!','p@ssw0rd',
+        '12345678','123456789','1234567890','qwerty123','qwertyuiop',
+        'abc12345','iloveyou','admin123','admin@123','letmein123',
+        'welcome1','welcome123','welcome2024','welcome2025','welcome2026'
+    ]);
+
+    function score(pw) {
+        let s = 0;
+        if (pw.length >= 8)  s += 15;
+        if (pw.length >= 12) s += 15;
+        if (pw.length >= 16) s += 10;
+        if (/[a-z]/.test(pw))         s += 10;
+        if (/[A-Z]/.test(pw))         s += 10;
+        if (/[0-9]/.test(pw))         s += 10;
+        if (/[^a-zA-Z0-9]/.test(pw))  s += 10;
+        if (!/(.)\1{2,}/.test(pw))    s += 10;
+        if (!common.has(pw.toLowerCase())) s += 10;
+        return Math.min(s, 100);
+    }
+
+    function classes(pw) {
+        let n = 0;
+        if (/[a-z]/.test(pw)) n++;
+        if (/[A-Z]/.test(pw)) n++;
+        if (/[0-9]/.test(pw)) n++;
+        if (/[^a-zA-Z0-9]/.test(pw)) n++;
+        return n;
+    }
+
+    function update() {
+        const pw = input.value;
+        bar.classList.remove('weak','fair','good','strong');
+        hint.classList.remove('weak','fair','good','strong');
+
+        if (pw === '') {
+            hint.textContent = 'Use 8+ characters with letters, numbers and symbols.';
+            return;
+        }
+
+        if (common.has(pw.toLowerCase())) {
+            bar.classList.add('weak');
+            hint.classList.add('weak');
+            hint.textContent = '⚠ This password is too common. Please pick another.';
+            return;
+        }
+
+        if (pw.length < 8) {
+            bar.classList.add('weak');
+            hint.classList.add('weak');
+            hint.textContent = `${pw.length}/8 characters \u2014 keep going.`;
+            return;
+        }
+
+        if (classes(pw) < 3) {
+            bar.classList.add('weak');
+            hint.classList.add('weak');
+            hint.textContent = '⚠ Add another character type (UPPERCASE, number, or symbol).';
+            return;
+        }
+
+        const s = score(pw);
+        if      (s < 50)  { bar.classList.add('weak');   hint.classList.add('weak');   hint.textContent = 'Weak'; }
+        else if (s < 70)  { bar.classList.add('fair');   hint.classList.add('fair');   hint.textContent = 'Fair'; }
+        else if (s < 85)  { bar.classList.add('good');   hint.classList.add('good');   hint.textContent = 'Good ✓'; }
+        else              { bar.classList.add('strong'); hint.classList.add('strong'); hint.textContent = 'Strong ✓'; }
+    }
+
+    input.addEventListener('input', update);
+})();
+</script>
 </body>
 </html>
