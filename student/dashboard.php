@@ -37,6 +37,7 @@ $pendingContract = $pendingContractStmt->fetch();
     <meta charset="UTF-8">
     <title>Dashboard · Student · RentBridge</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="../assets/css/style.css" rel="stylesheet">
 </head>
@@ -64,9 +65,7 @@ $pendingContract = $pendingContractStmt->fetch();
             </div>
         </div>
 
-    <a href="../auth/logout.php" class="btn btn-outline-dark mt-4">Sign out</a>
-
-        
+        <a href="../auth/logout.php" class="btn btn-outline-dark mt-4">Sign out</a>
     </div>
 </body>
 </html>
