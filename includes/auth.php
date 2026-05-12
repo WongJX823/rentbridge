@@ -67,13 +67,18 @@ function current_role(): ?string {
     return $_SESSION['role'] ?? null;
 }
 
-function login_user(array $user): void {
+function login_user(array $user, string $name = ''): void {
     // Regenerate session ID on login (security: prevents session fixation)
     session_regenerate_id(true);
 
     $_SESSION['user_id'] = (int)$user['id'];
     $_SESSION['email']   = $user['email'];
     $_SESSION['role']    = $user['primary_role'];
+    $_SESSION['name']    = $name;
+}
+
+function current_user_name(): ?string {
+    return $_SESSION['name'] !== '' ? ($_SESSION['name'] ?? null) : null;
 }
 
 function logout_user(): void {

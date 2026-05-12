@@ -31,8 +31,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($user['status'] === 'pending') {
             $error = 'Your account is pending admin approval. Please check back later.';
         } else {
-            // ✅ All good — log in
-            login_user($user);
+            // ✅ All good — fetch display name from role table
+            $roleTable = match($user['primary_role']) {
+                'student'  => 'students',
+                'landlord' => 'landlords',
+                'agent'    => 'agents',
+                default    => null,
+            };
+            $name = '';
+            if ($roleTable) {
+                $ns = db()->prepare("SELECT full_name FROM $roleTable WHERE user_id = ? LIMIT 1");
+                $ns->execute([$user['id']]);
+                $name = (string)($ns->fetchColumn() ?: '');
+            }
+            login_user($user, $name);
             set_flash('success', 'Welcome back!');
             header('Location: ' . dashboard_url_for($user['primary_role']));
             exit;

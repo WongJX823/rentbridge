@@ -40,7 +40,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'cance
 $stmt = $pdo->prepare("
     SELECT b.*,
            p.title         AS property_title,
+           p.address       AS property_address,
            p.city          AS property_city,
+           p.postcode      AS property_postcode,
+           p.state         AS property_state,
            l.full_name     AS landlord_name,
            (SELECT image_path FROM property_images
              WHERE property_id = p.id
@@ -129,6 +132,19 @@ function status_label(string $status): array {
                                     <i class="bi bi-geo-alt"></i> <?= e($b['property_city']) ?>
                                     &nbsp;·&nbsp;
                                     <i class="bi bi-person"></i> Landlord: <?= e($b['landlord_name']) ?>
+                                    &nbsp;·&nbsp;
+                                    <?php
+                                        $mapQ = urlencode(
+                                            $b['property_address'] . ', ' .
+                                            $b['property_city'] . ' ' . $b['property_postcode'] . ', ' .
+                                            $b['property_state']
+                                        );
+                                    ?>
+                                    <a href="https://www.google.com/maps/search/?api=1&query=<?= $mapQ ?>"
+                                       target="_blank" rel="noopener"
+                                       class="text-decoration-none">
+                                        <i class="bi bi-map"></i> Map
+                                    </a>
                                 </div>
                                 <div class="row text-center small mb-2">
                                     <div class="col">

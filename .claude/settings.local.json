@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C \"D:\\\\Xampp\\\\htdocs\\\\rentbridge\\\\.claude\\\\worktrees\\\\keen-mccarthy-e1e5e9\" status)",
+      "Bash(php -r ' *)"
+    ]
+  }
+}

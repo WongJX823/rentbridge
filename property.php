@@ -95,12 +95,22 @@ $photos = $stmt->fetchAll();
                 <?= e(ucfirst(str_replace('_', ' ', $prop['property_type']))) ?>
             </span>
             <h1 class="mb-2"><?= e($prop['title']) ?></h1>
-            <p class="text-secondary">
+            <p class="text-secondary mb-1">
                 <i class="bi bi-geo-alt"></i>
                 <?= e($prop['address']) ?>,
                 <?= e($prop['city']) ?> <?= e($prop['postcode']) ?>,
                 <?= e($prop['state']) ?>
             </p>
+            <?php
+                $mapQuery = urlencode(
+                    $prop['address'] . ', ' . $prop['city'] . ' ' . $prop['postcode'] . ', ' . $prop['state']
+                );
+            ?>
+            <a href="https://www.google.com/maps/search/?api=1&query=<?= $mapQuery ?>"
+               target="_blank" rel="noopener"
+               class="small text-decoration-none">
+                <i class="bi bi-map"></i> View on Google Maps
+            </a>
 
             <hr class="my-4">
 
