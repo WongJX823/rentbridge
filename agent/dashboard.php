@@ -11,7 +11,36 @@ $pendingStmt = db()->prepare(
 );
 $pendingStmt->execute([current_user_id()]);
 $pendingCases = (int)$pendingStmt->fetchColumn();
+
+// Pending signature — agent signs LAST (both student AND landlord must have signed first)
+$pendingContractStmt = db()->prepare(
+    "SELECT id, contract_code
+       FROM contracts
+      WHERE agent_id = ?
+        AND status = 'pending_signatures'
+        AND agent_signed_at IS NULL
+        AND student_signed_at IS NOT NULL
+        AND landlord_signed_at IS NOT NULL
+      ORDER BY created_at DESC LIMIT 1"
+);
+$pendingContractStmt->execute([current_user_id()]);
+$pendingContract = $pendingContractStmt->fetch();
 ?>
+
+<?php if ($pendingContract): ?>
+    <div class="alert d-flex align-items-center gap-3 mt-4" style="background:#FFF4D6; border-color:#D4A017; color:#7C5E0A;">
+        <i class="bi bi-pen-fill fs-4"></i>
+        <div class="flex-grow-1">
+            <strong>Contract ready for your signature</strong>
+            <div class="small">Contract code: <?= e($pendingContract['contract_code']) ?></div>
+        </div>
+        <a href="/rentbridge/contracts/view.php?id=<?= (int)$pendingContract['id'] ?>"
+           class="btn btn-sm btn-success">
+            Review &amp; sign <i class="bi bi-arrow-right ms-1"></i>
+        </a>
+    </div>
+<?php endif; ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>

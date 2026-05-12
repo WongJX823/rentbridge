@@ -19,7 +19,35 @@ $pendingBookings = (int)$pendingStmt->fetchColumn();
 $propStmt = db()->prepare("SELECT COUNT(*) FROM properties WHERE landlord_id = ?");
 $propStmt->execute([current_user_id()]);
 $propCount = (int)$propStmt->fetchColumn();
+
+// Pending signature — landlord signs SECOND (student must have signed first)
+$pendingContractStmt = db()->prepare(
+    "SELECT id, contract_code
+       FROM contracts
+      WHERE landlord_id = ?
+        AND status = 'pending_signatures'
+        AND landlord_signed_at IS NULL
+        AND student_signed_at IS NOT NULL
+      ORDER BY created_at DESC LIMIT 1"
+);
+$pendingContractStmt->execute([current_user_id()]);
+$pendingContract = $pendingContractStmt->fetch();
 ?>
+
+<?php if ($pendingContract): ?>
+    <div class="alert d-flex align-items-center gap-3 mt-4" style="background:#FFF4D6; border-color:#D4A017; color:#7C5E0A;">
+        <i class="bi bi-pen-fill fs-4"></i>
+        <div class="flex-grow-1">
+            <strong>Contract ready for your signature</strong>
+            <div class="small">Contract code: <?= e($pendingContract['contract_code']) ?></div>
+        </div>
+        <a href="/rentbridge/contracts/view.php?id=<?= (int)$pendingContract['id'] ?>"
+           class="btn btn-sm btn-success">
+            Review &amp; sign <i class="bi bi-arrow-right ms-1"></i>
+        </a>
+    </div>
+<?php endif; ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
