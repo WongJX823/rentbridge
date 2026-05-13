@@ -183,7 +183,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <?php if (isset($errors['preferred_name'])): ?>
                             <div class="invalid-feedback"><?= e($errors['preferred_name']) ?></div>
                         <?php endif; ?>
-                    </div>`
+                    </div>
 
                         <div class="row g-3 mb-3">
                             <div class="col-sm-6">

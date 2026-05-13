@@ -375,9 +375,9 @@ function generate_contract_pdf(int $contractId): ?string {
 
     // Build absolute paths to signature images (dompdf needs absolute paths)
     $base = __DIR__ . '/../';
-    $sigStudent  = !empty($c['student_signature'])  ? $base . $c['student_signature']  : null;
-    $sigLandlord = !empty($c['landlord_signature']) ? $base . $c['landlord_signature'] : null;
-    $sigAgent    = !empty($c['agent_signature'])    ? $base . $c['agent_signature']    : null;
+    $sigStudent  = !empty($c['student_signature'])  ? realpath($base . $c['student_signature'])  : null;
+$sigLandlord = !empty($c['landlord_signature']) ? realpath($base . $c['landlord_signature']) : null;
+$sigAgent    = !empty($c['agent_signature'])    ? realpath($base . $c['agent_signature'])    : null;
 
     // Helper for safe HTML escape
     $h = fn(?string $v): string => htmlspecialchars($v ?? '', ENT_QUOTES, 'UTF-8');
@@ -500,7 +500,7 @@ function generate_contract_pdf(int $contractId): ?string {
             <td class="sig-box party">
                 <h3>Landlord</h3>
                 <?php if ($sigLandlord && file_exists($sigLandlord)): ?>
-                    <img class="sig-img" src="<?= $sigLandlord ?>" alt="">
+                    <img class="sig-img" src="file://<?= str_replace('\\', '/', $sigLandlord) ?>" alt="">
                 <?php else: ?>
                     <div class="muted small">(not signed)</div>
                 <?php endif; ?>
@@ -512,8 +512,8 @@ function generate_contract_pdf(int $contractId): ?string {
             <td class="sig-box party">
                 <h3>Tenant</h3>
                 <?php if ($sigStudent && file_exists($sigStudent)): ?>
-                    <img class="sig-img" src="<?= $sigStudent ?>" alt="">
-                <?php else: ?>
+                    <img class="sig-img" src="file://<?= str_replace('\\', '/', $sigStudent) ?>" alt="">                
+                    <?php else: ?>
                     <div class="muted small">(not signed)</div>
                 <?php endif; ?>
                 <div class="sig-meta">
@@ -524,7 +524,7 @@ function generate_contract_pdf(int $contractId): ?string {
             <td class="sig-box party">
                 <h3>Witness Agent</h3>
                 <?php if ($sigAgent && file_exists($sigAgent)): ?>
-                    <img class="sig-img" src="<?= $sigAgent ?>" alt="">
+                    <img class="sig-img" src="file://<?= str_replace('\\', '/', $sigAgent) ?>" alt="">
                 <?php else: ?>
                     <div class="muted small">(not signed)</div>
                 <?php endif; ?>
@@ -549,9 +549,14 @@ function generate_contract_pdf(int $contractId): ?string {
     // Render with dompdf
     try {
         $options = new \Dompdf\Options();
-        $options->set('isRemoteEnabled', false);   // we use absolute file paths
-        $options->set('isHtml5ParserEnabled', true);
-        $options->set('defaultFont', 'DejaVu Sans');
+$options->set('isRemoteEnabled', true);  // Allow file:// access for signature images
+$options->set('isHtml5ParserEnabled', true);
+$options->set('defaultFont', 'DejaVu Sans');
+// Tell dompdf which directories it can read images from
+$options->setChroot([
+    realpath(__DIR__ . '/../uploads'),
+    realpath(__DIR__ . '/../'),
+]);
 
         $dompdf = new \Dompdf\Dompdf($options);
         $dompdf->loadHtml($html, 'UTF-8');

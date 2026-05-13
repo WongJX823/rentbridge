@@ -104,12 +104,15 @@ $statusBadge = match ($contract['status']) {
                 </p>
                 <div class="d-flex gap-2">
                     <span class="badge bg-<?= $statusBadge[1] ?> fs-6"><?= e($statusBadge[0]) ?></span>
-                    <?php if (!empty($contract['contract_pdf_path'])): ?>
-                        <a href="/rentbridge/<?= e($contract['contract_pdf_path']) ?>"
-                           class="btn btn-success btn-sm" target="_blank">
-                            <i class="bi bi-download me-1"></i> Download PDF
-                        </a>
-                    <?php endif; ?>
+                    <?php if (!empty($contract['contract_pdf_path'])):
+    $pdfFullPath = __DIR__ . '/../' . $contract['contract_pdf_path'];
+    $cacheBust = file_exists($pdfFullPath) ? '?v=' . filemtime($pdfFullPath) : '';
+?>
+    <a href="/rentbridge/<?= e($contract['contract_pdf_path']) ?><?= $cacheBust ?>"
+       class="btn btn-success btn-sm" target="_blank">
+        <i class="bi bi-download me-1"></i> Download PDF
+    </a>
+<?php endif; ?>
                 </div>
             </div>
 
