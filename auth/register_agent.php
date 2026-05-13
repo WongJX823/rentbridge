@@ -6,6 +6,7 @@ $success = false;
 $old = [
     'email'      => '',
     'full_name'  => '',
+    'preferred_name' => '',
     'staff_id'   => '',
     'department' => '',
     'phone'      => '',
@@ -16,7 +17,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
 
     $old['email']      = trim($_POST['email'] ?? '');
-    $old['full_name']  = trim($_POST['full_name'] ?? '');
+    $old['full_name'] = trim($_POST['full_name'] ?? '');
+    $old['preferred_name']  = trim($_POST['preferred_name'] ?? '');
     $old['staff_id']   = strtoupper(trim($_POST['staff_id'] ?? ''));
     $old['department'] = trim($_POST['department'] ?? '');
     $old['phone']      = trim($_POST['phone'] ?? '');
@@ -27,7 +29,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!filter_var($old['email'], FILTER_VALIDATE_EMAIL))
         $errors['email'] = 'Enter a valid email address.';
 
-    if ($old['full_name']  === '') $errors['full_name']  = 'Full name is required.';
+    if ($old['full_name'] === '') $errors['full_name'] = 'Full name is required.';
+    if ($old['preferred_name']  === '') $errors['preferred_name']  = 'Nickname is required.';
     if ($old['staff_id']   === '') $errors['staff_id']   = 'Staff ID is required.';
     if ($old['department'] === '') $errors['department'] = 'Department is required.';
     if ($old['phone']      === '') $errors['phone']      = 'Phone number is required.';
@@ -68,12 +71,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $userId = (int)$pdo->lastInsertId();
 
                 $stmt = $pdo->prepare(
-                    'INSERT INTO agents (user_id, full_name, staff_id, department, phone)
-                     VALUES (?, ?, ?, ?, ?)'
+                    'INSERT INTO agents (user_id, full_name, preferred_name, staff_id, department, phone)
+                     VALUES (?, ?, ?, ?, ?, ?)'
                 );
                 $stmt->execute([
                     $userId,
                     $old['full_name'],
+                    $old['preferred_name'],
                     $old['staff_id'],
                     $old['department'],
                     $old['phone']
@@ -82,7 +86,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $pdo->commit();
 
                 $success = true;
-                $old = ['email'=>'','full_name'=>'','staff_id'=>'','department'=>'','phone'=>''];
+                $old = ['email'=>'','full_name'=>'','preferred_name'=>'','staff_id'=>'','department'=>'','phone'=>''];
             }
         } catch (Throwable $e) {
             if (isset($pdo) && $pdo->inTransaction()) $pdo->rollBack();
@@ -157,15 +161,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <form method="POST" novalidate>
                         <?= csrf_field() ?>
 
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">Full name</label>
-                            <input type="text" name="full_name"
-                                   class="form-control <?= isset($errors['full_name']) ? 'is-invalid' : '' ?>"
-                                   value="<?= e($old['full_name']) ?>" required>
-                            <?php if (isset($errors['full_name'])): ?>
-                                <div class="invalid-feedback"><?= e($errors['full_name']) ?></div>
-                            <?php endif; ?>
-                        </div>
+                    <div class="mb-3">
+                `        <label class="form-label fw-semibold">Full name <small class="text-secondary fw-normal">— as printed on your IC</small></label>
+                        <input type="text" name="full_name"
+                            class="form-control <?= isset($errors['full_name']) ? 'is-invalid' : '' ?>"
+                            value="<?= e($old['full_name']) ?>"
+                            placeholder="Abu bin Ahmad" required>
+                        <small class="text-secondary">Used on contracts and official documents.</small>
+                        <?php if (isset($errors['full_name'])): ?>
+                            <div class="invalid-feedback"><?= e($errors['full_name']) ?></div>
+                        <?php endif; ?>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Nickname <small class="text-secondary fw-normal">— what we'll call you</small></label>
+                        <input type="text" name="preferred_name"
+                            class="form-control <?= isset($errors['preferred_name']) ? 'is-invalid' : '' ?>"
+                            value="<?= e($old['preferred_name']) ?>"
+                            placeholder="Abu" maxlength="50" required>
+                        <small class="text-secondary">Shown in the navbar and greetings.</small>
+                        <?php if (isset($errors['preferred_name'])): ?>
+                            <div class="invalid-feedback"><?= e($errors['preferred_name']) ?></div>
+                        <?php endif; ?>
+                    </div>`
 
                         <div class="row g-3 mb-3">
                             <div class="col-sm-6">

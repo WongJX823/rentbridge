@@ -120,10 +120,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // 2. Insert into landlords
             $stmt = $pdo->prepare(
-                'INSERT INTO landlords (user_id, full_name, ic_no, phone)
-                 VALUES (?, ?, ?, ?)'
-            );
-            $stmt->execute([$userId, $step1['full_name'], $step1['ic_no'], $step1['phone']]);
+    'INSERT INTO landlords (user_id, full_name, preferred_name, ic_no, phone)
+     VALUES (?, ?, ?, ?, ?)'
+);
+$stmt->execute([
+    $userId,
+    $signup['full_name'],
+    $signup['preferred_name'],
+    $signup['ic_no'],
+    $signup['phone']
+]);
 
             // 3. Insert into properties
            $stmt = $pdo->prepare(

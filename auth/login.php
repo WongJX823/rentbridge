@@ -30,6 +30,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = 'This account has been suspended. Please contact support.';
         } elseif ($user['status'] === 'pending') {
             $error = 'Your account is pending admin approval. Please check back later.';
+        } elseif ($user['status'] === 'rejected') {
+            $error = 'Your application was not approved. Please contact UTeM HEP for clarification.';
         } else {
             // ✅ All good — log in
             login_user($user);

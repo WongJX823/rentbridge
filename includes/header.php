@@ -35,9 +35,9 @@ require_once __DIR__ . '/auth.php';
 
             <div class="d-flex gap-2">
                 <?php if (is_logged_in()): ?>
-                    <a class="btn btn-outline-light" href="/rentbridge/<?= e(current_role()) ?>/dashboard.php">
-                        <i class="bi bi-speedometer2 me-1"></i> Dashboard
-                    </a>
+    <a class="btn btn-outline-light" href="/rentbridge/<?= e(current_role()) ?>/dashboard.php">
+        <i class="bi bi-person-circle me-1"></i> <?= e(current_user_display_name()) ?>
+    </a>
                     <a class="btn btn-success" href="/rentbridge/auth/logout.php">
                         Sign out
                     </a>

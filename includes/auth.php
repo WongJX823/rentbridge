@@ -230,3 +230,83 @@ function unread_notifications_count(int $userId): int {
         return 0;
     }
 }
+
+/**
+ * Get the current user's preferred "first name" for navbar display.
+ *
+ * Heuristics for Malaysian context:
+ *   1. If name contains "Bin"/"Binti"/"A/L"/"A/P" → take last word BEFORE that connector
+ *      ("Muhammad Ali Bin Abdullah" → "Ali")
+ *   2. If 3+ words and no connector → take last 2 words
+ *      ("Wong Jia Xi" → "Jia Xi" — Chinese convention)
+ *   3. If 2 words → take first word
+ *      ("John Smith" → "John" — Western convention)
+ *   4. If 1 word → as-is
+ *      ("Sarah" → "Sarah")
+ *   5. Email prefix fallback for admin / missing profile.
+ */
+function current_user_display_name(): string {
+    $userId = current_user_id();
+    $role   = current_role();
+    if (!$userId || !$role) return 'Guest';
+
+    static $cache = null;
+    if ($cache !== null) return $cache;
+
+    $pdo = db();
+    $name = null;
+
+    try {
+        if (in_array($role, ['student', 'landlord', 'agent'], true)) {
+            $table = $role . 's';
+            $stmt  = $pdo->prepare("SELECT full_name FROM $table WHERE user_id = ? LIMIT 1");
+            $stmt->execute([$userId]);
+            $name = $stmt->fetchColumn() ?: null;
+        }
+
+        if (!$name) {
+            $stmt = $pdo->prepare('SELECT email FROM users WHERE id = ? LIMIT 1');
+            $stmt->execute([$userId]);
+            $email = $stmt->fetchColumn();
+            $name  = $email ? explode('@', $email)[0] : 'User';
+        }
+    } catch (Throwable $e) {
+        $name = 'User';
+    }
+
+    $cache = derive_first_name(trim($name));
+    return $cache;
+}
+
+/**
+ * Pure function to derive a display-friendly first name from a full name.
+ * Pure = no DB, no globals — easy to unit-test.
+ */
+function derive_first_name(string $fullName): string {
+    if ($fullName === '') return 'User';
+
+    // Split into words
+    $words = preg_split('/\s+/', $fullName);
+    $count = count($words);
+
+    if ($count === 1) return $words[0];
+
+    // Look for Malay connector words: Bin / Binti / A/L / A/P
+    $connectors = ['bin', 'binti', 'a/l', 'a/p', 's/o', 'd/o'];
+    foreach ($words as $i => $w) {
+        if (in_array(strtolower(rtrim($w, '.')), $connectors, true)) {
+            // Take the word(s) just before the connector
+            if ($i === 1) return $words[0];               // "Ali Bin X" → "Ali"
+            if ($i >= 2)  return $words[$i - 1];          // "Muhammad Ali Bin X" → "Ali"
+        }
+    }
+
+    // No connector — apply length heuristic
+    if ($count === 2) {
+        // 2 words: assume Western "First Last" → take first
+        return $words[0];
+    }
+
+    // 3+ words: assume Chinese "Surname Given Given" → take last 2
+    return $words[$count - 2] . ' ' . $words[$count - 1];
+}

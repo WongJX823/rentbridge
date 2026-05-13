@@ -3,44 +3,40 @@ require_once __DIR__ . '/../includes/auth.php';
 
 $errors = [];
 $old = [
-    'email'     => $_SESSION['landlord_signup']['email']     ?? '',
-    'full_name' => $_SESSION['landlord_signup']['full_name'] ?? '',
-    'ic_no'     => $_SESSION['landlord_signup']['ic_no']     ?? '',
-    'phone'     => $_SESSION['landlord_signup']['phone']     ?? '',
+    'email'          => $_SESSION['landlord_signup']['email']          ?? '',
+    'full_name'      => $_SESSION['landlord_signup']['full_name']      ?? '',
+    'preferred_name' => $_SESSION['landlord_signup']['preferred_name'] ?? '',
+    'ic_no'          => $_SESSION['landlord_signup']['ic_no']          ?? '',
+    'phone'          => $_SESSION['landlord_signup']['phone']          ?? '',
 ];
 
 // ---- HANDLE STEP 1 SUBMIT ----
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
 
-    $old['email']     = trim($_POST['email'] ?? '');
-    $old['full_name'] = trim($_POST['full_name'] ?? '');
-    $old['ic_no']     = trim($_POST['ic_no'] ?? '');
-    $old['phone']     = trim($_POST['phone'] ?? '');
-    $password         = $_POST['password'] ?? '';
-    $confirm          = $_POST['password_confirm'] ?? '';
+    $old['email']          = trim($_POST['email'] ?? '');
+    $old['full_name']      = trim($_POST['full_name'] ?? '');
+    $old['preferred_name'] = trim($_POST['preferred_name'] ?? '');
+    $old['ic_no']          = trim($_POST['ic_no'] ?? '');
+    $old['phone']          = trim($_POST['phone'] ?? '');
+    $password              = $_POST['password'] ?? '';
+    $confirm               = $_POST['password_confirm'] ?? '';
 
-    // Validate
     if (!filter_var($old['email'], FILTER_VALIDATE_EMAIL))
         $errors['email'] = 'Enter a valid email address.';
 
-    if ($old['full_name'] === '')
-        $errors['full_name'] = 'Full name is required.';
+    if ($old['full_name']      === '') $errors['full_name']      = 'Full name is required.';
+    if ($old['preferred_name'] === '') $errors['preferred_name'] = 'Nickname is required.';
+    if ($old['ic_no']          === '') $errors['ic_no']          = 'IC number is required.';
+    if ($old['phone']          === '') $errors['phone']          = 'Phone number is required.';
 
-    if ($old['ic_no'] === '')
-        $errors['ic_no'] = 'IC number is required.';
-
-    if ($old['phone'] === '')
-        $errors['phone'] = 'Phone number is required.';
-
-        $pwError = validate_password($password);
+    $pwError = validate_password($password);
     if ($pwError !== null)
         $errors['password'] = $pwError;
 
     if ($password !== $confirm)
         $errors['password_confirm'] = 'Passwords do not match.';
 
-    // DB uniqueness check
     if (empty($errors)) {
         $pdo = db();
 
@@ -53,14 +49,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($stmt->fetch()) $errors['ic_no'] = 'This IC number is already registered.';
     }
 
-    // All good? Save Step 1 data to session and continue to Step 2
     if (empty($errors)) {
         $_SESSION['landlord_signup'] = [
-            'email'         => $old['email'],
-            'full_name'     => $old['full_name'],
-            'ic_no'         => $old['ic_no'],
-            'phone'         => $old['phone'],
-            'password_hash' => password_hash($password, PASSWORD_BCRYPT),
+            'email'          => $old['email'],
+            'full_name'      => $old['full_name'],
+            'preferred_name' => $old['preferred_name'],
+            'ic_no'          => $old['ic_no'],
+            'phone'          => $old['phone'],
+            'password_hash'  => password_hash($password, PASSWORD_BCRYPT),
         ];
         header('Location: register_landlord_step2.php');
         exit;
@@ -101,7 +97,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </a>
                 </p>
 
-                <!-- Step indicator -->
                 <div class="d-flex align-items-center gap-2 mb-3 small text-secondary fw-semibold">
                     <span class="badge bg-primary">1</span>
                     <span>About you</span>
@@ -117,58 +112,86 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <?= csrf_field() ?>
 
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">Full name</label>
-                        <input type="text" name="full_name" class="form-control <?= isset($errors['full_name']) ? 'is-invalid' : '' ?>"
-                               value="<?= e($old['full_name']) ?>" required>
-                        <?php if (isset($errors['full_name'])): ?><div class="invalid-feedback"><?= e($errors['full_name']) ?></div><?php endif; ?>
+                        <label class="form-label fw-semibold">Full name <small class="text-secondary fw-normal">— as printed on your IC</small></label>
+                        <input type="text" name="full_name"
+                               class="form-control <?= isset($errors['full_name']) ? 'is-invalid' : '' ?>"
+                               value="<?= e($old['full_name']) ?>"
+                               placeholder="Lim Boon Keng" required>
+                        <small class="text-secondary">Used on contracts and official documents.</small>
+                        <?php if (isset($errors['full_name'])): ?>
+                            <div class="invalid-feedback"><?= e($errors['full_name']) ?></div>
+                        <?php endif; ?>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Nickname <small class="text-secondary fw-normal">— what we'll call you</small></label>
+                        <input type="text" name="preferred_name"
+                               class="form-control <?= isset($errors['preferred_name']) ? 'is-invalid' : '' ?>"
+                               value="<?= e($old['preferred_name']) ?>"
+                               placeholder="Boon Keng" maxlength="50" required>
+                        <small class="text-secondary">Shown in the navbar and greetings.</small>
+                        <?php if (isset($errors['preferred_name'])): ?>
+                            <div class="invalid-feedback"><?= e($errors['preferred_name']) ?></div>
+                        <?php endif; ?>
                     </div>
 
                     <div class="row g-3 mb-3">
                         <div class="col-sm-6">
                             <label class="form-label fw-semibold">IC number</label>
-                            <input type="text" name="ic_no" class="form-control <?= isset($errors['ic_no']) ? 'is-invalid' : '' ?>"
-                                   placeholder="900101-14-5678" value="<?= e($old['ic_no']) ?>" required>
-                            <?php if (isset($errors['ic_no'])): ?><div class="invalid-feedback"><?= e($errors['ic_no']) ?></div><?php endif; ?>
+                            <input type="text" name="ic_no"
+                                   class="form-control <?= isset($errors['ic_no']) ? 'is-invalid' : '' ?>"
+                                   placeholder="900101-14-5678"
+                                   value="<?= e($old['ic_no']) ?>" required>
+                            <?php if (isset($errors['ic_no'])): ?>
+                                <div class="invalid-feedback"><?= e($errors['ic_no']) ?></div>
+                            <?php endif; ?>
                         </div>
                         <div class="col-sm-6">
                             <label class="form-label fw-semibold">Phone</label>
-                            <input type="tel" name="phone" class="form-control <?= isset($errors['phone']) ? 'is-invalid' : '' ?>"
-                                   placeholder="0123456789" value="<?= e($old['phone']) ?>" required>
-                            <?php if (isset($errors['phone'])): ?><div class="invalid-feedback"><?= e($errors['phone']) ?></div><?php endif; ?>
+                            <input type="tel" name="phone"
+                                   class="form-control <?= isset($errors['phone']) ? 'is-invalid' : '' ?>"
+                                   placeholder="0123456789"
+                                   value="<?= e($old['phone']) ?>" required>
+                            <?php if (isset($errors['phone'])): ?>
+                                <div class="invalid-feedback"><?= e($errors['phone']) ?></div>
+                            <?php endif; ?>
                         </div>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Email address</label>
-                        <input type="email" name="email" class="form-control <?= isset($errors['email']) ? 'is-invalid' : '' ?>"
+                        <input type="email" name="email"
+                               class="form-control <?= isset($errors['email']) ? 'is-invalid' : '' ?>"
                                value="<?= e($old['email']) ?>" required>
-                        <?php if (isset($errors['email'])): ?><div class="invalid-feedback"><?= e($errors['email']) ?></div><?php endif; ?>
+                        <?php if (isset($errors['email'])): ?>
+                            <div class="invalid-feedback"><?= e($errors['email']) ?></div>
+                        <?php endif; ?>
                     </div>
 
                     <div class="row g-3 mb-4">
-                            <div class="col-sm-6">
-                                <label class="form-label fw-semibold">Password</label>
-                                <input type="password" name="password" id="pw-input"
-                                    class="form-control <?= isset($errors['password']) ? 'is-invalid' : '' ?>"
-                                    placeholder="Min 8 chars, 3 of: aA1@" required>
-                                <div id="pw-meter" class="rb-pw-meter mt-1" aria-hidden="true">
-                                    <div class="rb-pw-meter__bar"></div>
-                                </div>
-                                <small id="pw-hint" class="rb-pw-hint">Use 8+ characters with letters, numbers and symbols.</small>
-                                <?php if (isset($errors['password'])): ?>
-                                    <div class="invalid-feedback d-block"><?= e($errors['password']) ?></div>
-                                <?php endif; ?>
+                        <div class="col-sm-6">
+                            <label class="form-label fw-semibold">Password</label>
+                            <input type="password" name="password" id="pw-input"
+                                class="form-control <?= isset($errors['password']) ? 'is-invalid' : '' ?>"
+                                placeholder="Min 8 chars, 3 of: aA1@" required>
+                            <div id="pw-meter" class="rb-pw-meter mt-1" aria-hidden="true">
+                                <div class="rb-pw-meter__bar"></div>
                             </div>
-                            <div class="col-sm-6">
-                                <label class="form-label fw-semibold">Confirm password</label>
-                                <input type="password" name="password_confirm"
-                                       class="form-control <?= isset($errors['password_confirm']) ? 'is-invalid' : '' ?>"
-                                       required>
-                                <?php if (isset($errors['password_confirm'])): ?>
-                                    <div class="invalid-feedback"><?= e($errors['password_confirm']) ?></div>
-                                <?php endif; ?>
-                            </div>
+                            <small id="pw-hint" class="rb-pw-hint">Use 8+ characters with letters, numbers and symbols.</small>
+                            <?php if (isset($errors['password'])): ?>
+                                <div class="invalid-feedback d-block"><?= e($errors['password']) ?></div>
+                            <?php endif; ?>
                         </div>
+                        <div class="col-sm-6">
+                            <label class="form-label fw-semibold">Confirm password</label>
+                            <input type="password" name="password_confirm"
+                                   class="form-control <?= isset($errors['password_confirm']) ? 'is-invalid' : '' ?>"
+                                   required>
+                            <?php if (isset($errors['password_confirm'])): ?>
+                                <div class="invalid-feedback"><?= e($errors['password_confirm']) ?></div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
 
                     <button type="submit" class="btn btn-primary w-100">
                         Continue to property info <i class="bi bi-arrow-right ms-1"></i>
@@ -183,6 +206,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
     </div>
 </div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 (function () {
@@ -191,7 +215,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     const hint  = document.getElementById('pw-hint');
     if (!input || !bar || !hint) return;
 
-    // List mirrors PHP's COMMON_PASSWORDS (top offenders)
     const common = new Set([
         'password','password1','password123','password!','p@ssw0rd',
         '12345678','123456789','1234567890','qwerty123','qwertyuiop',
@@ -227,31 +250,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         bar.classList.remove('weak','fair','good','strong');
         hint.classList.remove('weak','fair','good','strong');
 
-        if (pw === '') {
-            hint.textContent = 'Use 8+ characters with letters, numbers and symbols.';
-            return;
-        }
-
-        if (common.has(pw.toLowerCase())) {
-            bar.classList.add('weak');
-            hint.classList.add('weak');
-            hint.textContent = '⚠ This password is too common. Please pick another.';
-            return;
-        }
-
-        if (pw.length < 8) {
-            bar.classList.add('weak');
-            hint.classList.add('weak');
-            hint.textContent = `${pw.length}/8 characters \u2014 keep going.`;
-            return;
-        }
-
-        if (classes(pw) < 3) {
-            bar.classList.add('weak');
-            hint.classList.add('weak');
-            hint.textContent = '⚠ Add another character type (UPPERCASE, number, or symbol).';
-            return;
-        }
+        if (pw === '') { hint.textContent = 'Use 8+ characters with letters, numbers and symbols.'; return; }
+        if (common.has(pw.toLowerCase())) { bar.classList.add('weak'); hint.classList.add('weak'); hint.textContent = '⚠ This password is too common.'; return; }
+        if (pw.length < 8) { bar.classList.add('weak'); hint.classList.add('weak'); hint.textContent = `${pw.length}/8 characters — keep going.`; return; }
+        if (classes(pw) < 3) { bar.classList.add('weak'); hint.classList.add('weak'); hint.textContent = '⚠ Add another character type.'; return; }
 
         const s = score(pw);
         if      (s < 50)  { bar.classList.add('weak');   hint.classList.add('weak');   hint.textContent = 'Weak'; }

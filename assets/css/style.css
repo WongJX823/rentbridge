@@ -414,3 +414,91 @@ code {
     cursor: crosshair;
     touch-action: none;
 }
+
+/* ================================================
+   ADMIN STAT CARDS — improved contrast + 3x2 grid
+   ================================================ */
+.stat-card {
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border: 1px solid var(--rb-line);
+    border-radius: 18px;
+    padding: 1.6rem;
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.2s ease;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+}
+.stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 20px 40px -15px rgba(15, 44, 82, 0.2);
+    border-color: var(--rb-navy);
+    color: inherit;
+    text-decoration: none;
+}
+
+.stat-card__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    font-size: 1.4rem;
+    margin-bottom: 1rem;
+}
+
+.stat-card__value {
+    font-family: 'Fraunces', serif;
+    font-size: 2.6rem;
+    font-weight: 600;
+    color: var(--rb-navy);
+    line-height: 1;
+    margin-bottom: 0.4rem;
+}
+
+.stat-card__label {
+    color: var(--rb-text-soft);
+    font-size: 0.95rem;
+    font-weight: 500;
+    margin-bottom: 1rem;
+}
+
+.stat-card__action {
+    margin-top: auto;
+    padding-top: 0.8rem;
+    border-top: 1px dashed var(--rb-line);
+    color: var(--rb-navy);
+    font-size: 0.85rem;
+    font-weight: 600;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.stat-card__action i {
+    transition: transform 0.15s ease;
+}
+.stat-card:hover .stat-card__action i {
+    transform: translateX(4px);
+}
+
+/* Yellow accent for cards needing attention (only when count > 0) */
+.stat-card--warning {
+    background: linear-gradient(135deg, #FFFBF0 0%, #FFFFFF 60%);
+    border-color: #E5C77A;
+}
+.stat-card--warning::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: linear-gradient(90deg, #D4A017, #E5C77A);
+}
+.stat-card--warning:hover {
+    border-color: #B7791F;
+}
