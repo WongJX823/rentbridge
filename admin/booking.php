@@ -557,6 +557,7 @@ $isCancellable = !in_array($booking['status'], [
                     </div>
                 </div>
                 <?php endif; ?>
+                
 
             </div>
         </div>

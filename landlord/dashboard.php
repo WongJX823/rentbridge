@@ -87,10 +87,10 @@ $pendingContract = $pendingContractStmt->fetch();
             </a>
         </div>
         <div class="col-md-6">
-            <a href="#" class="d-block bg-white rounded-3 border p-4 text-decoration-none text-dark h-100">
+            <a href="/rentbridge/landlord/properties.php" class="d-block bg-white rounded-3 border p-4 text-decoration-none text-dark h-100">
                 <i class="bi bi-house-door display-6 text-emerald"></i>
                 <h5 class="mt-2 mb-1">My properties</h5>
-                <p class="text-secondary mb-0 small"><?= $propCount ?> property listed.</p>
+                <p class="text-secondary mb-0 small"><?= $propCount ?> property listed. Add more anytime.</p>
             </a>
         </div>
     </div>
