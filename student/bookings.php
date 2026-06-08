@@ -114,8 +114,10 @@ function status_label(string $status): array {
                 [$label, $color] = status_label($b['status']);
             ?>
                 <div class="col-12">
-                    <div class="bg-white border rounded-3 overflow-hidden">
-                        <div class="row g-0">
+                    <a href="/rentbridge/student/booking.php?id=<?= (int)$b['id'] ?>"
+                        class="text-decoration-none text-dark d-block">
+                            <div class="bg-white border rounded-3 overflow-hidden booking-row">
+                                <div class="row g-0">
                             <div class="col-md-3" style="background:linear-gradient(135deg,#E6ECF4,#E4F2EA); min-height: 160px;">
                                 <?php if (!empty($b['image_path'])): ?>
                                     <img src="/rentbridge/<?= e($b['image_path']) ?>"
