@@ -63,9 +63,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($action === 'accept') {
                 $pdo->beginTransaction();
 
-                // Status → agent_assigned
+                // Status → agent_verifying (NEW: inspection step before contract)
                 $stmt = $pdo->prepare(
-                    'UPDATE bookings SET status = "agent_assigned" WHERE id = ?'
+                    'UPDATE bookings SET status = "agent_verifying" WHERE id = ?'
                 );
                 $stmt->execute([$caseId]);
 
@@ -75,43 +75,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 );
                 $stmt->execute([(int)$case['property_id']]);
 
+                // Create the inspection record with 5-day deadline
+                $stmt = $pdo->prepare(
+                    'INSERT INTO agent_verifications
+                        (booking_id, agent_id, started_at, deadline_at)
+                     VALUES (?, ?, NOW(), DATE_ADD(NOW(), INTERVAL 5 DAY))'
+                );
+                $stmt->execute([$caseId, current_user_id()]);
+
                 $pdo->commit();
 
-                 // ▶ Auto-create contract (Module 9.1)
-                require_once __DIR__ . '/../includes/contracts.php';
-                $contractId = create_contract_from_booking($caseId);
-
-                // Notify student + landlord
+                // Notify student
                 notify(
                     (int)$case['student_id'],
                     'agent_accepted',
                     'Your UTeM agent is on the case!',
-                    'Agent has accepted to witness your tenancy for "' . $case['property_title'] . '". '
-                        . ($contractId ? 'Your contract is now ready to sign.' : ''),
-                    $contractId
-                        ? '/rentbridge/contracts/view.php?id=' . $contractId
-                        : '/rentbridge/student/bookings.php'
-                );
-                
-                // Notify student + landlord
-                notify(
-                    (int)$case['student_id'],
-                    'agent_accepted',
-                    'Your UTeM agent is on the case!',
-                    'Agent has accepted to witness your tenancy for "' . $case['property_title'] . '".',
+                    current_user_display_name() . ' will inspect "' . $case['property_title']
+                        . '" within 5 days. The contract will be issued after inspection passes.',
                     '/rentbridge/student/bookings.php'
                 );
 
+                // Notify landlord
                 notify(
                     (int)$case['landlord_id'],
                     'agent_accepted',
-                    'Agent confirmed for booking #' . $caseId,
-                    'A UTeM staff agent has accepted to witness this tenancy.',
+                    'Agent will visit your property',
+                    current_user_display_name() . ' (UTeM staff) will inspect your property "'
+                        . $case['property_title']
+                        . '" within 5 days. Please arrange access (key handover or in-person meet).',
                     '/rentbridge/landlord/bookings.php'
                 );
 
-                set_flash('success', 'Case accepted. The tenancy will now proceed to contract signing.');
-                header('Location: /rentbridge/agent/cases.php');
+                set_flash('success', 'Case accepted. Please inspect the property within 5 days.');
+                header('Location: /rentbridge/agent/inspection.php?booking_id=' . $caseId);
                 exit;
             }
 

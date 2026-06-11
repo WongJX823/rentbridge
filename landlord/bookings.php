@@ -139,6 +139,30 @@ foreach ($bookings as $b) {
                                             <strong><?= e(date('d M, H:i', strtotime($b['created_at']))) ?></strong>
                                         </div>
                                     </div>
+                                    <!-- Agent assignment status -->
+                                    <?php if (in_array($b['status'], ['pending_agent','agent_assigned','agent_verifying','agent_verified','contract_pending','active'], true)): ?>
+                                        <div class="small mt-3 p-2 rounded-3" style="background:var(--rb-cream); border:1px solid var(--rb-line);">
+                                            <?php if (!empty($b['agent_name'])): ?>
+                                                <i class="bi bi-person-badge text-emerald-dark"></i>
+                                                <strong>Witness agent:</strong>
+                                                <?= e($b['agent_name']) ?>
+                                                <span class="text-secondary">
+                                                    · <?= e($b['agent_department']) ?>
+                                                </span>
+                                                <?php if ($b['status'] === 'pending_agent'): ?>
+                                                    <span class="badge bg-warning text-dark ms-1">🟡 awaiting confirmation</span>
+                                                <?php elseif ($b['status'] === 'agent_verifying'): ?>
+                                                    <span class="badge bg-info text-dark ms-1">🔍 inspecting property</span>
+                                                <?php else: ?>
+                                                    <span class="badge bg-success ms-1">✓ confirmed</span>
+                                                <?php endif; ?>
+                                            <?php elseif ($b['status'] === 'pending_agent'): ?>
+                                                <i class="bi bi-search text-secondary"></i>
+                                                <span class="text-secondary">Looking for a UTeM staff agent…</span>
+                                            <?php endif; ?>
+                                        </div>
+                                    <?php endif; ?>
+
                                     <?php if ($isPending): ?>
                                         <div class="mt-3 small text-warning fw-semibold">
                                             <i class="bi bi-arrow-right-circle"></i> Click to review &amp; respond
@@ -152,28 +176,7 @@ foreach ($bookings as $b) {
             <?php endforeach; ?>
         </div>
     <?php endif; ?>
-    <!-- Agent assignment status -->
-                                <?php if ($b['status'] === 'pending_agent' || $b['status'] === 'agent_assigned'
-                                        || $b['status'] === 'contract_pending' || $b['status'] === 'active'): ?>
-                                    <div class="small mt-3 p-2 rounded-3" style="background:var(--rb-cream); border:1px solid var(--rb-line);">
-                                        <?php if (!empty($b['agent_name'])): ?>
-                                            <i class="bi bi-person-badge text-emerald-dark"></i>
-                                            <strong>Witness agent:</strong>
-                                            <?= e($b['agent_name']) ?>
-                                            <span class="text-secondary">
-                                                · <?= e($b['agent_department']) ?>
-                                            </span>
-                                            <?php if ($b['status'] === 'pending_agent'): ?>
-                                                <span class="badge bg-warning text-dark ms-1">🟡 awaiting confirmation</span>
-                                            <?php else: ?>
-                                                <span class="badge bg-success ms-1">✓ confirmed</span>
-                                            <?php endif; ?>
-                                        <?php elseif ($b['status'] === 'pending_agent'): ?>
-                                            <i class="bi bi-search text-secondary"></i>
-                                            <span class="text-secondary">Looking for a UTeM staff agent…</span>
-                                        <?php endif; ?>
-                                    </div>
-                                <?php endif; ?>
+   
 </div>
 
 </body>

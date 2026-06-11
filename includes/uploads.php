@@ -62,3 +62,28 @@ function save_property_image(array $file): string {
 
     return $relPath;
 }
+
+/**
+ * Save an inspection photo upload to disk.
+ * Returns the relative path (e.g. uploads/inspections/insp_abc123.jpg)
+ */
+function save_inspection_photo(array $file): string {
+    $dir = __DIR__ . '/../uploads/inspections';
+    if (!is_dir($dir)) {
+        mkdir($dir, 0775, true);
+    }
+
+    $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+    if (!in_array($ext, ['jpg','jpeg','png','webp'], true)) {
+        throw new RuntimeException('Unsupported file type.');
+    }
+
+    $filename = 'insp_' . bin2hex(random_bytes(8)) . '.' . $ext;
+    $fullPath = $dir . '/' . $filename;
+
+    if (!move_uploaded_file($file['tmp_name'], $fullPath)) {
+        throw new RuntimeException('Failed to save photo.');
+    }
+
+    return 'uploads/inspections/' . $filename;
+}

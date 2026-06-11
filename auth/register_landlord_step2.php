@@ -125,10 +125,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 );
 $stmt->execute([
     $userId,
-    $signup['full_name'],
-    $signup['preferred_name'],
-    $signup['ic_no'],
-    $signup['phone']
+    $step1['full_name'],
+    $step1['preferred_name'],
+    $step1['ic_no'],
+    $step1['phone']
 ]);
 
             // 3. Insert into properties
