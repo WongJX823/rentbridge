@@ -1,0 +1,372 @@
+/* =============================================================
+   RentBridge Admin Panel — sidebar + responsive layout
+   ============================================================= */
+
+:root {
+    --admin-sidebar-w: 240px;
+    --admin-sidebar-w-collapsed: 64px;
+    --admin-topbar-h: 56px;
+    --admin-sidebar-bg: #0F2C52;       /* deep navy */
+    --admin-sidebar-bg-hover: #1A3D6B; /* lighter navy on hover */
+    --admin-sidebar-bg-active: #2E8B57;/* emerald accent on active */
+    --admin-sidebar-text: #DCE6F2;     /* off-white for readability */
+    --admin-sidebar-text-muted: #8FA8C7;
+    --admin-content-bg: #FAF8F3;        /* cream */
+}
+
+/* ------------------------------------------------------------- */
+/* Body                                                          */
+/* ------------------------------------------------------------- */
+.admin-body {
+    background: var(--admin-content-bg);
+    min-height: 100vh;
+    margin: 0;
+}
+
+/* ------------------------------------------------------------- */
+/* Top bar (sticky)                                              */
+/* ------------------------------------------------------------- */
+.admin-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 1030;
+    height: var(--admin-topbar-h);
+    background: var(--admin-sidebar-bg);
+    color: white;
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.topbar-toggle {
+    background: transparent;
+    border: none;
+    color: white;
+    font-size: 1.4rem;
+    padding: 4px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.topbar-toggle:hover {
+    background: rgba(255,255,255,0.1);
+}
+
+.topbar-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: white;
+    text-decoration: none;
+    font-family: 'Fraunces', serif;
+    font-size: 1.15rem;
+    font-weight: 600;
+}
+.topbar-brand:hover { color: white; }
+
+.topbar-logo {
+    width: 28px;
+    height: 28px;
+    background: var(--admin-sidebar-bg-active);
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 700;
+    transform: rotate(-6deg);
+}
+
+.topbar-divider { opacity: 0.5; }
+.topbar-tag {
+    font-family: 'Manrope', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 500;
+    opacity: 0.8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.topbar-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 0.85rem;
+}
+
+.topbar-clock {
+    color: var(--admin-sidebar-text-muted);
+    font-family: 'Manrope', sans-serif;
+}
+
+/* ------------------------------------------------------------- */
+/* Shell layout (sidebar + main)                                 */
+/* ------------------------------------------------------------- */
+.admin-shell {
+    display: flex;
+    min-height: calc(100vh - var(--admin-topbar-h));
+}
+
+/* ------------------------------------------------------------- */
+/* Sidebar (sticky)                                              */
+/* ------------------------------------------------------------- */
+.admin-sidebar {
+    position: sticky;
+    top: var(--admin-topbar-h);
+    height: calc(100vh - var(--admin-topbar-h));
+    width: var(--admin-sidebar-w);
+    background: var(--admin-sidebar-bg);
+    color: var(--admin-sidebar-text);
+    display: flex;
+    flex-direction: column;
+    transition: width 0.2s ease;
+    overflow-y: auto;
+    flex-shrink: 0;
+}
+
+.sidebar-nav {
+    flex-grow: 1;
+    padding: 16px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.sidebar-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    color: var(--admin-sidebar-text);
+    text-decoration: none;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    transition: background 0.15s, color 0.15s;
+    white-space: nowrap;
+}
+.sidebar-link i {
+    font-size: 1.15rem;
+    flex-shrink: 0;
+    width: 24px;
+    text-align: center;
+}
+.sidebar-link:hover {
+    background: var(--admin-sidebar-bg-hover);
+    color: white;
+}
+.sidebar-link.active {
+    background: var(--admin-sidebar-bg-active);
+    color: white;
+}
+.sidebar-link.sidebar-logout {
+    color: #F8A4A4;
+}
+.sidebar-link.sidebar-logout:hover {
+    background: rgba(220,53,69,0.2);
+    color: white;
+}
+
+.sidebar-footer {
+    padding: 8px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+}
+
+/* ------------------------------------------------------------- */
+/* Collapsed sidebar (icon-only)                                 */
+/* ------------------------------------------------------------- */
+.sidebar-collapsed .admin-sidebar {
+    width: var(--admin-sidebar-w-collapsed);
+}
+.sidebar-collapsed .sidebar-label {
+    display: none;
+}
+.sidebar-collapsed .sidebar-link {
+    justify-content: center;
+    padding: 10px 0;
+}
+
+/* ------------------------------------------------------------- */
+/* Main content area                                             */
+/* ------------------------------------------------------------- */
+.admin-main {
+    flex-grow: 1;
+    padding: 24px 32px;
+    min-width: 0;  /* prevents overflow */
+}
+
+.admin-page-header {
+    margin-bottom: 24px;
+    border-bottom: 1px solid rgba(15, 44, 82, 0.08);
+    padding-bottom: 16px;
+}
+
+.admin-page-title {
+    font-family: 'Fraunces', serif;
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: #0F2C52;
+    margin: 0 0 12px 0;
+}
+
+/* ------------------------------------------------------------- */
+/* Sub-navigation tabs (in content area)                         */
+/* ------------------------------------------------------------- */
+.admin-tabs {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+}
+
+.admin-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    background: white;
+    color: #0F2C52;
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+    border: 1px solid rgba(15, 44, 82, 0.12);
+    transition: all 0.15s;
+}
+.admin-tab:hover {
+    background: var(--admin-content-bg);
+    border-color: rgba(15, 44, 82, 0.3);
+}
+.admin-tab.active {
+    background: #0F2C52;
+    color: white;
+    border-color: #0F2C52;
+}
+.admin-tab-count {
+    background: rgba(255,255,255,0.2);
+    border-radius: 999px;
+    padding: 0 8px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+.admin-tab:not(.active) .admin-tab-count {
+    background: rgba(15, 44, 82, 0.08);
+}
+
+/* ------------------------------------------------------------- */
+/* Stat cards (used on dashboard)                                */
+/* ------------------------------------------------------------- */
+.admin-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+}
+
+.admin-stat-card {
+    background: white;
+    border: 1px solid rgba(15, 44, 82, 0.08);
+    border-radius: 12px;
+    padding: 20px;
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+    display: block;
+}
+.admin-stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(15, 44, 82, 0.08);
+    border-color: rgba(15, 44, 82, 0.2);
+    color: inherit;
+}
+
+.admin-stat-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: #E4F2EA;
+    color: #2E8B57;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    margin-bottom: 12px;
+}
+
+.admin-stat-value {
+    font-family: 'Fraunces', serif;
+    font-size: 2rem;
+    font-weight: 600;
+    color: #0F2C52;
+    line-height: 1;
+    margin-bottom: 4px;
+}
+
+.admin-stat-label {
+    font-size: 0.85rem;
+    color: rgba(15, 44, 82, 0.7);
+    font-weight: 500;
+}
+
+.admin-stat-action {
+    font-size: 0.8rem;
+    color: #2E8B57;
+    margin-top: 12px;
+    font-weight: 600;
+}
+
+/* ------------------------------------------------------------- */
+/* RESPONSIVE — collapse sidebar into drawer on mobile           */
+/* ------------------------------------------------------------- */
+@media (max-width: 768px) {
+    .admin-sidebar {
+        position: fixed;
+        top: var(--admin-topbar-h);
+        left: 0;
+        height: calc(100vh - var(--admin-topbar-h));
+        z-index: 1020;
+        transform: translateX(-100%);
+        transition: transform 0.25s ease;
+        box-shadow: 2px 0 8px rgba(0,0,0,0.2);
+    }
+
+    /* When sidebar is "expanded" on mobile, slide it in */
+    body:not(.sidebar-collapsed) .admin-sidebar {
+        transform: translateX(0);
+    }
+
+    /* On mobile we INVERT the meaning: collapsed = hidden */
+    .sidebar-collapsed .admin-sidebar {
+        transform: translateX(-100%);
+        width: var(--admin-sidebar-w);  /* full width when shown */
+    }
+    .sidebar-collapsed .sidebar-label {
+        display: inline;  /* show labels on mobile (full drawer width) */
+    }
+
+    .admin-main {
+        padding: 16px;
+    }
+
+    .admin-page-title {
+        font-size: 1.4rem;
+    }
+
+    .topbar-tag {
+        display: none;  /* save space on small screens */
+    }
+
+    .topbar-clock {
+        display: none;
+    }
+}
+
+/* On mobile, default to collapsed (hidden) sidebar */
+@media (max-width: 768px) {
+    body:not(.sidebar-collapsed) .admin-sidebar {
+        /* expanded means visible on mobile */
+    }
+}
