@@ -93,7 +93,7 @@ $pageContent   = $pageContent   ?? '';
             <a href="/rentbridge/admin/bookings.php"
                class="sidebar-link <?= $activeNav === 'bookings' ? 'active' : '' ?>">
                 <i class="bi bi-clipboard-data-fill"></i>
-                <span class="sidebar-label">Bookings</span>
+                <span class="sidebar-label">Tenancies</span>
             </a>
             <a href="/rentbridge/admin/reports.php"
                class="sidebar-link <?= $activeNav === 'reports' ? 'active' : '' ?>">
@@ -128,8 +128,8 @@ $pageContent   = $pageContent   ?? '';
 
                 <?php if (!empty($filterContent)): ?>
                     <button type="button" class="admin-filter-toggle" id="filterToggle">
-                        <i class="bi bi-funnel"></i>
-                        <span>Filters</span>
+                        <i class="bi bi-search"></i>
+                        <span>Search</span>
                     </button>
                 <?php endif; ?>
             </div>

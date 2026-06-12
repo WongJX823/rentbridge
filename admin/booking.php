@@ -1,568 +1,397 @@
 <?php
 require_once __DIR__ . '/../includes/auth.php';
-require_once __DIR__ . '/../includes/bookings.php';
 require_role('admin');
 
-$bookingId = (int)($_GET['id'] ?? $_POST['booking_id'] ?? 0);
+$bookingId = (int)($_GET['id'] ?? 0);
 if ($bookingId <= 0) {
     http_response_code(400);
-    die('Invalid booking ID.');
+    die('Invalid tenancy ID.');
 }
 
 $pdo = db();
 
-// Fetch everything we need
+// Fetch booking + all parties + contract
 $stmt = $pdo->prepare("
     SELECT b.*,
            p.title          AS property_title,
            p.address        AS property_address,
            p.city           AS property_city,
-           p.state          AS property_state,
            p.postcode       AS property_postcode,
-           p.status         AS property_status,
            s.full_name      AS student_name,
-           s.preferred_name AS student_nickname,
            s.matric_no      AS student_matric,
            s.phone          AS student_phone,
-           us.email         AS student_email,
+           su.email         AS student_email,
            l.full_name      AS landlord_name,
-           l.preferred_name AS landlord_nickname,
            l.phone          AS landlord_phone,
-           ul.email         AS landlord_email,
+           lu.email         AS landlord_email,
            a.full_name      AS agent_name,
            a.staff_id       AS agent_staff_id,
            a.department     AS agent_department,
-           ua.email         AS agent_email,
-           cb.email         AS cancelled_by_email,
-           ct.id              AS contract_id,
-           ct.contract_code   AS contract_code,
-           ct.status          AS contract_status,
-           ct.contract_pdf_path AS contract_pdf,
-           ct.student_signed_at,
-           ct.landlord_signed_at,
-           ct.agent_signed_at
+           au.email         AS agent_email,
+           c.id             AS contract_id,
+           c.contract_code,
+           c.status         AS contract_status,
+           c.student_signed_at,
+           c.landlord_signed_at,
+           c.agent_signed_at,
+           c.contract_pdf_path,
+           c.created_at     AS contract_created_at,
+           c.activated_at   AS contract_activated_at,
+           v.id             AS verification_id,
+           v.outcome        AS verification_outcome
       FROM bookings b
       JOIN properties p ON p.id = b.property_id
-      JOIN students   s ON s.user_id = b.student_id
-      JOIN users      us ON us.id = b.student_id
-      JOIN landlords  l ON l.user_id = b.landlord_id
-      JOIN users      ul ON ul.id = b.landlord_id
+      JOIN users su ON su.id = b.student_id
+      JOIN students s ON s.user_id = b.student_id
+      JOIN users lu ON lu.id = b.landlord_id
+      JOIN landlords l ON l.user_id = b.landlord_id
+      LEFT JOIN users au ON au.id = b.agent_id
       LEFT JOIN agents a ON a.user_id = b.agent_id
-      LEFT JOIN users  ua ON ua.id = b.agent_id
-      LEFT JOIN users  cb ON cb.id = b.cancelled_by
-      LEFT JOIN contracts ct ON ct.booking_id = b.id
+      LEFT JOIN contracts c ON c.booking_id = b.id
+      LEFT JOIN agent_verifications v ON v.booking_id = b.id
      WHERE b.id = ?
      LIMIT 1
 ");
 $stmt->execute([$bookingId]);
-$booking = $stmt->fetch();
+$tenancy = $stmt->fetch();
 
-if (!$booking) {
+if (!$tenancy) {
     http_response_code(404);
-    die('Booking not found.');
+    die('Tenancy not found.');
 }
 
+// --- HANDLE ADMIN CANCEL ---
 $errors = [];
-$reason = '';
-
-// ---- HANDLE ADMIN ACTIONS ----
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
     $action = $_POST['action'] ?? '';
-    $reason = trim($_POST['reason'] ?? '');
 
-    if ($action === 'assign_agent') {
-        $newAgentId = (int)($_POST['agent_id'] ?? 0);
-
-        if ($newAgentId <= 0) {
-            $errors['general'] = 'Please pick an agent.';
-        } elseif ($booking['status'] !== 'pending_agent') {
-            $errors['general'] = 'This booking is not awaiting agent assignment.';
-        } else {
-            try {
-                $pdo->beginTransaction();
-
-                // Update booking
-                $stmt = $pdo->prepare('UPDATE bookings SET agent_id = ? WHERE id = ?');
-                $stmt->execute([$newAgentId, $bookingId]);
-
-                // Increment agent caseload
-                $stmt = $pdo->prepare(
-                    'UPDATE agents SET current_caseload = current_caseload + 1 WHERE user_id = ?'
-                );
-                $stmt->execute([$newAgentId]);
-
-                $pdo->commit();
-
-                // Notify the agent
-                notify(
-                    $newAgentId,
-                    'agent_assignment',
-                    'Manually assigned by admin',
-                    'You have been assigned by an administrator to booking #' . $bookingId . '.',
-                    '/rentbridge/agent/cases.php'
-                );
-
-                set_flash('success', 'Agent assigned successfully.');
-                header('Location: /rentbridge/admin/booking.php?id=' . $bookingId);
-                exit;
-
-            } catch (Throwable $e) {
-                if ($pdo->inTransaction()) $pdo->rollBack();
-                $errors['general'] = 'Error: ' . $e->getMessage();
-            }
-        }
-    }
-
-    elseif ($action === 'cancel_admin') {
+    if ($action === 'admin_cancel') {
+        $reason = trim($_POST['cancel_reason'] ?? '');
         if ($reason === '') {
-            $errors['reason'] = 'Cancellation reason is required (for audit trail).';
-        } elseif (in_array($booking['status'], ['completed', 'cancelled_by_student', 'cancelled_by_landlord', 'cancelled_by_admin', 'rejected_by_landlord'], true)) {
-            $errors['general'] = 'This booking cannot be cancelled in its current state.';
-        } else {
+            $errors['general'] = 'Cancellation reason required.';
+        } elseif (!in_array($tenancy['status'], ['active','completed','cancelled_by_student','cancelled_by_landlord','cancelled_by_admin'], true)) {
             try {
                 $pdo->beginTransaction();
-
-                // Cancel booking
-                $stmt = $pdo->prepare(
-                    'UPDATE bookings
-                        SET status              = "cancelled_by_admin",
-                            cancellation_reason = ?,
-                            cancelled_by        = ?
-                      WHERE id = ?'
-                );
+                $stmt = $pdo->prepare("
+                    UPDATE bookings
+                       SET status = 'cancelled_by_admin',
+                           cancellation_reason = ?,
+                           cancelled_by = ?
+                     WHERE id = ?
+                ");
                 $stmt->execute([$reason, current_user_id(), $bookingId]);
 
-                // If there was an assigned agent, decrement their caseload
-                if (!empty($booking['agent_id'])) {
-                    $stmt = $pdo->prepare(
-                        'UPDATE agents SET current_caseload = GREATEST(0, current_caseload - 1) WHERE user_id = ?'
-                    );
-                    $stmt->execute([(int)$booking['agent_id']]);
-                }
+                // Release property
+                $stmt = $pdo->prepare("UPDATE properties SET status = 'available' WHERE id = ?");
+                $stmt->execute([(int)$tenancy['property_id']]);
 
-                // If property was 'booked', set it back to 'available'
-                if ($booking['property_status'] === 'booked') {
-                    $stmt = $pdo->prepare(
-                        'UPDATE properties SET status = "available" WHERE id = ?'
-                    );
-                    $stmt->execute([(int)$booking['property_id']]);
-                }
+                // Notify both parties
+                notify((int)$tenancy['student_id'], 'admin_cancelled',
+                    'Tenancy cancelled by admin',
+                    'Your tenancy #' . $bookingId . ' was cancelled. Reason: ' . $reason,
+                    '/rentbridge/student/bookings.php');
+                notify((int)$tenancy['landlord_id'], 'admin_cancelled',
+                    'Tenancy cancelled by admin',
+                    'Tenancy #' . $bookingId . ' was cancelled. Reason: ' . $reason,
+                    '/rentbridge/landlord/bookings.php');
 
                 $pdo->commit();
-
-                // Notify all parties
-                $msg = 'Booking #' . $bookingId . ' for "' . $booking['property_title'] . '" was cancelled by an administrator. Reason: ' . $reason;
-                foreach (['student_id', 'landlord_id', 'agent_id'] as $col) {
-                    if (!empty($booking[$col])) {
-                        notify(
-                            (int)$booking[$col],
-                            'booking_cancelled_admin',
-                            'Booking cancelled by admin',
-                            $msg,
-                            '/rentbridge/index.php'
-                        );
-                    }
-                }
-
-                set_flash('success', 'Booking cancelled. All parties notified.');
-                header('Location: /rentbridge/admin/bookings.php?status=cancelled_by_admin');
+                set_flash('warning', 'Tenancy cancelled and parties notified.');
+                header('Location: /rentbridge/admin/booking.php?id=' . $bookingId);
                 exit;
-
             } catch (Throwable $e) {
                 if ($pdo->inTransaction()) $pdo->rollBack();
-                $errors['general'] = 'Error: ' . $e->getMessage();
+                $errors['general'] = 'Failed: ' . $e->getMessage();
             }
-        }
-    }
-
-    elseif ($action === 'retry_assign') {
-        if ($booking['status'] !== 'pending_agent') {
-            $errors['general'] = 'Auto-assignment only works on bookings awaiting an agent.';
-        } else {
-            $result = auto_assign_agent($bookingId);
-            if ($result) {
-                set_flash('success', 'Auto-assignment succeeded! Agent has been notified.');
-            } else {
-                set_flash('warning', 'Still no eligible agent. Try manual assignment below.');
-            }
-            header('Location: /rentbridge/admin/booking.php?id=' . $bookingId);
-            exit;
         }
     }
 }
 
-// Get list of eligible agents for manual assignment (excluding landlord + already-rejected)
-$eligibleAgents = [];
-if ($booking['status'] === 'pending_agent' && empty($booking['agent_id'])) {
-    $rejected = [];
-    if (!empty($booking['rejected_agents'])) {
-        $decoded = json_decode($booking['rejected_agents'], true);
-        if (is_array($decoded)) $rejected = array_map('intval', $decoded);
-    }
-    $rejected[] = (int)$booking['landlord_id'];
+// --- LAYOUT ---
+$pageTitle = 'Tenancy #' . $bookingId;
+$activeNav = 'bookings';
 
-    $placeholders = implode(',', array_fill(0, count($rejected), '?'));
-
-    $stmt = $pdo->prepare("
-        SELECT a.user_id, a.full_name, a.staff_id, a.department,
-               a.current_caseload, a.max_caseload, a.availability
-          FROM agents a
-          JOIN users u ON u.id = a.user_id
-         WHERE u.status = 'active'
-           AND a.user_id NOT IN ($placeholders)
-         ORDER BY a.current_caseload ASC, a.full_name ASC
-    ");
-    $stmt->execute($rejected);
-    $eligibleAgents = $stmt->fetchAll();
-}
-
-function booking_status_label(string $status): array {
+function tenancy_status_label_full(string $status): array {
     return match ($status) {
-        'pending_landlord'      => ['Awaiting landlord',     'warning'],
-        'pending_agent'         => ['Awaiting agent',        'info'],
-        'agent_assigned'        => ['Agent confirmed',       'primary'],
-        'contract_pending'      => ['Contract pending',      'primary'],
-        'active'                => ['Active tenancy',        'success'],
-        'rejected_by_landlord'  => ['Rejected by landlord',  'danger'],
-        'completed'             => ['Completed',             'secondary'],
-        'cancelled_by_student'  => ['Cancelled by student',  'secondary'],
-        'cancelled_by_landlord' => ['Cancelled by landlord', 'secondary'],
-        'cancelled_by_admin'    => ['Cancelled by admin',    'danger'],
-        default                 => [ucfirst($status),        'secondary'],
+        'pending_landlord'      => ['Pending landlord',   'warning'],
+        'pending_agent'         => ['Pending agent',      'warning'],
+        'agent_verifying'       => ['🔍 Inspecting',      'info'],
+        'agent_verified'        => ['✓ Verified',         'success'],
+        'verification_failed'   => ['Inspection failed',  'danger'],
+        'contract_pending'      => ['📝 Contract signing','primary'],
+        'active'                => ['Active tenancy',     'success'],
+        'completed'             => ['Completed',          'secondary'],
+        'cancelled_by_student'  => ['Cancelled (student)','secondary'],
+        'cancelled_by_landlord' => ['Cancelled (landlord)','secondary'],
+        'cancelled_by_admin'    => ['Cancelled (admin)',  'danger'],
+        'rejected_by_landlord'  => ['Rejected by landlord','danger'],
+        default                 => [$status, 'secondary'],
     };
 }
-[$label, $color] = booking_status_label($booking['status']);
+[$statusLabel, $statusColor] = tenancy_status_label_full($tenancy['status']);
 
-$startTs = strtotime($booking['start_date']);
-$endTs   = strtotime($booking['end_date']);
-$months  = max(1, (int)round(($endTs - $startTs) / (30.44 * 86400)));
-$isStuck = $booking['status'] === 'pending_agent' && empty($booking['agent_id']);
-$isCancellable = !in_array($booking['status'], [
-    'completed', 'cancelled_by_student', 'cancelled_by_landlord',
-    'cancelled_by_admin', 'rejected_by_landlord'
-], true);
+// Sign progress for contract
+$signed = 0;
+if ($tenancy['contract_id']) {
+    if (!empty($tenancy['student_signed_at']))  $signed++;
+    if (!empty($tenancy['landlord_signed_at'])) $signed++;
+    if (!empty($tenancy['agent_signed_at']))    $signed++;
+}
+
+ob_start();
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Booking #<?= (int)$booking['id'] ?> · Admin · RentBridge</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-    <link href="../assets/css/style.css" rel="stylesheet">
-</head>
-<body style="background: var(--rb-cream);">
 
-<?php include '../includes/header.php'; ?>
+<p class="small mb-3">
+    <a href="/rentbridge/admin/bookings.php" class="text-secondary text-decoration-none">
+        <i class="bi bi-arrow-left"></i> Back to tenancies
+    </a>
+</p>
 
-<div class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-lg-10">
+<?php if (!empty($errors['general'])): ?>
+    <div class="alert alert-danger"><?= e($errors['general']) ?></div>
+<?php endif; ?>
 
-            <p class="small mb-3">
-                <a href="/rentbridge/admin/bookings.php" class="text-secondary text-decoration-none">
-                    <i class="bi bi-arrow-left"></i> All bookings
-                </a>
-            </p>
+<!-- HEADER -->
+<div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-2">
+    <div>
+        <h2 class="mb-1">Tenancy #<?= (int)$bookingId ?></h2>
+        <p class="text-secondary mb-0">
+            Created <?= e(date('d M Y, H:i', strtotime($tenancy['created_at']))) ?>
+        </p>
+    </div>
+    <span class="badge bg-<?= $statusColor ?> fs-6"><?= e($statusLabel) ?></span>
+</div>
 
-            <div class="d-flex justify-content-between align-items-start mb-4">
-                <div>
-                    <h1 class="mb-1">Booking #<?= (int)$booking['id'] ?></h1>
-                    <p class="text-secondary mb-0">
-                        Created <?= e(date('d M Y, H:i', strtotime($booking['created_at']))) ?>
-                    </p>
-                </div>
-                <span class="badge bg-<?= $color ?> fs-6"><?= e($label) ?></span>
+<!-- PROPERTY CARD -->
+<div class="bg-white border rounded-3 p-4 mb-4">
+    <h6 class="text-secondary text-uppercase small mb-3">Property</h6>
+    <div class="d-flex justify-content-between flex-wrap gap-3">
+        <div>
+            <a href="/rentbridge/admin/property.php?id=<?= (int)$tenancy['property_id'] ?>"
+               class="text-decoration-none text-dark">
+                <strong class="fs-5"><?= e($tenancy['property_title']) ?></strong>
+            </a>
+            <div class="small text-secondary">
+                <i class="bi bi-geo-alt"></i> <?= e($tenancy['property_address']) ?>,
+                <?= e($tenancy['property_city']) ?> <?= e($tenancy['property_postcode']) ?>
             </div>
-
-            <?php if (!empty($errors['general'])): ?>
-                <div class="alert alert-danger"><?= e($errors['general']) ?></div>
-            <?php endif; ?>
-
-            <?php $flash = get_flash(); if ($flash): ?>
-                <div class="alert alert-<?= e($flash['type']) ?>"><?= e($flash['message']) ?></div>
-            <?php endif; ?>
-
-            <div class="row g-4">
-
-                <!-- Property -->
-                <div class="col-12">
-                    <div class="bg-white border rounded-3 p-4">
-                        <h6 class="text-secondary text-uppercase small mb-3">Property</h6>
-                        <h5><?= e($booking['property_title']) ?></h5>
-                        <p class="text-secondary small mb-0">
-                            <i class="bi bi-geo-alt"></i>
-                            <?= e($booking['property_address']) ?>,
-                            <?= e($booking['property_city']) ?> <?= e($booking['property_postcode']) ?>,
-                            <?= e($booking['property_state']) ?>
-                            &nbsp;·&nbsp;
-                            Status: <span class="badge bg-light text-dark border"><?= e($booking['property_status']) ?></span>
-                        </p>
-                    </div>
-                </div>
-
-                <!-- 3 Parties -->
-                <div class="col-md-4">
-                    <div class="bg-white border rounded-3 p-4 h-100">
-                        <h6 class="text-secondary text-uppercase small mb-3">Student</h6>
-                        <h5 class="mb-1"><?= e($booking['student_name']) ?></h5>
-                        <small class="text-secondary d-block mb-3">@<?= e($booking['student_nickname']) ?></small>
-                        <div class="small text-secondary">
-                            <div><i class="bi bi-card-text"></i> <?= e($booking['student_matric']) ?></div>
-                            <div><i class="bi bi-envelope"></i> <?= e($booking['student_email']) ?></div>
-                            <div><i class="bi bi-telephone"></i> <?= e($booking['student_phone']) ?></div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-md-4">
-                    <div class="bg-white border rounded-3 p-4 h-100">
-                        <h6 class="text-secondary text-uppercase small mb-3">Landlord</h6>
-                        <h5 class="mb-1"><?= e($booking['landlord_name']) ?></h5>
-                        <small class="text-secondary d-block mb-3">@<?= e($booking['landlord_nickname']) ?></small>
-                        <div class="small text-secondary">
-                            <div><i class="bi bi-envelope"></i> <?= e($booking['landlord_email']) ?></div>
-                            <div><i class="bi bi-telephone"></i> <?= e($booking['landlord_phone']) ?></div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-md-4">
-                    <div class="bg-white border rounded-3 p-4 h-100">
-                        <h6 class="text-secondary text-uppercase small mb-3">Witness Agent</h6>
-                        <?php if (!empty($booking['agent_name'])): ?>
-                            <h5 class="mb-1"><?= e($booking['agent_name']) ?></h5>
-                            <small class="text-secondary d-block mb-3"><?= e($booking['agent_department']) ?> · <?= e($booking['agent_staff_id']) ?></small>
-                            <div class="small text-secondary">
-                                <div><i class="bi bi-envelope"></i> <?= e($booking['agent_email']) ?></div>
-                            </div>
-                        <?php else: ?>
-                            <div class="text-secondary small">
-                                <i class="bi bi-search"></i>
-                                <?php if ($isStuck): ?>
-                                    <strong class="text-warning">No agent assigned</strong> — manual assignment needed
-                                <?php else: ?>
-                                    Not yet assigned
-                                <?php endif; ?>
-                            </div>
-                        <?php endif; ?>
-                    </div>
-                </div>
-
-                <!-- Tenancy terms -->
-                <div class="col-12">
-                    <div class="bg-white border rounded-3 p-4">
-                        <h6 class="text-secondary text-uppercase small mb-3">Tenancy terms</h6>
-                        <div class="row text-center">
-                            <div class="col-md-3">
-                                <small class="text-secondary text-uppercase">Move in</small>
-                                <div class="fw-semibold"><?= e(date('d M Y', $startTs)) ?></div>
-                            </div>
-                            <div class="col-md-3">
-                                <small class="text-secondary text-uppercase">Move out</small>
-                                <div class="fw-semibold"><?= e(date('d M Y', $endTs)) ?></div>
-                            </div>
-                            <div class="col-md-3">
-                                <small class="text-secondary text-uppercase">Duration</small>
-                                <div class="fw-semibold"><?= $months ?> month<?= $months === 1 ? '' : 's' ?></div>
-                            </div>
-                            <div class="col-md-3">
-                                <small class="text-secondary text-uppercase">Total rent</small>
-                                <div class="fw-semibold text-emerald">RM <?= number_format($months * (float)$booking['monthly_rent']) ?></div>
-                            </div>
-                        </div>
-                    </div>      
-                </div>
-
-                <!-- Contract (if exists) -->
-                <?php if (!empty($booking['contract_id'])): ?>
-                <div class="col-12">
-                    <div class="bg-white border rounded-3 p-4">
-                        <div class="d-flex justify-content-between align-items-start mb-3">
-                            <h6 class="text-secondary text-uppercase small mb-0">Contract</h6>
-                            <span class="badge bg-<?= match ($booking['contract_status']) {
-                                'pending_signatures' => 'warning',
-                                'active'             => 'success',
-                                'completed'          => 'secondary',
-                                'terminated'         => 'danger',
-                                default              => 'secondary',
-                            } ?>">
-                                <?= e(ucfirst(str_replace('_',' ', $booking['contract_status']))) ?>
-                            </span>
-                        </div>
-
-                        <div class="row g-3 align-items-center">
-                            <div class="col-md-3">
-                                <small class="text-secondary text-uppercase">Code</small>
-                                <div class="fw-semibold"><code><?= e($booking['contract_code']) ?></code></div>
-                            </div>
-                            <div class="col-md-6">
-                                <small class="text-secondary text-uppercase">Signatures</small>
-                                <div class="small">
-                                    <span class="me-2">
-                                        <?= !empty($booking['student_signed_at']) ? '✓' : '✗' ?> Student
-                                    </span>
-                                    <span class="me-2">
-                                        <?= !empty($booking['landlord_signed_at']) ? '✓' : '✗' ?> Landlord
-                                    </span>
-                                    <span>
-                                        <?= !empty($booking['agent_signed_at']) ? '✓' : '✗' ?> Agent
-                                    </span>
-                                </div>
-                            </div>
-                            <div class="col-md-3 text-md-end">
-                                <div class="d-flex gap-2 justify-content-md-end flex-wrap">
-                                    <?php if (!empty($booking['contract_pdf'])):
-                                        $pdfFullPath = __DIR__ . '/../' . $booking['contract_pdf'];
-                                        $cacheBust = file_exists($pdfFullPath) ? '?v=' . filemtime($pdfFullPath) : '';
-                                    ?>
-                                        <a href="/rentbridge/<?= e($booking['contract_pdf']) ?><?= $cacheBust ?>"
-                                        target="_blank" class="btn btn-sm btn-success">
-                                            <i class="bi bi-download me-1"></i> PDF
-                                        </a>
-                                    <?php endif; ?>
-                                    <a href="/rentbridge/contracts/view.php?id=<?= (int)$booking['contract_id'] ?>"
-                                    class="btn btn-sm btn-outline-dark">
-                                        <i class="bi bi-file-earmark-text me-1"></i> Open
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <?php endif; ?>
-
-                <!-- Cancellation info (if cancelled) -->
-                <?php if (!empty($booking['cancellation_reason'])): ?>
-                <div class="col-12">
-                    <div class="bg-white border rounded-3 p-4" style="border-left:4px solid #DC3545 !important;">
-                        <h6 class="text-secondary text-uppercase small mb-2">Cancellation record</h6>
-                        <div class="small text-secondary mb-2">
-                            Cancelled by: <?= e($booking['cancelled_by_email'] ?? 'unknown') ?>
-                        </div>
-                        <p class="mb-0" style="white-space: pre-line;"><?= e($booking['cancellation_reason']) ?></p>
-                    </div>
-                </div>
-                <?php endif; ?>
-
-                <!-- Rejected agents history (audit trail) -->
-                <?php if (!empty($booking['rejected_agents'])):
-                    $rejected = json_decode($booking['rejected_agents'], true) ?? [];
-                    if (!empty($rejected)):
-                ?>
-                <div class="col-12">
-                    <div class="bg-light border rounded-3 p-4">
-                        <h6 class="text-secondary text-uppercase small mb-2">
-                            <i class="bi bi-clock-history"></i> Agent rejection history (admin-only)
-                        </h6>
-                        <small class="text-secondary">
-                            <?= count($rejected) ?> agent<?= count($rejected) === 1 ? '' : 's' ?> previously declined this case
-                            (IDs: <?= e(implode(', ', $rejected)) ?>). They are excluded from auto-assignment.
-                        </small>
-                    </div>
-                </div>
-                <?php endif; endif; ?>
-
-                <!-- ADMIN ACTIONS PANEL -->
-                <?php if ($isStuck): ?>
-                <!-- Stuck booking: show retry + manual assign -->
-                <div class="col-12">
-                    <div class="bg-white border rounded-3 p-4" style="border-left:4px solid #D4A017 !important;">
-                        <h6 class="text-secondary text-uppercase small mb-3">⚠ Manual agent assignment</h6>
-                        <p class="text-secondary small">
-                            Auto-assignment couldn't find an eligible agent. Try retrying the algorithm, or pick an agent manually below.
-                        </p>
-
-                        <!-- Retry auto-assign -->
-                        <form method="POST" class="mb-3">
-                            <?= csrf_field() ?>
-                            <input type="hidden" name="booking_id" value="<?= (int)$booking['id'] ?>">
-                            <button type="submit" name="action" value="retry_assign" class="btn btn-outline-primary">
-                                <i class="bi bi-arrow-clockwise me-1"></i> Retry auto-assignment
-                            </button>
-                        </form>
-
-                        <hr>
-
-                        <!-- Manual assign -->
-                        <form method="POST">
-                            <?= csrf_field() ?>
-                            <input type="hidden" name="booking_id" value="<?= (int)$booking['id'] ?>">
-
-                            <label class="form-label small fw-semibold">Or pick an agent to manually assign:</label>
-
-                            <?php if (empty($eligibleAgents)): ?>
-                                <div class="alert alert-danger small mb-2">
-                                    <i class="bi bi-exclamation-circle"></i>
-                                    No eligible agents at all — every active agent has either been rejected, is the landlord, or no agents exist.
-                                </div>
-                            <?php else: ?>
-                                <select name="agent_id" class="form-select mb-3" required>
-                                    <option value="">— Choose an agent —</option>
-                                    <?php foreach ($eligibleAgents as $a):
-                                        $isFull = (int)$a['current_caseload'] >= (int)$a['max_caseload'];
-                                        $isUnavailable = $a['availability'] !== 'available';
-                                    ?>
-                                        <option value="<?= (int)$a['user_id'] ?>"
-                                                <?= ($isFull || $isUnavailable) ? 'disabled' : '' ?>>
-                                            <?= e($a['full_name']) ?>
-                                            (<?= e($a['department']) ?>)
-                                            · Caseload: <?= (int)$a['current_caseload'] ?>/<?= (int)$a['max_caseload'] ?>
-                                            <?php if ($isFull): ?>· FULL<?php endif; ?>
-                                            <?php if ($isUnavailable): ?>· <?= e($a['availability']) ?><?php endif; ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                                <button type="submit" name="action" value="assign_agent" class="btn btn-success">
-                                    <i class="bi bi-person-plus me-1"></i> Manually assign
-                                </button>
-                            <?php endif; ?>
-                        </form>
-                    </div>
-                </div>
-                <?php endif; ?>
-
-                <!-- Admin cancel (always available for non-terminal states) -->
-                <?php if ($isCancellable): ?>
-                <div class="col-12">
-                    <div class="bg-white border rounded-3 p-4" style="border-left:4px solid #DC3545 !important;">
-                        <h6 class="text-secondary text-uppercase small mb-3">Admin override: cancel booking</h6>
-                        <p class="text-secondary small">
-                            Use this only for dispute resolution, misconduct, or system errors. All parties will be notified with your reason.
-                        </p>
-
-                        <form method="POST">
-                            <?= csrf_field() ?>
-                            <input type="hidden" name="booking_id" value="<?= (int)$booking['id'] ?>">
-
-                            <div class="mb-3">
-                                <label class="form-label small">Cancellation reason <small class="text-secondary fw-normal">— required for audit trail</small></label>
-                                <textarea name="reason" rows="3"
-                                          class="form-control <?= isset($errors['reason']) ? 'is-invalid' : '' ?>"
-                                          placeholder="e.g. Property reported as misrepresented, mutual agreement, suspected fraud..."><?= e($reason) ?></textarea>
-                                <?php if (isset($errors['reason'])): ?>
-                                    <div class="invalid-feedback"><?= e($errors['reason']) ?></div>
-                                <?php endif; ?>
-                            </div>
-
-                            <button type="submit" name="action" value="cancel_admin" class="btn btn-outline-danger"
-                                    onclick="return confirm('Cancel this booking on behalf of admin? All parties will be notified. This cannot be undone.');">
-                                <i class="bi bi-x-octagon me-1"></i> Cancel booking
-                            </button>
-                        </form>
-                    </div>
-                </div>
-                <?php endif; ?>
-                
-
-            </div>
+        </div>
+        <div class="text-end">
+            <div class="small text-secondary">Monthly rent</div>
+            <strong class="text-emerald fs-5">RM <?= number_format((float)$tenancy['monthly_rent']) ?></strong>
         </div>
     </div>
 </div>
 
-</body>
-</html>
+<!-- 3 PARTIES (side by side) -->
+<div class="row g-3 mb-4">
+    <!-- Student -->
+    <div class="col-md-4">
+        <div class="bg-white border rounded-3 p-3 h-100">
+            <small class="text-secondary text-uppercase">Student</small>
+            <div class="fw-semibold mt-1"><?= e($tenancy['student_name']) ?></div>
+            <div class="small text-secondary"><code><?= e($tenancy['student_matric']) ?></code></div>
+            <div class="small text-secondary mt-2">
+                <div><i class="bi bi-envelope"></i> <?= e($tenancy['student_email']) ?></div>
+                <div><i class="bi bi-telephone"></i> <?= e($tenancy['student_phone']) ?></div>
+            </div>
+            <a href="/rentbridge/admin/user.php?id=<?= (int)$tenancy['student_id'] ?>"
+               class="btn btn-sm btn-outline-dark w-100 mt-2">View profile</a>
+        </div>
+    </div>
+
+    <!-- Landlord -->
+    <div class="col-md-4">
+        <div class="bg-white border rounded-3 p-3 h-100">
+            <small class="text-secondary text-uppercase">Landlord</small>
+            <div class="fw-semibold mt-1"><?= e($tenancy['landlord_name']) ?></div>
+            <div class="small text-secondary mt-2">
+                <div><i class="bi bi-envelope"></i> <?= e($tenancy['landlord_email']) ?></div>
+                <div><i class="bi bi-telephone"></i> <?= e($tenancy['landlord_phone']) ?></div>
+            </div>
+            <a href="/rentbridge/admin/user.php?id=<?= (int)$tenancy['landlord_id'] ?>"
+               class="btn btn-sm btn-outline-dark w-100 mt-2">View profile</a>
+        </div>
+    </div>
+
+    <!-- Agent -->
+    <div class="col-md-4">
+        <div class="bg-white border rounded-3 p-3 h-100">
+            <small class="text-secondary text-uppercase">Agent</small>
+            <?php if (!empty($tenancy['agent_name'])): ?>
+                <div class="fw-semibold mt-1"><?= e($tenancy['agent_name']) ?></div>
+                <div class="small text-secondary"><code><?= e($tenancy['agent_staff_id']) ?></code> · <?= e($tenancy['agent_department']) ?></div>
+                <div class="small text-secondary mt-2">
+                    <div><i class="bi bi-envelope"></i> <?= e($tenancy['agent_email']) ?></div>
+                </div>
+                <a href="/rentbridge/admin/user.php?id=<?= (int)$tenancy['agent_id'] ?>"
+                   class="btn btn-sm btn-outline-dark w-100 mt-2">View profile</a>
+            <?php else: ?>
+                <div class="text-secondary small mt-2">No agent assigned yet</div>
+            <?php endif; ?>
+        </div>
+    </div>
+</div>
+
+<!-- TENANCY DETAILS -->
+<div class="bg-white border rounded-3 p-4 mb-4">
+    <h5 class="mb-3"><i class="bi bi-calendar-range me-2"></i>Tenancy details</h5>
+    <div class="row g-3">
+        <div class="col-md-3 col-6">
+            <small class="text-secondary text-uppercase">Start date</small>
+            <div class="fw-semibold"><?= e(date('d M Y', strtotime($tenancy['start_date']))) ?></div>
+        </div>
+        <div class="col-md-3 col-6">
+            <small class="text-secondary text-uppercase">End date</small>
+            <div class="fw-semibold"><?= e(date('d M Y', strtotime($tenancy['end_date']))) ?></div>
+        </div>
+        <div class="col-md-3 col-6">
+            <small class="text-secondary text-uppercase">Monthly rent</small>
+            <div class="fw-semibold">RM <?= number_format((float)$tenancy['monthly_rent']) ?></div>
+        </div>
+        <div class="col-md-3 col-6">
+            <small class="text-secondary text-uppercase">Deposit</small>
+            <div class="fw-semibold">RM <?= number_format((float)$tenancy['deposit']) ?></div>
+        </div>
+    </div>
+
+    <?php if (!empty($tenancy['student_note'])): ?>
+        <hr>
+        <small class="text-secondary text-uppercase">Student's note</small>
+        <p style="white-space:pre-line;" class="mb-0 small"><?= e($tenancy['student_note']) ?></p>
+    <?php endif; ?>
+
+    <?php if (!empty($tenancy['cancellation_reason'])): ?>
+        <hr>
+        <small class="text-secondary text-uppercase">Cancellation reason</small>
+        <p style="white-space:pre-line;" class="mb-0 small text-danger"><?= e($tenancy['cancellation_reason']) ?></p>
+    <?php endif; ?>
+</div>
+
+<!-- INSPECTION REPORT -->
+<?php if ($tenancy['verification_id']): ?>
+<div class="bg-white border rounded-3 p-4 mb-4">
+    <div class="d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-clipboard-check me-2"></i>Inspection report</h5>
+        <a href="/rentbridge/agent/inspection_view.php?id=<?= (int)$tenancy['verification_id'] ?>"
+           class="btn btn-sm btn-outline-dark">
+            View full report <i class="bi bi-arrow-right ms-1"></i>
+        </a>
+    </div>
+    <p class="text-secondary small mt-2 mb-0">
+        Outcome: <strong><?= e(ucfirst(str_replace('_', ' ', $tenancy['verification_outcome']))) ?></strong>
+    </p>
+</div>
+<?php endif; ?>
+
+<!-- CONTRACT CARD (simpler version per spec) -->
+<div class="bg-white border rounded-3 p-4 mb-4">
+    <h5 class="mb-3"><i class="bi bi-file-earmark-text me-2"></i>Contract</h5>
+
+    <?php if (empty($tenancy['contract_id'])): ?>
+        <p class="text-secondary mb-0">
+            Contract not yet generated.
+            <small>(Will be created automatically when inspection passes.)</small>
+        </p>
+    <?php else: ?>
+        <div class="row g-3 align-items-center">
+            <div class="col-md-3">
+                <small class="text-secondary text-uppercase">Contract code</small>
+                <div class="fw-semibold"><code><?= e($tenancy['contract_code']) ?></code></div>
+            </div>
+            <div class="col-md-3">
+                <small class="text-secondary text-uppercase">Status</small>
+                <div>
+                    <?php if ($tenancy['contract_status'] === 'active'): ?>
+                        <span class="badge bg-success">Active</span>
+                    <?php elseif ($tenancy['contract_status'] === 'pending_signatures'): ?>
+                        <span class="badge bg-warning text-dark">Awaiting signatures</span>
+                    <?php elseif ($tenancy['contract_status'] === 'completed'): ?>
+                        <span class="badge bg-secondary">Completed</span>
+                    <?php else: ?>
+                        <span class="badge bg-danger"><?= e($tenancy['contract_status']) ?></span>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <small class="text-secondary text-uppercase">Sign progress</small>
+                <div class="fw-semibold">
+                    <?= $signed ?>/3 signatures
+                    <?php if ($signed === 3): ?> ✓<?php endif; ?>
+                </div>
+            </div>
+            <div class="col-md-3 text-md-end">
+                <?php if (!empty($tenancy['contract_pdf_path'])): ?>
+                    <a href="/rentbridge/<?= e($tenancy['contract_pdf_path']) ?>?v=<?= filemtime(__DIR__ . '/../' . $tenancy['contract_pdf_path']) ?>"
+                       target="_blank" class="btn btn-sm btn-outline-dark">
+                        <i class="bi bi-file-pdf me-1"></i> Download PDF
+                    </a>
+                <?php endif; ?>
+                <a href="/rentbridge/contracts/view.php?id=<?= (int)$tenancy['contract_id'] ?>"
+                   class="btn btn-sm btn-outline-dark">
+                    View contract <i class="bi bi-arrow-right ms-1"></i>
+                </a>
+            </div>
+        </div>
+
+        <hr>
+
+        <div class="row g-2 small">
+            <div class="col-md-4">
+                <span class="text-secondary">Student:</span>
+                <?php if (!empty($tenancy['student_signed_at'])): ?>
+                    <span class="text-success">✓ <?= e(date('d M, H:i', strtotime($tenancy['student_signed_at']))) ?></span>
+                <?php else: ?>
+                    <span class="text-secondary">— not signed</span>
+                <?php endif; ?>
+            </div>
+            <div class="col-md-4">
+                <span class="text-secondary">Landlord:</span>
+                <?php if (!empty($tenancy['landlord_signed_at'])): ?>
+                    <span class="text-success">✓ <?= e(date('d M, H:i', strtotime($tenancy['landlord_signed_at']))) ?></span>
+                <?php else: ?>
+                    <span class="text-secondary">— not signed</span>
+                <?php endif; ?>
+            </div>
+            <div class="col-md-4">
+                <span class="text-secondary">Agent:</span>
+                <?php if (!empty($tenancy['agent_signed_at'])): ?>
+                    <span class="text-success">✓ <?= e(date('d M, H:i', strtotime($tenancy['agent_signed_at']))) ?></span>
+                <?php else: ?>
+                    <span class="text-secondary">— not signed</span>
+                <?php endif; ?>
+            </div>
+        </div>
+    <?php endif; ?>
+</div>
+
+<!-- ADMIN ACTIONS -->
+<?php if (!in_array($tenancy['status'], ['completed','cancelled_by_student','cancelled_by_landlord','cancelled_by_admin'], true)): ?>
+<div class="bg-white border rounded-3 p-4 mb-4" style="border-left: 4px solid #DC3545 !important;">
+    <h5 class="mb-3"><i class="bi bi-shield-exclamation me-2"></i>Admin actions</h5>
+    <p class="text-secondary small mb-3">Cancellation by admin will release the property and notify all parties. Use sparingly.</p>
+
+    <button type="button" class="btn btn-outline-danger" data-bs-toggle="collapse" data-bs-target="#cancelForm">
+        <i class="bi bi-x-circle me-1"></i> Cancel this tenancy…
+    </button>
+
+    <div class="collapse mt-3" id="cancelForm">
+        <form method="POST">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" value="admin_cancel">
+            <label class="form-label small fw-semibold">Reason (will be sent to both parties)</label>
+            <textarea name="cancel_reason" rows="3" class="form-control mb-2" required
+                      placeholder="Explain why this tenancy is being cancelled"></textarea>
+            <button type="submit" class="btn btn-danger btn-sm"
+                    onclick="return confirm('Cancel this tenancy? This cannot be undone.');">
+                Confirm cancellation
+            </button>
+        </form>
+    </div>
+</div>
+<?php endif; ?>
+
+<?php
+$pageContent = ob_get_clean();
+require __DIR__ . '/../includes/admin_layout.php';
