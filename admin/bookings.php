@@ -203,4 +203,4 @@ ob_start();
 
 <?php
 $pageContent = ob_get_clean();
-require __DIR__ . '/../includes/admin_layout.php';
+require __DIR__ . '/../includes/admin_layout.php';  
