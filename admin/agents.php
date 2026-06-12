@@ -4,141 +4,306 @@ require_role('admin');
 
 $pdo = db();
 
-// Optional filter: ?status=pending|active|rejected|suspended
-$filter = $_GET['status'] ?? 'pending';
-$validStatuses = ['pending', 'active', 'rejected', 'suspended', 'all'];
-if (!in_array($filter, $validStatuses, true)) $filter = 'pending';
+// --- TAB STATE ---
+$tab = $_GET['tab'] ?? 'all';
+$validTabs = ['all', 'active', 'assigned', 'pending', 'rejected', 'suspended'];
+if (!in_array($tab, $validTabs, true)) $tab = 'all';
 
-$where = "u.primary_role = 'agent'";
-$params = [];
-if ($filter !== 'all') {
-    $where .= ' AND u.status = ?';
-    $params[] = $filter;
-}
+// --- FILTER STATE ---
+$searchQuery = trim($_GET['q'] ?? '');
+$filterDept  = trim($_GET['dept'] ?? '');
 
-$stmt = $pdo->prepare("
-    SELECT u.id, u.email, u.status AS user_status, u.created_at,
-           a.full_name, a.staff_id, a.department, a.phone,
-           a.availability, a.current_caseload, a.max_caseload
-      FROM users u
-      JOIN agents a ON a.user_id = u.id
-     WHERE $where
-     ORDER BY (u.status = 'pending') DESC, u.created_at DESC
-");
-$stmt->execute($params);
-$agents = $stmt->fetchAll();
-
-// Count for tabs
+// --- TAB COUNTS ---
 $counts = [];
-foreach (['pending', 'active', 'rejected', 'suspended'] as $s) {
+foreach (['active', 'pending', 'rejected', 'suspended'] as $s) {
     $stmt = $pdo->prepare("SELECT COUNT(*) FROM users WHERE primary_role = 'agent' AND status = ?");
     $stmt->execute([$s]);
     $counts[$s] = (int)$stmt->fetchColumn();
 }
-$counts['all'] = array_sum($counts);
+// "Assigned" tab: active agents who have a current inspection case
+$stmt = $pdo->query("
+    SELECT COUNT(DISTINCT u.id)
+      FROM users u
+      JOIN agents a ON a.user_id = u.id
+      JOIN bookings b ON b.agent_id = u.id
+     WHERE u.primary_role = 'agent'
+       AND u.status = 'active'
+       AND b.status IN ('agent_verifying','agent_verified','contract_pending')
+");
+$counts['assigned'] = (int)$stmt->fetchColumn();
+$counts['all'] = $counts['active'] + $counts['pending'] + $counts['rejected'] + $counts['suspended'];
 
-function user_status_badge(string $status): array {
+// --- BUILD QUERY ---
+$where  = "u.primary_role = 'agent'";
+$params = [];
+$joinAssigned = '';
+
+if ($tab === 'assigned') {
+    // Special tab: agents with active inspection cases
+    $joinAssigned = "
+        JOIN bookings b ON b.agent_id = u.id
+            AND b.status IN ('agent_verifying','agent_verified','contract_pending')
+        JOIN properties p ON p.id = b.property_id
+    ";
+    $where .= " AND u.status = 'active'";
+} elseif ($tab !== 'all') {
+    $where .= ' AND u.status = ?';
+    $params[] = $tab;
+}
+
+if ($searchQuery !== '') {
+    $where .= ' AND (a.full_name LIKE ? OR a.staff_id LIKE ? OR u.email LIKE ?)';
+    $like = '%' . $searchQuery . '%';
+    $params[] = $like;
+    $params[] = $like;
+    $params[] = $like;
+}
+if ($filterDept !== '') {
+    $where .= ' AND a.department = ?';
+    $params[] = $filterDept;
+}
+
+// For "assigned" tab, include property + booking details
+$selectCols = "u.id, u.email, u.status, u.created_at,
+               a.full_name, a.staff_id, a.department,
+               a.current_caseload, a.max_caseload, a.availability";
+
+if ($tab === 'assigned') {
+    $selectCols .= ",
+                   b.id AS booking_id,
+                   b.status AS booking_status,
+                   b.created_at AS booking_created,
+                   p.id AS property_id,
+                   p.title AS property_title,
+                   p.city AS property_city,
+                   v.deadline_at AS inspection_deadline,
+                   v.outcome AS inspection_outcome";
+    $joinAssigned .= " LEFT JOIN agent_verifications v ON v.booking_id = b.id ";
+}
+
+$stmt = $pdo->prepare("
+    SELECT $selectCols
+      FROM users u
+      JOIN agents a ON a.user_id = u.id
+      $joinAssigned
+     WHERE $where
+     ORDER BY
+       CASE u.status WHEN 'pending' THEN 0 WHEN 'active' THEN 1 ELSE 2 END,
+       a.full_name ASC
+");
+$stmt->execute($params);
+$rows = $stmt->fetchAll();
+
+// All departments (for filter dropdown)
+$deptStmt = $pdo->query("SELECT DISTINCT department FROM agents ORDER BY department");
+$departments = $deptStmt->fetchAll(PDO::FETCH_COLUMN);
+
+// --- LAYOUT SETUP ---
+$pageTitle = 'Agents';
+$activeNav = 'agents';
+
+function build_tab_url(string $tab, string $q, string $dept): string {
+    $params = ['tab' => $tab];
+    if ($q !== '')    $params['q'] = $q;
+    if ($dept !== '') $params['dept'] = $dept;
+    return '?' . http_build_query($params);
+}
+
+$pageTabs = [
+    ['label' => 'All',       'href' => build_tab_url('all',       $searchQuery, $filterDept), 'active' => $tab==='all',       'count' => $counts['all']],
+    ['label' => 'Active',    'href' => build_tab_url('active',    $searchQuery, $filterDept), 'active' => $tab==='active',    'count' => $counts['active']],
+    ['label' => 'Assigned',  'href' => build_tab_url('assigned',  $searchQuery, $filterDept), 'active' => $tab==='assigned',  'count' => $counts['assigned']],
+    ['label' => 'Pending',   'href' => build_tab_url('pending',   $searchQuery, $filterDept), 'active' => $tab==='pending',   'count' => $counts['pending']],
+    ['label' => 'Rejected',  'href' => build_tab_url('rejected',  $searchQuery, $filterDept), 'active' => $tab==='rejected',  'count' => $counts['rejected']],
+    ['label' => 'Suspended', 'href' => build_tab_url('suspended', $searchQuery, $filterDept), 'active' => $tab==='suspended', 'count' => $counts['suspended']],
+];
+
+// Filter drawer
+ob_start();
+?>
+<form method="GET" class="row g-2 align-items-end">
+    <input type="hidden" name="tab" value="<?= e($tab) ?>">
+    <div class="col-md-6">
+        <label class="form-label small fw-semibold text-secondary text-uppercase">Search</label>
+        <input type="text" name="q" value="<?= e($searchQuery) ?>"
+               class="form-control" placeholder="Name, staff ID, or email">
+    </div>
+    <div class="col-md-3">
+        <label class="form-label small fw-semibold text-secondary text-uppercase">Department</label>
+        <select name="dept" class="form-select">
+            <option value="">All departments</option>
+            <?php foreach ($departments as $d): ?>
+                <option value="<?= e($d) ?>" <?= $filterDept===$d?'selected':'' ?>><?= e($d) ?></option>
+            <?php endforeach; ?>
+        </select>
+    </div>
+    <div class="col-md-3 d-flex gap-2">
+        <button type="submit" class="btn btn-primary flex-fill">
+            <i class="bi bi-search me-1"></i> Apply
+        </button>
+        <a href="?tab=<?= e($tab) ?>" class="btn btn-outline-secondary">Clear</a>
+    </div>
+</form>
+<?php
+$filterContent = ob_get_clean();
+
+// Helpers
+function agent_status_badge(string $status): array {
     return match ($status) {
-        'pending'   => ['Pending review', 'warning'],
-        'active'    => ['Active',          'success'],
-        'rejected'  => ['Rejected',        'danger'],
-        'suspended' => ['Suspended',       'secondary'],
-        default     => [ucfirst($status),  'secondary'],
+        'active'    => ['Active',    'success'],
+        'pending'   => ['Pending',   'warning'],
+        'rejected'  => ['Rejected',  'danger'],
+        'suspended' => ['Suspended', 'secondary'],
+        default     => [$status,     'secondary'],
     };
 }
+
+function booking_status_label(string $status): array {
+    return match ($status) {
+        'agent_verifying'   => ['🔍 Inspecting',      'info'],
+        'agent_verified'    => ['✓ Verified',         'success'],
+        'contract_pending'  => ['📝 Contract signing','primary'],
+        default             => [ucfirst(str_replace('_', ' ', $status)), 'secondary'],
+    };
+}
+
+// Page content
+ob_start();
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Agent management · Admin · RentBridge</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-    <link href="../assets/css/style.css" rel="stylesheet">
-</head>
-<body>
 
-<?php include '../includes/header.php'; ?>
-
-<div class="container py-5">
-    <div class="d-flex justify-content-between align-items-end mb-4">
-        <div>
-            <h1 class="mb-1">Agent management</h1>
-            <p class="text-secondary mb-0">UTeM staff who serve as witness agents.</p>
-        </div>
-        <a href="/rentbridge/admin/dashboard.php" class="btn btn-ghost">
-            <i class="bi bi-arrow-left me-1"></i> Back to dashboard
-        </a>
+<?php if (empty($rows)): ?>
+    <div class="text-center py-5 bg-white rounded-3 border">
+        <i class="bi bi-person-badge" style="font-size: 3rem; color: rgba(15,44,82,0.15);"></i>
+        <h4 class="mt-3">No agents found</h4>
+        <p class="text-secondary small">
+            <?php if ($tab === 'assigned'): ?>
+                No agents currently have active inspection cases.
+            <?php elseif ($searchQuery || $filterDept): ?>
+                Try adjusting your filters.
+            <?php else: ?>
+                No agents in this tab yet.
+            <?php endif; ?>
+        </p>
     </div>
+<?php elseif ($tab === 'assigned'): ?>
+    <!-- ASSIGNED TAB: special view showing agent → property relation -->
+    <p class="text-secondary small mb-3">
+        <i class="bi bi-info-circle me-1"></i>
+        Showing agents currently assigned to a property inspection or contract.
+    </p>
 
-    <!-- Status filter tabs -->
-    <ul class="nav nav-pills mb-4">
-        <?php foreach (['pending', 'active', 'rejected', 'suspended', 'all'] as $s):
-            $label = ucfirst($s);
-        ?>
-            <li class="nav-item">
-                <a class="nav-link <?= $filter === $s ? 'active' : '' ?>"
-                   href="?status=<?= $s ?>">
-                    <?= $label ?>
-                    <span class="badge bg-light text-dark ms-1"><?= $counts[$s] ?></span>
-                </a>
-            </li>
-        <?php endforeach; ?>
-    </ul>
-
-    <?php if (empty($agents)): ?>
-        <div class="text-center py-5 bg-white rounded-3 border">
-            <i class="bi bi-people" style="font-size: 3rem; color: var(--rb-line);"></i>
-            <h4 class="mt-3">No agents in "<?= e($filter) ?>"</h4>
-        </div>
-    <?php else: ?>
-        <div class="bg-white border rounded-3 overflow-hidden">
-            <table class="table mb-0">
-                <thead style="background: var(--rb-cream);">
-                    <tr>
-                        <th class="ps-4">Name</th>
-                        <th>Staff ID</th>
-                        <th>Department</th>
-                        <th>Email</th>
-                        <th>Status</th>
-                        <th>Joined</th>
-                        <th class="pe-4 text-end">Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                <?php foreach ($agents as $a):
-                    [$badgeLabel, $badgeColor] = user_status_badge($a['user_status']);
+    <div class="bg-white border rounded-3 overflow-hidden">
+        <table class="table mb-0 align-middle">
+            <thead style="background:#F4F4EE;">
+                <tr>
+                    <th class="ps-3">Agent</th>
+                    <th>Department</th>
+                    <th>Property under inspection</th>
+                    <th>Status</th>
+                    <th>Deadline</th>
+                    <th class="text-end pe-3"></th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($rows as $r):
+                    [$bStatusLabel, $bStatusColor] = booking_status_label($r['booking_status']);
+                    $deadlineTs = $r['inspection_deadline'] ? strtotime($r['inspection_deadline']) : null;
+                    $overdue    = $deadlineTs && time() > $deadlineTs;
                 ?>
                     <tr>
-                        <td class="ps-4">
-                            <strong><?= e($a['full_name']) ?></strong>
-                            <?php if ((int)$a['current_caseload'] > 0): ?>
-                                <small class="text-secondary d-block">
-                                    Cases: <?= (int)$a['current_caseload'] ?>/<?= (int)$a['max_caseload'] ?>
-                                </small>
+                        <td class="ps-3">
+                            <strong><?= e($r['full_name']) ?></strong>
+                            <div class="small text-secondary">
+                                <code><?= e($r['staff_id']) ?></code>
+                            </div>
+                        </td>
+                        <td><?= e($r['department']) ?></td>
+                        <td>
+                            <a href="/rentbridge/admin/property.php?id=<?= (int)$r['property_id'] ?>"
+                               class="text-decoration-none">
+                                <strong><?= e($r['property_title']) ?></strong>
+                            </a>
+                            <div class="small text-secondary">
+                                <i class="bi bi-geo-alt"></i> <?= e($r['property_city']) ?>
+                                &nbsp;·&nbsp; Booking #<?= (int)$r['booking_id'] ?>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge bg-<?= $bStatusColor ?>"><?= e($bStatusLabel) ?></span>
+                        </td>
+                        <td>
+                            <?php if ($deadlineTs): ?>
+                                <span class="<?= $overdue ? 'text-danger fw-semibold' : 'text-secondary' ?>">
+                                    <?= e(date('d M, H:i', $deadlineTs)) ?>
+                                    <?php if ($overdue): ?>
+                                        <br><small><i class="bi bi-exclamation-triangle"></i> Overdue</small>
+                                    <?php endif; ?>
+                                </span>
+                            <?php else: ?>
+                                <span class="text-secondary small">—</span>
                             <?php endif; ?>
                         </td>
-                        <td><code><?= e($a['staff_id']) ?></code></td>
-                        <td><?= e($a['department']) ?></td>
-                        <td><small><?= e($a['email']) ?></small></td>
-                        <td><span class="badge bg-<?= $badgeColor ?>"><?= e($badgeLabel) ?></span></td>
-                        <td><small><?= e(date('d M Y', strtotime($a['created_at']))) ?></small></td>
-                        <td class="pe-4 text-end">
-                            <a href="/rentbridge/admin/agent.php?id=<?= (int)$a['id'] ?>"
+                        <td class="text-end pe-3">
+                            <a href="/rentbridge/admin/booking.php?id=<?= (int)$r['booking_id'] ?>"
+                               class="btn btn-sm btn-outline-dark">
+                                View case <i class="bi bi-arrow-right ms-1"></i>
+                            </a>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+
+<?php else: ?>
+    <!-- ALL OTHER TABS: standard agent list -->
+    <div class="bg-white border rounded-3 overflow-hidden">
+        <table class="table mb-0 align-middle">
+            <thead style="background:#F4F4EE;">
+                <tr>
+                    <th class="ps-3">Agent</th>
+                    <th>Department</th>
+                    <th>Staff ID</th>
+                    <th>Caseload</th>
+                    <th>Status</th>
+                    <th class="text-end pe-3"></th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($rows as $r):
+                    [$label, $color] = agent_status_badge($r['status']);
+                ?>
+                    <tr>
+                        <td class="ps-3">
+                            <strong><?= e($r['full_name']) ?></strong>
+                            <div class="small text-secondary"><?= e($r['email']) ?></div>
+                        </td>
+                        <td><?= e($r['department']) ?></td>
+                        <td><code><?= e($r['staff_id']) ?></code></td>
+                        <td>
+                            <?= (int)$r['current_caseload'] ?> / <?= (int)$r['max_caseload'] ?>
+                        </td>
+                        <td><span class="badge bg-<?= $color ?>"><?= e($label) ?></span></td>
+                        <td class="text-end pe-3">
+                            <a href="/rentbridge/admin/agent.php?id=<?= (int)$r['id'] ?>"
                                class="btn btn-sm btn-outline-dark">
                                 Review <i class="bi bi-arrow-right ms-1"></i>
                             </a>
                         </td>
                     </tr>
                 <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
-    <?php endif; ?>
-</div>
+            </tbody>
+        </table>
+    </div>
+<?php endif; ?>
 
-</body>
-</html>
+<p class="text-secondary small mt-3 mb-0">
+    Showing <?= count($rows) ?> <?= count($rows) === 1 ? 'agent' : 'agents' ?>
+    <?php if ($searchQuery || $filterDept): ?>
+        (filtered)
+    <?php endif; ?>
+</p>
+
+<?php
+$pageContent = ob_get_clean();
+require __DIR__ . '/../includes/admin_layout.php';

@@ -4,235 +4,203 @@ require_role('admin');
 
 $pdo = db();
 
-$filter = $_GET['status'] ?? 'all_active';
-$validStatuses = [
-    'all_active',          // shorthand: everything not terminal
-    'pending_landlord', 'pending_agent', 'agent_assigned',
-    'contract_pending', 'active',
-    'rejected_by_landlord', 'completed',
-    'cancelled_by_student', 'cancelled_by_landlord', 'cancelled_by_admin',
-    'all'
+// --- TAB STATE ---
+$tab = $_GET['tab'] ?? 'all';
+$validTabs = ['all', 'pending', 'inspecting', 'active', 'completed', 'cancelled', 'stuck'];
+if (!in_array($tab, $validTabs, true)) $tab = 'all';
+
+// --- FILTER STATE ---
+$searchQuery = trim($_GET['q'] ?? '');
+
+// Status groupings
+$statusGroups = [
+    'pending'    => ['pending_landlord', 'pending_agent'],
+    'inspecting' => ['agent_verifying', 'agent_verified', 'contract_pending'],
+    'active'     => ['active'],
+    'completed'  => ['completed'],
+    'cancelled'  => ['rejected_by_landlord', 'verification_failed',
+                     'cancelled_by_student', 'cancelled_by_landlord', 'cancelled_by_admin'],
 ];
-if (!in_array($filter, $validStatuses, true)) $filter = 'all_active';
 
-// Optional: highlight bookings needing admin attention (pending_agent + no agent assigned)
-$needsAttention = $_GET['attention'] ?? '0';
+// Tab counts
+$counts = ['all' => 0];
+foreach ($statusGroups as $key => $statuses) {
+    $ph = implode(',', array_fill(0, count($statuses), '?'));
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM bookings WHERE status IN ($ph)");
+    $stmt->execute($statuses);
+    $counts[$key] = (int)$stmt->fetchColumn();
+    $counts['all'] += $counts[$key];
+}
+// Stuck: pending_agent with no agent_id
+$counts['stuck'] = (int)$pdo->query(
+    "SELECT COUNT(*) FROM bookings WHERE status = 'pending_agent' AND agent_id IS NULL"
+)->fetchColumn();
 
-$where = '1=1';
+// --- BUILD QUERY ---
+$where  = "1 = 1";
 $params = [];
 
-if ($filter === 'all_active') {
-    $where .= " AND b.status IN ('pending_landlord','pending_agent','agent_assigned','contract_pending','active')";
-} elseif ($filter !== 'all') {
-    $where .= ' AND b.status = ?';
-    $params[] = $filter;
+if ($tab === 'stuck') {
+    $where .= " AND b.status = 'pending_agent' AND b.agent_id IS NULL";
+} elseif ($tab !== 'all' && isset($statusGroups[$tab])) {
+    $ph = implode(',', array_fill(0, count($statusGroups[$tab]), '?'));
+    $where .= " AND b.status IN ($ph)";
+    $params = array_merge($params, $statusGroups[$tab]);
 }
 
-if ($needsAttention === '1') {
-    $where .= " AND b.status = 'pending_agent' AND b.agent_id IS NULL";
+if ($searchQuery !== '') {
+    $where .= " AND (p.title LIKE ? OR s.full_name LIKE ? OR l.full_name LIKE ?)";
+    $like = '%' . $searchQuery . '%';
+    $params[] = $like;
+    $params[] = $like;
+    $params[] = $like;
 }
 
 $stmt = $pdo->prepare("
-    SELECT b.*,
-           p.title         AS property_title,
-           p.city          AS property_city,
-           s.full_name     AS student_name,
-           s.preferred_name AS student_nickname,
-           l.full_name     AS landlord_name,
-           a.full_name     AS agent_name,
-           (SELECT image_path FROM property_images
-             WHERE property_id = p.id
-             ORDER BY is_primary DESC, id ASC LIMIT 1) AS image_path
+    SELECT b.id, b.status, b.start_date, b.end_date, b.monthly_rent, b.created_at,
+           p.id AS property_id, p.title AS property_title, p.city,
+           s.full_name AS student_name,
+           l.full_name AS landlord_name,
+           a.full_name AS agent_name
       FROM bookings b
       JOIN properties p ON p.id = b.property_id
-      JOIN students   s ON s.user_id = b.student_id
-      JOIN landlords  l ON l.user_id = b.landlord_id
+      JOIN students s ON s.user_id = b.student_id
+      JOIN landlords l ON l.user_id = b.landlord_id
       LEFT JOIN agents a ON a.user_id = b.agent_id
      WHERE $where
-     ORDER BY
-       CASE WHEN b.status = 'pending_agent' AND b.agent_id IS NULL THEN 0 ELSE 1 END,
-       b.created_at DESC
+     ORDER BY b.created_at DESC
 ");
 $stmt->execute($params);
 $bookings = $stmt->fetchAll();
 
-// Count stuck bookings (needing manual agent assignment)
-$stmt = $pdo->prepare(
-    "SELECT COUNT(*) FROM bookings WHERE status = 'pending_agent' AND agent_id IS NULL"
-);
-$stmt->execute();
-$stuckCount = (int)$stmt->fetchColumn();
+// --- LAYOUT SETUP ---
+$pageTitle = 'Bookings';
+$activeNav = 'bookings';
 
-function booking_status_label(string $status): array {
-    return match ($status) {
-        'pending_landlord'      => ['Awaiting landlord',     'warning'],
-        'pending_agent'         => ['Awaiting agent',        'info'],
-        'agent_assigned'        => ['Agent confirmed',       'primary'],
-        'contract_pending'      => ['Contract pending',      'primary'],
-        'active'                => ['Active tenancy',        'success'],
-        'rejected_by_landlord'  => ['Rejected by landlord',  'danger'],
-        'completed'             => ['Completed',             'secondary'],
-        'cancelled_by_student'  => ['Cancelled by student',  'secondary'],
-        'cancelled_by_landlord' => ['Cancelled by landlord', 'secondary'],
-        'cancelled_by_admin'    => ['Cancelled by admin',    'danger'],
-        default                 => [ucfirst($status),        'secondary'],
-    };
+function build_booking_tab_url(string $tab, string $q): string {
+    $params = ['tab' => $tab];
+    if ($q !== '') $params['q'] = $q;
+    return '?' . http_build_query($params);
 }
 
-function pretty_filter_label(string $s): string {
-    return match ($s) {
-        'all_active'            => 'In progress',
-        'all'                   => 'All',
-        'pending_landlord'      => 'Awaiting landlord',
-        'pending_agent'         => 'Awaiting agent',
-        'agent_assigned'        => 'Agent confirmed',
-        'contract_pending'      => 'Contract pending',
-        'active'                => 'Active',
-        'completed'             => 'Completed',
-        'rejected_by_landlord'  => 'Rejected',
-        'cancelled_by_student'  => 'Cancelled (student)',
-        'cancelled_by_landlord' => 'Cancelled (landlord)',
-        'cancelled_by_admin'    => 'Cancelled (admin)',
-        default                 => ucfirst($s),
-    };
-}
+$pageTabs = [
+    ['label' => 'All',        'href' => build_booking_tab_url('all',        $searchQuery), 'active' => $tab==='all',        'count' => $counts['all']],
+    ['label' => 'Pending',    'href' => build_booking_tab_url('pending',    $searchQuery), 'active' => $tab==='pending',    'count' => $counts['pending']],
+    ['label' => 'Inspecting', 'href' => build_booking_tab_url('inspecting', $searchQuery), 'active' => $tab==='inspecting', 'count' => $counts['inspecting']],
+    ['label' => 'Active',     'href' => build_booking_tab_url('active',     $searchQuery), 'active' => $tab==='active',     'count' => $counts['active']],
+    ['label' => 'Completed',  'href' => build_booking_tab_url('completed',  $searchQuery), 'active' => $tab==='completed',  'count' => $counts['completed']],
+    ['label' => 'Cancelled',  'href' => build_booking_tab_url('cancelled',  $searchQuery), 'active' => $tab==='cancelled',  'count' => $counts['cancelled']],
+    ['label' => 'Stuck',      'href' => build_booking_tab_url('stuck',      $searchQuery), 'active' => $tab==='stuck',      'count' => $counts['stuck']],
+];
+
+// Filter drawer
+ob_start();
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Bookings · Admin · RentBridge</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-    <link href="../assets/css/style.css" rel="stylesheet">
-</head>
-<body>
+<form method="GET" class="row g-2 align-items-end">
+    <input type="hidden" name="tab" value="<?= e($tab) ?>">
+    <div class="col-md-9">
+        <label class="form-label small fw-semibold text-secondary text-uppercase">Search</label>
+        <input type="text" name="q" value="<?= e($searchQuery) ?>"
+               class="form-control" placeholder="Property, student or landlord name">
+    </div>
+    <div class="col-md-3 d-flex gap-2">
+        <button type="submit" class="btn btn-primary flex-fill">
+            <i class="bi bi-search me-1"></i> Apply
+        </button>
+        <a href="?tab=<?= e($tab) ?>" class="btn btn-outline-secondary">Clear</a>
+    </div>
+</form>
+<?php
+$filterContent = ob_get_clean();
 
-<?php include '../includes/header.php'; ?>
+function booking_status_label_admin(string $status): array {
+    return match ($status) {
+        'pending_landlord'      => ['Pending landlord',   'warning'],
+        'pending_agent'         => ['Pending agent',      'warning'],
+        'agent_verifying'       => ['🔍 Inspecting',      'info'],
+        'agent_verified'        => ['✓ Verified',         'success'],
+        'verification_failed'   => ['Verification failed','danger'],
+        'contract_pending'      => ['📝 Contract signing','primary'],
+        'active'                => ['Active',             'success'],
+        'completed'             => ['Completed',          'secondary'],
+        'cancelled_by_student'  => ['Cancelled (student)','secondary'],
+        'cancelled_by_landlord' => ['Cancelled (landlord)','secondary'],
+        'cancelled_by_admin'    => ['Cancelled (admin)',  'danger'],
+        'rejected_by_landlord'  => ['Rejected',           'danger'],
+        default                 => [$status,              'secondary'],
+    };
+}
 
-<div class="container py-5">
-    <div class="d-flex justify-content-between align-items-end mb-4">
-        <div>
-            <h1 class="mb-1">All bookings</h1>
-            <p class="text-secondary mb-0"><?= count($bookings) ?> booking<?= count($bookings) === 1 ? '' : 's' ?> shown</p>
-        </div>
-        <a href="/rentbridge/admin/dashboard.php" class="btn btn-ghost">
-            <i class="bi bi-arrow-left me-1"></i> Back to dashboard
-        </a>
+ob_start();
+?>
+
+<?php if (empty($bookings)): ?>
+    <div class="text-center py-5 bg-white rounded-3 border">
+        <i class="bi bi-clipboard" style="font-size: 3rem; color: rgba(15,44,82,0.15);"></i>
+        <h4 class="mt-3">No bookings found</h4>
+        <p class="text-secondary small">
+            <?= $searchQuery ? 'Try a different search.' : 'No bookings in this tab.' ?>
+        </p>
+    </div>
+<?php else: ?>
+    <div class="bg-white border rounded-3 overflow-hidden">
+        <table class="table mb-0 align-middle">
+            <thead style="background:#F4F4EE;">
+                <tr>
+                    <th class="ps-3">Booking</th>
+                    <th>Property</th>
+                    <th>Student</th>
+                    <th>Landlord</th>
+                    <th>Agent</th>
+                    <th>Status</th>
+                    <th class="text-end pe-3"></th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($bookings as $b):
+                    [$label, $color] = booking_status_label_admin($b['status']);
+                ?>
+                    <tr>
+                        <td class="ps-3">
+                            <strong>#<?= (int)$b['id'] ?></strong>
+                            <div class="small text-secondary">
+                                <?= e(date('d M Y', strtotime($b['created_at']))) ?>
+                            </div>
+                        </td>
+                        <td>
+                            <a href="/rentbridge/admin/property.php?id=<?= (int)$b['property_id'] ?>"
+                               class="text-decoration-none text-dark">
+                                <strong class="small"><?= e($b['property_title']) ?></strong>
+                            </a>
+                            <div class="small text-secondary">
+                                <i class="bi bi-geo-alt"></i> <?= e($b['city']) ?>
+                            </div>
+                        </td>
+                        <td class="small"><?= e($b['student_name']) ?></td>
+                        <td class="small"><?= e($b['landlord_name']) ?></td>
+                        <td class="small">
+                            <?= !empty($b['agent_name']) ? e($b['agent_name'])
+                                : '<span class="text-secondary">—</span>' ?>
+                        </td>
+                        <td><span class="badge bg-<?= $color ?>"><?= e($label) ?></span></td>
+                        <td class="text-end pe-3">
+                            <a href="/rentbridge/admin/booking.php?id=<?= (int)$b['id'] ?>"
+                               class="btn btn-sm btn-outline-dark">
+                                View <i class="bi bi-arrow-right ms-1"></i>
+                            </a>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
     </div>
 
-    <!-- Alert if there are stuck bookings -->
-    <?php if ($stuckCount > 0 && $needsAttention !== '1'): ?>
-        <div class="alert d-flex align-items-center gap-3 mb-4" style="background:#FFF4D6; border-color:#D4A017; color:#7C5E0A;">
-            <i class="bi bi-exclamation-triangle-fill fs-4"></i>
-            <div class="flex-grow-1">
-                <strong><?= $stuckCount ?> booking<?= $stuckCount === 1 ? '' : 's' ?> need manual agent assignment</strong>
-                <div class="small">Auto-assignment failed — likely no eligible agents are available.</div>
-            </div>
-            <a href="?attention=1" class="btn btn-sm btn-warning">
-                Show only these <i class="bi bi-arrow-right ms-1"></i>
-            </a>
-        </div>
-    <?php endif; ?>
+    <p class="text-secondary small mt-3 mb-0">
+        Showing <?= count($bookings) ?> <?= count($bookings) === 1 ? 'booking' : 'bookings' ?>
+        <?php if ($searchQuery): ?> (filtered)<?php endif; ?>
+    </p>
+<?php endif; ?>
 
-    <!-- Status filter tabs -->
-    <ul class="nav nav-pills mb-4 flex-wrap">
-        <?php foreach (['all_active', 'pending_landlord', 'pending_agent', 'active', 'completed', 'all'] as $s): ?>
-            <li class="nav-item">
-                <a class="nav-link <?= ($filter === $s && $needsAttention !== '1') ? 'active' : '' ?>"
-                   href="?status=<?= $s ?>">
-                    <?= e(pretty_filter_label($s)) ?>
-                </a>
-            </li>
-        <?php endforeach; ?>
-        <li class="nav-item">
-            <a class="nav-link text-warning <?= $needsAttention === '1' ? 'active' : '' ?>"
-               href="?attention=1">
-                <i class="bi bi-exclamation-triangle"></i> Needs attention
-                <?php if ($stuckCount > 0): ?>
-                    <span class="badge bg-warning text-dark ms-1"><?= $stuckCount ?></span>
-                <?php endif; ?>
-            </a>
-        </li>
-    </ul>
-
-    <?php if (empty($bookings)): ?>
-        <div class="text-center py-5 bg-white rounded-3 border">
-            <i class="bi bi-clipboard" style="font-size: 3rem; color: var(--rb-line);"></i>
-            <h4 class="mt-3">No bookings match this filter</h4>
-        </div>
-    <?php else: ?>
-        <div class="row g-4">
-            <?php foreach ($bookings as $b):
-                [$label, $color] = booking_status_label($b['status']);
-                $isStuck = $b['status'] === 'pending_agent' && empty($b['agent_id']);
-            ?>
-                <div class="col-12">
-                    <a href="/rentbridge/admin/booking.php?id=<?= (int)$b['id'] ?>"
-                       class="text-decoration-none text-dark d-block">
-                        <div class="bg-white border rounded-3 overflow-hidden booking-row <?= $isStuck ? 'booking-row--urgent' : '' ?>">
-                            <div class="row g-0">
-                                <div class="col-md-3" style="background:linear-gradient(135deg,#E6ECF4,#E4F2EA); min-height: 160px;">
-                                    <?php if (!empty($b['image_path'])): ?>
-                                        <img src="/rentbridge/<?= e($b['image_path']) ?>"
-                                             style="width:100%; height:100%; object-fit:cover;" alt="">
-                                    <?php endif; ?>
-                                </div>
-                                <div class="col-md-9 p-4">
-                                    <div class="d-flex justify-content-between align-items-start mb-2">
-                                        <div>
-                                            <h5 class="mb-1">
-                                                <?= e($b['property_title']) ?>
-                                                <small class="text-secondary fw-normal">· Booking #<?= (int)$b['id'] ?></small>
-                                            </h5>
-                                            <div class="text-secondary small">
-                                                <i class="bi bi-person"></i> <?= e($b['student_name']) ?>
-                                                &nbsp;·&nbsp;
-                                                <i class="bi bi-house"></i> <?= e($b['landlord_name']) ?>
-                                                <?php if (!empty($b['agent_name'])): ?>
-                                                    &nbsp;·&nbsp;
-                                                    <i class="bi bi-person-badge"></i> <?= e($b['agent_name']) ?>
-                                                <?php endif; ?>
-                                            </div>
-                                        </div>
-                                        <span class="badge bg-<?= $color ?>"><?= e($label) ?></span>
-                                    </div>
-                                    <div class="row text-center small mt-3">
-                                        <div class="col">
-                                            <div class="text-secondary text-uppercase">Move in</div>
-                                            <strong><?= e(date('d M Y', strtotime($b['start_date']))) ?></strong>
-                                        </div>
-                                        <div class="col">
-                                            <div class="text-secondary text-uppercase">Move out</div>
-                                            <strong><?= e(date('d M Y', strtotime($b['end_date']))) ?></strong>
-                                        </div>
-                                        <div class="col">
-                                            <div class="text-secondary text-uppercase">Monthly</div>
-                                            <strong class="text-emerald">RM <?= number_format((float)$b['monthly_rent']) ?></strong>
-                                        </div>
-                                        <div class="col">
-                                            <div class="text-secondary text-uppercase">Created</div>
-                                            <strong><?= e(date('d M, H:i', strtotime($b['created_at']))) ?></strong>
-                                        </div>
-                                    </div>
-                                    <?php if ($isStuck): ?>
-                                        <div class="mt-3 small text-warning fw-semibold">
-                                            <i class="bi bi-exclamation-triangle"></i>
-                                            Needs manual agent assignment — click to review
-                                        </div>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-            <?php endforeach; ?>
-        </div>
-    <?php endif; ?>
-</div>
-
-</body>
-</html>
+<?php
+$pageContent = ob_get_clean();
+require __DIR__ . '/../includes/admin_layout.php';

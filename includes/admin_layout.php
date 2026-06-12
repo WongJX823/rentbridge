@@ -1,18 +1,19 @@
 <?php
 /**
- * Admin layout wrapper.
+ * Admin layout wrapper — sticky sidebar + sticky tab bar + filter drawer.
  *
- * Usage in each admin page:
- *   $pageTitle  = 'Properties';
- *   $activeNav  = 'properties';     // sidebar item highlight
- *   $pageTabs   = [                  // optional sub-tabs
- *       ['label' => 'All',     'href' => '?tab=all',     'active' => $tab === 'all'],
- *       ['label' => 'Booked',  'href' => '?tab=booked',  'active' => $tab === 'booked'],
+ * Usage:
+ *   $pageTitle  = 'Agents';
+ *   $activeNav  = 'agents';
+ *   $pageTabs   = [
+ *       ['label' => 'All',      'href' => '?tab=all',      'active' => $tab==='all',      'count' => 12],
+ *       ['label' => 'Assigned', 'href' => '?tab=assigned', 'active' => $tab==='assigned', 'count' => 7],
+ *       ['label' => 'Pending',  'href' => '?tab=pending',  'active' => $tab==='pending',  'count' => 5],
  *   ];
+ *   $filterContent = '<input ... />';   // optional: HTML for filter drawer
+ *
  *   ob_start();
- *   ?>
- *   ... content HTML ...
- *   <?php
+ *   ?> ... your page content ...  <?php
  *   $pageContent = ob_get_clean();
  *   require __DIR__ . '/../includes/admin_layout.php';
  */
@@ -20,10 +21,11 @@
 require_once __DIR__ . '/auth.php';
 require_role('admin');
 
-$pageTitle  = $pageTitle  ?? 'Admin';
-$activeNav  = $activeNav  ?? '';
-$pageTabs   = $pageTabs   ?? [];
-$pageContent= $pageContent?? '';
+$pageTitle     = $pageTitle     ?? 'Admin';
+$activeNav     = $activeNav     ?? '';
+$pageTabs      = $pageTabs      ?? [];
+$filterContent = $filterContent ?? '';
+$pageContent   = $pageContent   ?? '';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -43,7 +45,11 @@ $pageContent= $pageContent?? '';
 
 <!-- TOP BAR -->
 <header class="admin-topbar">
-    <button type="button" class="topbar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">
+    <button type="button"
+            class="topbar-toggle"
+            id="sidebarToggle"
+            data-tooltip="Hide sidebar"
+            aria-label="Toggle sidebar">
         <i class="bi bi-list"></i>
     </button>
     <a href="/rentbridge/admin/dashboard.php" class="topbar-brand">
@@ -53,7 +59,7 @@ $pageContent= $pageContent?? '';
         <span class="topbar-tag">Admin Panel</span>
     </a>
     <div class="topbar-right">
-        <span id="topbarClock" class="topbar-clock">
+        <span class="topbar-clock">
             <i class="bi bi-clock"></i> <span id="clockText">—</span>
         </span>
     </div>
@@ -103,59 +109,98 @@ $pageContent= $pageContent?? '';
         </div>
     </aside>
 
-    <!-- MAIN CONTENT -->
+    <!-- MAIN AREA -->
     <main class="admin-main">
 
-        <!-- Page header (title + tabs) -->
-        <div class="admin-page-header">
-            <h1 class="admin-page-title"><?= e($pageTitle) ?></h1>
+        <!-- Tab bar at top of content area -->
+        <?php if (!empty($pageTabs)): ?>
+            <div class="admin-tabbar">
+                <h1 class="admin-page-title-inline"><?= e($pageTitle) ?></h1>
+                <?php foreach ($pageTabs as $tab): ?>
+                    <a href="<?= e($tab['href']) ?>"
+                       class="admin-tab <?= !empty($tab['active']) ? 'active' : '' ?>">
+                        <?= e($tab['label']) ?>
+                        <?php if (isset($tab['count'])): ?>
+                            <span class="admin-tab-count"><?= (int)$tab['count'] ?></span>
+                        <?php endif; ?>
+                    </a>
+                <?php endforeach; ?>
 
-            <?php if (!empty($pageTabs)): ?>
-                <nav class="admin-tabs">
-                    <?php foreach ($pageTabs as $tab): ?>
-                        <a href="<?= e($tab['href']) ?>"
-                           class="admin-tab <?= !empty($tab['active']) ? 'active' : '' ?>">
-                            <?= e($tab['label']) ?>
-                            <?php if (isset($tab['count'])): ?>
-                                <span class="admin-tab-count"><?= (int)$tab['count'] ?></span>
-                            <?php endif; ?>
-                        </a>
-                    <?php endforeach; ?>
-                </nav>
-            <?php endif; ?>
-        </div>
-
-        <!-- Page-specific flash message -->
-        <?php $flash = get_flash(); if ($flash): ?>
-            <div class="alert alert-<?= e($flash['type']) ?> alert-dismissible fade show">
-                <?= e($flash['message']) ?>
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                <?php if (!empty($filterContent)): ?>
+                    <button type="button" class="admin-filter-toggle" id="filterToggle">
+                        <i class="bi bi-funnel"></i>
+                        <span>Filters</span>
+                    </button>
+                <?php endif; ?>
             </div>
+
+            <?php if (!empty($filterContent)): ?>
+                <div class="admin-filter-drawer" id="filterDrawer">
+                    <?= $filterContent ?>
+                </div>
+            <?php endif; ?>
         <?php endif; ?>
 
-        <!-- Content from page -->
-        <?= $pageContent ?>
+        <!-- Page content -->
+        <div class="admin-content">
+
+            <?php if (empty($pageTabs)): ?>
+                <!-- For pages without tabs (e.g. Dashboard) -->
+                <div class="admin-page-header-noTabs">
+                    <h1 class="admin-page-title-inline"><?= e($pageTitle) ?></h1>
+                </div>
+            <?php endif; ?>
+
+            <?php $flash = get_flash(); if ($flash): ?>
+                <div class="alert alert-<?= e($flash['type']) ?> alert-dismissible fade show">
+                    <?= e($flash['message']) ?>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            <?php endif; ?>
+
+            <?= $pageContent ?>
+        </div>
 
     </main>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-// Sidebar collapse toggle
+// Sidebar collapse toggle + dynamic tooltip
 (function() {
     const toggle = document.getElementById('sidebarToggle');
-    const sidebar = document.getElementById('adminSidebar');
     const body = document.body;
+
+    function updateTooltip() {
+        if (body.classList.contains('sidebar-collapsed')) {
+            toggle.setAttribute('data-tooltip', 'Show sidebar');
+        } else {
+            toggle.setAttribute('data-tooltip', 'Hide sidebar');
+        }
+    }
 
     // Restore previous state
     if (localStorage.getItem('rb-admin-sidebar') === 'collapsed') {
         body.classList.add('sidebar-collapsed');
     }
+    updateTooltip();
 
     toggle.addEventListener('click', function() {
         body.classList.toggle('sidebar-collapsed');
         localStorage.setItem('rb-admin-sidebar',
             body.classList.contains('sidebar-collapsed') ? 'collapsed' : 'expanded');
+        updateTooltip();
+    });
+})();
+
+// Filter drawer toggle
+(function() {
+    const toggle = document.getElementById('filterToggle');
+    const drawer = document.getElementById('filterDrawer');
+    if (!toggle || !drawer) return;
+    toggle.addEventListener('click', function() {
+        drawer.classList.toggle('open');
+        toggle.classList.toggle('active');
     });
 })();
 
@@ -169,7 +214,7 @@ $pageContent= $pageContent?? '';
         el.textContent = now.toLocaleString('en-MY', opts);
     }
     tick();
-    setInterval(tick, 30000);  // update every 30 seconds
+    setInterval(tick, 30000);
 })();
 </script>
 </body>

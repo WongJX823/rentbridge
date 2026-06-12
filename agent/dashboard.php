@@ -1,141 +1,99 @@
 <?php
 require_once __DIR__ . '/../includes/auth.php';
-require_role('admin');
+require_role('agent');
 
-$pdo = db();
+$stmt = db()->prepare('SELECT * FROM agents WHERE user_id = ?');
+$stmt->execute([current_user_id()]);
+$me = $stmt->fetch();
 
-// Fetch summary counts
-$counts = [];
+$pendingStmt = db()->prepare(
+    "SELECT COUNT(*) FROM bookings WHERE agent_id = ? AND status = 'pending_agent'"
+);
+$pendingStmt->execute([current_user_id()]);
+$pendingCases = (int)$pendingStmt->fetchColumn();
 
-$stmt = $pdo->query("SELECT COUNT(*) FROM users WHERE primary_role = 'student' AND status = 'active'");
-$counts['students'] = (int)$stmt->fetchColumn();
-
-$stmt = $pdo->query("SELECT COUNT(*) FROM users WHERE primary_role = 'landlord' AND status = 'active'");
-$counts['landlords'] = (int)$stmt->fetchColumn();
-
-$stmt = $pdo->query("SELECT COUNT(*) FROM users WHERE primary_role = 'agent' AND status = 'active'");
-$counts['agents_active'] = (int)$stmt->fetchColumn();
-
-$stmt = $pdo->query("SELECT COUNT(*) FROM users WHERE primary_role = 'agent' AND status = 'pending'");
-$counts['agents_pending'] = (int)$stmt->fetchColumn();
-
-$stmt = $pdo->query("SELECT COUNT(*) FROM properties WHERE status = 'pending_approval'");
-$counts['properties_pending'] = (int)$stmt->fetchColumn();
-
-$stmt = $pdo->query("SELECT COUNT(*) FROM properties WHERE status = 'available'");
-$counts['properties_available'] = (int)$stmt->fetchColumn();
-
-$stmt = $pdo->query("SELECT COUNT(*) FROM bookings WHERE status IN ('pending_landlord','pending_agent','agent_verifying','agent_verified','contract_pending','active')");
-$counts['bookings_active'] = (int)$stmt->fetchColumn();
-
-$stmt = $pdo->query("SELECT COUNT(*) FROM bookings WHERE status = 'pending_agent' AND agent_id IS NULL");
-$counts['bookings_stuck'] = (int)$stmt->fetchColumn();
-
-// Setup admin layout
-$pageTitle = 'Dashboard';
-$activeNav = 'dashboard';
-
-ob_start();
+// Pending signature — agent signs LAST (both student AND landlord must have signed first)
+$pendingContractStmt = db()->prepare(
+    "SELECT id, contract_code
+       FROM contracts
+      WHERE agent_id = ?
+        AND status = 'pending_signatures'
+        AND agent_signed_at IS NULL
+        AND student_signed_at IS NOT NULL
+        AND landlord_signed_at IS NOT NULL
+      ORDER BY created_at DESC LIMIT 1"
+);
+$pendingContractStmt->execute([current_user_id()]);
+$pendingContract = $pendingContractStmt->fetch();
 ?>
 
-<!-- Welcome -->
-<div class="mb-4">
-    <p class="text-secondary mb-0">Welcome back. Here's what's happening across RentBridge today.</p>
-</div>
-
-<!-- Stuck bookings alert -->
-<?php if ($counts['bookings_stuck'] > 0): ?>
-    <div class="alert d-flex align-items-center gap-3 mb-4" style="background:#FFF4D6; border-color:#D4A017; color:#7C5E0A;">
-        <i class="bi bi-exclamation-triangle-fill fs-4"></i>
+<?php if ($pendingContract): ?>
+    <div class="alert d-flex align-items-center gap-3 mt-4" style="background:#FFF4D6; border-color:#D4A017; color:#7C5E0A;">
+        <i class="bi bi-pen-fill fs-4"></i>
         <div class="flex-grow-1">
-            <strong><?= $counts['bookings_stuck'] ?> booking<?= $counts['bookings_stuck'] === 1 ? '' : 's' ?> need manual agent assignment</strong>
-            <div class="small">Auto-assignment couldn't find an eligible agent.</div>
+            <strong>Contract ready for your signature</strong>
+            <div class="small">Contract code: <?= e($pendingContract['contract_code']) ?></div>
         </div>
-        <a href="/rentbridge/admin/bookings.php?attention=1" class="btn btn-sm btn-warning">
+        <a href="/rentbridge/contracts/view.php?id=<?= (int)$pendingContract['id'] ?>"
+           class="btn btn-sm btn-success">
+            Review &amp; sign <i class="bi bi-arrow-right ms-1"></i>
+        </a>
+    </div>
+<?php endif; ?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard · Agent · RentBridge</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="../assets/css/style.css" rel="stylesheet">
+</head>
+<body>
+    <?php include '../includes/header.php'; ?>
+
+    <div class="container py-5">
+        <h1>Welcome, <em><?= e($me['full_name']) ?>.</em></h1>
+        <p class="text-secondary">Agent dashboard · Staff ID <?= e($me['staff_id']) ?></p>
+
+        <p>Caseload: <?= (int)$me['current_caseload'] ?> / <?= (int)$me['max_caseload'] ?></p>
+
+        <?php if ($pendingCases > 0): ?>
+    <div class="alert d-flex align-items-center gap-3 mt-4" style="background:#FFF4D6; border-color:#D4A017; color:#7C5E0A;">
+        <i class="bi bi-bell-fill fs-4"></i>
+        <div class="flex-grow-1">
+            <strong><?= $pendingCases ?> new case<?= $pendingCases === 1 ? '' : 's' ?> waiting for your acceptance</strong>
+        </div>
+        <a href="/rentbridge/agent/cases.php" class="btn btn-sm btn-primary">
             Review now <i class="bi bi-arrow-right ms-1"></i>
         </a>
     </div>
 <?php endif; ?>
 
-<!-- Stat cards grid -->
-<div class="admin-stat-grid">
-
-    <a href="/rentbridge/admin/users.php?role=student" class="admin-stat-card">
-        <div class="admin-stat-icon">
-            <i class="bi bi-mortarboard-fill"></i>
-        </div>
-        <div class="admin-stat-value"><?= $counts['students'] ?></div>
-        <div class="admin-stat-label">Active students</div>
-        <div class="admin-stat-action">View all <i class="bi bi-arrow-right"></i></div>
-    </a>
-
-    <a href="/rentbridge/admin/users.php?role=landlord" class="admin-stat-card">
-        <div class="admin-stat-icon" style="background: #E6ECF4; color: #0F2C52;">
-            <i class="bi bi-house-heart-fill"></i>
-        </div>
-        <div class="admin-stat-value"><?= $counts['landlords'] ?></div>
-        <div class="admin-stat-label">Active landlords</div>
-        <div class="admin-stat-action">View all <i class="bi bi-arrow-right"></i></div>
-    </a>
-
-    <a href="/rentbridge/admin/agents.php?status=active" class="admin-stat-card">
-        <div class="admin-stat-icon" style="background: #FFF4D6; color: #7C5E0A;">
-            <i class="bi bi-person-badge-fill"></i>
-        </div>
-        <div class="admin-stat-value"><?= $counts['agents_active'] ?></div>
-        <div class="admin-stat-label">Active agents</div>
-        <div class="admin-stat-action">View all <i class="bi bi-arrow-right"></i></div>
-    </a>
-
-    <a href="/rentbridge/admin/agents.php?status=pending" class="admin-stat-card">
-        <div class="admin-stat-icon" style="background: #FFF4D6; color: #D4A017;">
-            <i class="bi bi-hourglass-split"></i>
-        </div>
-        <div class="admin-stat-value"><?= $counts['agents_pending'] ?></div>
-        <div class="admin-stat-label">Pending agent approvals</div>
-        <div class="admin-stat-action">Review <i class="bi bi-arrow-right"></i></div>
-    </a>
-
-    <a href="/rentbridge/admin/properties.php?status=pending_approval" class="admin-stat-card">
-        <div class="admin-stat-icon" style="background: #FFF4D6; color: #D4A017;">
-            <i class="bi bi-house-add-fill"></i>
-        </div>
-        <div class="admin-stat-value"><?= $counts['properties_pending'] ?></div>
-        <div class="admin-stat-label">Pending property listings</div>
-        <div class="admin-stat-action">Review <i class="bi bi-arrow-right"></i></div>
-    </a>
-
-    <a href="/rentbridge/admin/bookings.php" class="admin-stat-card">
-        <div class="admin-stat-icon" style="background: #E4F2EA; color: #2E8B57;">
-            <i class="bi bi-clipboard-check-fill"></i>
-        </div>
-        <div class="admin-stat-value"><?= $counts['bookings_active'] ?></div>
-        <div class="admin-stat-label">Active bookings</div>
-        <div class="admin-stat-action">View all <i class="bi bi-arrow-right"></i></div>
-    </a>
-
-</div>
-
-<!-- Quick actions placeholder (future: recent activity feed) -->
-<div class="bg-white border rounded-3 p-4">
-    <h5 class="mb-3"><i class="bi bi-lightning-charge-fill text-warning"></i> Quick actions</h5>
-    <p class="text-secondary small mb-3">Common admin tasks:</p>
-    <div class="d-flex gap-2 flex-wrap">
-        <a href="/rentbridge/admin/agents.php?status=pending" class="btn btn-sm btn-outline-dark">
-            <i class="bi bi-person-check me-1"></i> Approve agents
+<div class="row g-3 mt-2">
+    <div class="col-md-6">
+        <a href="/rentbridge/agent/cases.php" class="d-block bg-white rounded-3 border p-4 text-decoration-none text-dark h-100">
+            <i class="bi bi-clipboard-check display-6 text-emerald"></i>
+            <h5 class="mt-2 mb-1">My cases</h5>
+            <p class="text-secondary mb-0 small">
+                <?= $pendingCases ?> pending · <?= (int)$me['current_caseload'] ?>/<?= (int)$me['max_caseload'] ?> caseload.
+            </p>
         </a>
-        <a href="/rentbridge/admin/properties.php?status=pending_approval" class="btn btn-sm btn-outline-dark">
-            <i class="bi bi-house-check me-1"></i> Review properties
-        </a>
-        <a href="/rentbridge/admin/bookings.php?attention=1" class="btn btn-sm btn-outline-dark">
-            <i class="bi bi-exclamation-triangle me-1"></i> Stuck bookings
-        </a>
-        <a href="/rentbridge/admin/reports.php" class="btn btn-sm btn-outline-dark">
-            <i class="bi bi-bar-chart me-1"></i> View reports
-        </a>
+    </div>
+    <div class="col-md-6">
+        <div class="bg-white rounded-3 border p-4 h-100">
+            <i class="bi bi-toggle-on display-6 text-emerald"></i>
+            <h5 class="mt-2 mb-1">Availability</h5>
+            <p class="text-secondary mb-0 small">
+                Status: <strong class="text-emerald"><?= e(ucfirst(str_replace('_', ' ', $me['availability']))) ?></strong>
+            </p>
+        </div>
     </div>
 </div>
 
-<?php
-$pageContent = ob_get_clean();
-require __DIR__ . '/../includes/admin_layout.php';
+<a href="/rentbridge/auth/logout.php" class="btn btn-outline-dark mt-4">Sign out</a>
+
+    </div>
+</body>
+</html>
