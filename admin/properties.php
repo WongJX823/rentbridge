@@ -173,8 +173,8 @@ ob_start();
         <table class="table mb-0 align-middle">
             <thead style="background:#F4F4EE;">
                 <tr>
-                    <th class="ps-3">Property</th>
-                    <th>Landlord</th>
+<th class="ps-3">ID</th>
+        <th>Property</th>                    <th>Landlord</th>
                     <th>Rent</th>
                     <th>Status</th>
                     <th>Inspecting agent</th>
@@ -188,6 +188,9 @@ ob_start();
                 ?>
                     <tr>
                         <td class="ps-3">
+                            <code class="text-secondary">#<?= (int)$p['id'] ?></code>
+                        </td>
+                        <td>
                             <strong><?= e($p['title']) ?></strong>
                             <?php if ($verified): ?>
                                 <span class="badge bg-success ms-1" title="Agent-verified">✓</span>

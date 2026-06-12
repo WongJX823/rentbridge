@@ -310,3 +310,29 @@ function derive_first_name(string $fullName): string {
     // 3+ words: assume Chinese "Surname Given Given" → take last 2
     return $words[$count - 2] . ' ' . $words[$count - 1];
 }
+
+/**
+ * Build a wa.me URL for opening WhatsApp with a pre-filled message.
+ *
+ * @param string $whatsappNo  Malaysian phone (with or without country code)
+ * @param string $message     Message to pre-fill (will be URL-encoded)
+ * @return string             Full https://wa.me/... URL
+ */
+function whatsapp_link(string $whatsappNo, string $message = ''): string {
+    // Strip non-digit characters
+    $digits = preg_replace('/\D/', '', $whatsappNo);
+
+    // Malaysian numbers: add country code 60 if not present
+    // Common formats: "0123456789" → "60123456789"
+    //                 "60123456789" → "60123456789"
+    //                 "+60123456789" → "60123456789"
+    if (strlen($digits) > 0 && $digits[0] === '0') {
+        $digits = '60' . substr($digits, 1);
+    }
+
+    $url = 'https://wa.me/' . $digits;
+    if ($message !== '') {
+        $url .= '?text=' . rawurlencode($message);
+    }
+    return $url;
+}

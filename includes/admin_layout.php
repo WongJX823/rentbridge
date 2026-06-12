@@ -75,11 +75,16 @@ $pageContent   = $pageContent   ?? '';
                 <i class="bi bi-grid-1x2-fill"></i>
                 <span class="sidebar-label">Dashboard</span>
             </a>
-            <a href="/rentbridge/admin/users.php"
-               class="sidebar-link <?= $activeNav === 'users' ? 'active' : '' ?>">
-                <i class="bi bi-people-fill"></i>
-                <span class="sidebar-label">Users</span>
-            </a>
+            <a href="/rentbridge/admin/students.php"
+   class="sidebar-link <?= $activeNav === 'students' ? 'active' : '' ?>">
+    <i class="bi bi-mortarboard-fill"></i>
+    <span class="sidebar-label">Students</span>
+</a>
+<a href="/rentbridge/admin/landlords.php"
+   class="sidebar-link <?= $activeNav === 'landlords' ? 'active' : '' ?>">
+    <i class="bi bi-house-heart-fill"></i>
+    <span class="sidebar-label">Landlords</span>
+</a>
             <a href="/rentbridge/admin/agents.php"
                class="sidebar-link <?= $activeNav === 'agents' ? 'active' : '' ?>">
                 <i class="bi bi-person-badge-fill"></i>

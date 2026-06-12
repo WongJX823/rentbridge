@@ -196,8 +196,9 @@ ob_start();
         <table class="table mb-0 align-middle">
             <thead style="background:#F4F4EE;">
                 <tr>
-                    <th class="ps-3">Agent</th>
-                    <th>Department</th>
+<th class="ps-3">ID</th>
+        <th>Agent</th>
+                            <th>Department</th>
                     <th>Property under inspection</th>
                     <th>Status</th>
                     <th>Deadline</th>
@@ -212,6 +213,9 @@ ob_start();
                 ?>
                     <tr>
                         <td class="ps-3">
+                            <code class="text-secondary">#<?= (int)$r['id'] ?></code>
+                        </td>
+                        <td>
                             <strong><?= e($r['full_name']) ?></strong>
                             <div class="small text-secondary">
                                 <code><?= e($r['staff_id']) ?></code>
@@ -261,8 +265,8 @@ ob_start();
         <table class="table mb-0 align-middle">
             <thead style="background:#F4F4EE;">
                 <tr>
-                    <th class="ps-3">Agent</th>
-                    <th>Department</th>
+<th class="ps-3">ID</th>
+        <th>Agent</th>                    <th>Department</th>
                     <th>Staff ID</th>
                     <th>Caseload</th>
                     <th>Status</th>
@@ -275,6 +279,9 @@ ob_start();
                 ?>
                     <tr>
                         <td class="ps-3">
+                            <code class="text-secondary">#<?= (int)$r['id'] ?></code>
+                        </td>
+                        <td>
                             <strong><?= e($r['full_name']) ?></strong>
                             <div class="small text-secondary"><?= e($r['email']) ?></div>
                         </td>

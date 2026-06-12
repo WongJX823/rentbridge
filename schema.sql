@@ -501,3 +501,9 @@ INSERT INTO users (email, password_hash, primary_role, status) VALUES (
 --   SHOW TABLES;                                    (should list 18)
 --   SELECT * FROM users;                            (should show 1 admin)
 -- ============================================================================
+
+-- ADD a single boolean opt-in column instead
+ALTER TABLE landlords
+    ADD COLUMN allow_whatsapp TINYINT(1) NOT NULL DEFAULT 0 AFTER phone;
+ALTER TABLE agents
+    ADD COLUMN allow_whatsapp TINYINT(1) NOT NULL DEFAULT 0 AFTER phone;

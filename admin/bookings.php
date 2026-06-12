@@ -147,8 +147,8 @@ ob_start();
         <table class="table mb-0 align-middle">
             <thead style="background:#F4F4EE;">
                 <tr>
-                    <th class="ps-3">Booking</th>
-                    <th>Property</th>
+                            <th class="ps-3">ID</th>
+        <th>Property</th>
                     <th>Student</th>
                     <th>Landlord</th>
                     <th>Agent</th>
@@ -161,13 +161,13 @@ ob_start();
                     [$label, $color] = booking_status_label_admin($b['status']);
                 ?>
                     <tr>
-                        <td class="ps-3">
-                            <strong>#<?= (int)$b['id'] ?></strong>
-                            <div class="small text-secondary">
-                                <?= e(date('d M Y', strtotime($b['created_at']))) ?>
-                            </div>
-                        </td>
-                        <td>
+    <td class="ps-3">
+        <code class="text-secondary">#<?= (int)$b['id'] ?></code>
+        <div class="small text-secondary">
+            <?= e(date('d M Y', strtotime($b['created_at']))) ?>
+        </div>
+    </td>
+    <td>
                             <a href="/rentbridge/admin/property.php?id=<?= (int)$b['property_id'] ?>"
                                class="text-decoration-none text-dark">
                                 <strong class="small"><?= e($b['property_title']) ?></strong>
