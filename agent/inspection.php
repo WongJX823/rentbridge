@@ -383,6 +383,51 @@ $overdue    = $now > $deadlineTs;
                 </div>
             </div>
 
+            <?php
+            require_once __DIR__ . '/../includes/uploads.php';
+            $documents = get_property_documents((int)$booking['property_id']);
+            ?>
+            <?php if (!empty($documents)): ?>
+            <div class="bg-white border rounded-3 p-4 mb-4"
+                style="border-left: 4px solid #0F2C52 !important;">
+                <h5 class="mb-3">
+                    <i class="bi bi-file-earmark-lock me-2"></i>
+                    Landlord's documents to verify
+                </h5>
+                <p class="text-secondary small mb-3">
+                    Cross-check these documents against the landlord's IC during your inspection.
+                </p>
+                <div class="row g-2">
+                    <?php foreach ($documents as $d):
+                        $typeLabel = match($d['document_type']) {
+                            'ownership_proof' => 'Ownership proof',
+                            'utility_bill'    => 'Utility bill',
+                            default           => 'Other',
+                        };
+                        $icon = strpos($d['mime_type'], 'pdf') !== false ? 'bi-file-pdf' : 'bi-file-image';
+                    ?>
+                        <div class="col-md-6">
+                            <a href="/rentbridge/<?= e($d['file_path']) ?>" target="_blank"
+                            class="d-flex gap-2 align-items-center p-3 border rounded-3 text-decoration-none text-dark"
+                            style="transition: background 0.1s;"
+                            onmouseover="this.style.background='#FAF8F3'"
+                            onmouseout="this.style.background='white'">
+                                <i class="bi <?= $icon ?> fs-3 text-secondary"></i>
+                                <div class="flex-grow-1">
+                                    <strong class="small"><?= e($d['original_name']) ?></strong>
+                                    <div class="small text-secondary">
+                                        <?= e($typeLabel) ?>
+                                        · <?= number_format((float)$d['file_size'] / 1024, 0) ?> KB
+                                    </div>
+                                </div>
+                                <i class="bi bi-box-arrow-up-right text-secondary"></i>
+                            </a>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            <?php endif; ?>
+
             <!-- Inspection form -->
             <form method="POST" enctype="multipart/form-data" novalidate>
                 <?= csrf_field() ?>

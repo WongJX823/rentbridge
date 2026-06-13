@@ -53,6 +53,28 @@ $old = [
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
 
+    // Handle "delete document" action separately
+    if (($_POST['action'] ?? '') === 'delete_doc' && $isEdit) {
+        $docId = (int)($_POST['doc_id'] ?? 0);
+        if ($docId > 0) {
+            // Verify ownership: doc must belong to a property owned by this user
+            $stmt = $pdo->prepare("
+                SELECT pd.id FROM property_documents pd
+                  JOIN properties p ON p.id = pd.property_id
+                 WHERE pd.id = ? AND p.landlord_id = ?
+                 LIMIT 1
+            ");
+            $stmt->execute([$docId, $userId]);
+            if ($stmt->fetchColumn()) {
+                require_once __DIR__ . '/../includes/uploads.php';
+                delete_property_document($docId);
+                set_flash('info', 'Document removed.');
+            }
+            header('Location: /rentbridge/landlord/add_property.php?edit=' . $editId);
+            exit;
+        }
+    }
+
     foreach (array_keys($old) as $f) {
         $old[$f] = trim($_POST[$f] ?? '');
     }
@@ -153,7 +175,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // Handle photo uploads (if any)
             if (!empty($_FILES['photos']['name'][0])) {
-                $count = count($_FILES['photos']['name']);
+                $count = min(count($_FILES['photos']['name']), 10); // ← cap at 10 server-side
                 for ($i = 0; $i < $count; $i++) {
                     if ($_FILES['photos']['error'][$i] !== UPLOAD_ERR_OK) continue;
 
@@ -181,6 +203,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
 
+            // Handle document upload (single file at a time)
+            if (!empty($_FILES['document_file']['name']) && $_FILES['document_file']['error'] === UPLOAD_ERR_OK) {
+                $docType = $_POST['document_type'] ?? 'other';
+                $docNotes = trim($_POST['document_notes'] ?? '');
+
+                $result = save_property_document(
+                    $propertyId,
+                    $userId,
+                    $docType,
+                    $_FILES['document_file'],
+                    $docNotes !== '' ? $docNotes : null
+                );
+
+                if (!$result['ok']) {
+                    // Don't fail the whole transaction — just warn
+                    set_flash('warning', 'Property saved, but document upload failed: ' . $result['error']);
+                }
+            }
+            
             $pdo->commit();
             set_flash('success', $isEdit ? 'Property updated.' : 'Property submitted for review.');
             header('Location: /rentbridge/landlord/property.php?id=' . $propertyId);
@@ -383,15 +424,297 @@ ob_start();
 
         <?php if ($isEdit && !empty($images)): ?>
             <p class="text-secondary small mb-2">
+                <i class="bi bi-info-circle"></i>
                 Existing photos remain — upload more to add to the gallery.
             </p>
         <?php endif; ?>
 
-        <input type="file" name="photos[]" class="form-control"
-               accept="image/jpeg,image/png,image/webp" multiple>
-        <small class="text-secondary">
-            JPG, PNG, or WebP. Max 5MB each. Upload multiple — first one becomes the cover photo.
-        </small>
+        <!-- Hidden file input (managed by JS) -->
+        <input type="file" name="photos[]" id="photoInput"
+            accept="image/jpeg,image/png,image/webp" multiple
+            style="display:none;">
+
+        <!-- Visible drop zone / picker button -->
+        <div id="photoDropzone"
+            style="border: 2px dashed rgba(15,44,82,0.2); border-radius: 8px;
+                    padding: 24px; text-align: center; cursor: pointer;
+                    background: #FAF8F3; transition: all 0.15s;">
+            <i class="bi bi-cloud-arrow-up" style="font-size: 2rem; color: rgba(15,44,82,0.4);"></i>
+            <div class="mt-2">
+                <strong>Click to add photos</strong>
+                <span class="text-secondary"> or drag &amp; drop here</span>
+            </div>
+            <small class="text-secondary">
+                JPG, PNG, or WebP · Max 5MB each · Up to <strong>10 photos</strong> per upload
+            </small>
+        </div>
+
+        <!-- Selected files preview -->
+        <div id="photoPreview" class="row g-2 mt-3" style="display:none;"></div>
+
+        <div id="photoCounter" class="small text-secondary mt-2"></div>
+    </div>
+
+    <script>
+    (function() {
+        const MAX_FILES = 10;
+        const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+        const ALLOWED = ['image/jpeg','image/png','image/webp'];
+
+        const fileInput   = document.getElementById('photoInput');
+        const dropzone    = document.getElementById('photoDropzone');
+        const previewArea = document.getElementById('photoPreview');
+        const counter     = document.getElementById('photoCounter');
+
+        // Maintained file list (persists across multiple "add files" clicks)
+        let collectedFiles = [];
+
+        function updateInputFiles() {
+            // Use DataTransfer to write the file list back to the input
+            // (so it gets submitted with the form)
+            const dt = new DataTransfer();
+            collectedFiles.forEach(f => dt.items.add(f));
+            fileInput.files = dt.files;
+        }
+
+        function updateCounter() {
+            if (collectedFiles.length === 0) {
+                counter.textContent = '';
+                previewArea.style.display = 'none';
+                return;
+            }
+            counter.innerHTML = `<strong>${collectedFiles.length}</strong> photo${collectedFiles.length === 1 ? '' : 's'} selected`
+                + ` · Total: ${formatBytes(collectedFiles.reduce((sum, f) => sum + f.size, 0))}`;
+            previewArea.style.display = 'flex';
+        }
+
+        function formatBytes(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+        }
+
+        function renderPreviews() {
+            previewArea.innerHTML = '';
+            collectedFiles.forEach((file, idx) => {
+                const col = document.createElement('div');
+                col.className = 'col-md-3 col-6';
+
+                const card = document.createElement('div');
+                card.style.cssText = `
+                    position: relative; border: 1px solid rgba(15,44,82,0.1);
+                    border-radius: 8px; overflow: hidden; aspect-ratio: 4/3;
+                    background: #F4F4EE;
+                `;
+
+                const img = document.createElement('img');
+                img.style.cssText = 'width:100%; height:100%; object-fit:cover;';
+                img.src = URL.createObjectURL(file);
+                img.onload = () => URL.revokeObjectURL(img.src);
+                card.appendChild(img);
+
+                // Cover badge for first
+                if (idx === 0) {
+                    const badge = document.createElement('span');
+                    badge.className = 'badge bg-success';
+                    badge.style.cssText = 'position:absolute; top:6px; left:6px;';
+                    badge.textContent = 'Cover';
+                    card.appendChild(badge);
+                }
+
+                // Remove button
+                const removeBtn = document.createElement('button');
+                removeBtn.type = 'button';
+                removeBtn.innerHTML = '×';
+                removeBtn.style.cssText = `
+                    position:absolute; top:6px; right:6px;
+                    width:24px; height:24px; border-radius:50%;
+                    background:rgba(0,0,0,0.6); color:white; border:none;
+                    font-size:14px; line-height:1; cursor:pointer;
+                `;
+                removeBtn.title = 'Remove';
+                removeBtn.onclick = () => {
+                    collectedFiles.splice(idx, 1);
+                    updateInputFiles();
+                    renderPreviews();
+                    updateCounter();
+                };
+                card.appendChild(removeBtn);
+
+                // Filename label
+                const label = document.createElement('div');
+                label.style.cssText = `
+                    position:absolute; bottom:0; left:0; right:0;
+                    background:rgba(0,0,0,0.5); color:white;
+                    font-size:0.7rem; padding:3px 6px;
+                    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+                `;
+                label.textContent = file.name;
+                card.appendChild(label);
+
+                col.appendChild(card);
+                previewArea.appendChild(col);
+            });
+        }
+
+        function addFiles(newFileList) {
+            const newFiles = Array.from(newFileList);
+            const rejected = [];
+
+            for (const file of newFiles) {
+                // Validate type
+                if (!ALLOWED.includes(file.type)) {
+                    rejected.push(`${file.name} (wrong type)`);
+                    continue;
+                }
+                // Validate size
+                if (file.size > MAX_SIZE) {
+                    rejected.push(`${file.name} (too large)`);
+                    continue;
+                }
+                // Validate max count
+                if (collectedFiles.length >= MAX_FILES) {
+                    rejected.push(`${file.name} (max ${MAX_FILES} reached)`);
+                    continue;
+                }
+                // Deduplicate by name+size
+                const isDuplicate = collectedFiles.some(
+                    f => f.name === file.name && f.size === file.size
+                );
+                if (isDuplicate) {
+                    rejected.push(`${file.name} (already added)`);
+                    continue;
+                }
+                collectedFiles.push(file);
+            }
+
+            if (rejected.length > 0) {
+                alert('Some files were not added:\n\n' + rejected.join('\n'));
+            }
+
+            updateInputFiles();
+            renderPreviews();
+            updateCounter();
+        }
+
+        // Click anywhere on dropzone → open file picker
+        dropzone.addEventListener('click', () => fileInput.click());
+
+        // File selected via picker
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                addFiles(e.target.files);
+            }
+        });
+
+        // Drag & drop
+        dropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropzone.style.background = '#E4F2EA';
+            dropzone.style.borderColor = '#2E8B57';
+        });
+        dropzone.addEventListener('dragleave', () => {
+            dropzone.style.background = '#FAF8F3';
+            dropzone.style.borderColor = 'rgba(15,44,82,0.2)';
+        });
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.style.background = '#FAF8F3';
+            dropzone.style.borderColor = 'rgba(15,44,82,0.2)';
+            if (e.dataTransfer.files.length > 0) {
+                addFiles(e.dataTransfer.files);
+            }
+        });
+    })();
+    </script>
+
+    <!-- DOCUMENTS -->
+<div class="bg-white border rounded-3 p-4 mb-3">
+    <h6 class="text-secondary text-uppercase small mb-3">
+        Ownership documents
+        <span class="badge bg-secondary ms-1">Private</span>
+    </h6>
+
+    <div class="alert alert-light border d-flex gap-2 small mb-3">
+        <i class="bi bi-shield-lock text-secondary"></i>
+        <div>
+            <strong>Only you, admin, and your assigned agent can see these.</strong>
+            Students never see your documents. Used to verify you're the legitimate owner.
+        </div>
+    </div>
+
+    <?php
+    // Show existing documents if edit mode
+    $existingDocs = $isEdit ? get_property_documents($editId) : [];
+    if (!empty($existingDocs)):
+    ?>
+        <div class="mb-3">
+            <div class="small text-secondary text-uppercase mb-2">Uploaded</div>
+            <?php foreach ($existingDocs as $d):
+                $typeLabel = match($d['document_type']) {
+                    'ownership_proof' => 'Ownership proof',
+                    'utility_bill'    => 'Utility bill',
+                    default           => 'Other',
+                };
+                $icon = strpos($d['mime_type'], 'pdf') !== false ? 'bi-file-pdf' : 'bi-file-image';
+            ?>
+                <div class="d-flex gap-2 align-items-center p-2 border rounded-3 mb-2">
+                    <i class="bi <?= $icon ?> fs-4 text-secondary"></i>
+                    <div class="flex-grow-1">
+                        <a href="/rentbridge/<?= e($d['file_path']) ?>" target="_blank"
+                           class="text-decoration-none text-dark">
+                            <strong class="small"><?= e($d['original_name']) ?></strong>
+                        </a>
+                        <div class="small text-secondary">
+                            <?= e($typeLabel) ?>
+                            · <?= number_format((float)$d['file_size'] / 1024, 0) ?> KB
+                            · <?= e(date('d M Y', strtotime($d['uploaded_at']))) ?>
+                        </div>
+                    </div>
+                    <form method="POST" class="m-0">
+                        <?= csrf_field() ?>
+                        <input type="hidden" name="action" value="delete_doc">
+                        <input type="hidden" name="doc_id" value="<?= (int)$d['id'] ?>">
+                        <button type="submit" class="btn btn-sm btn-outline-danger"
+                                onclick="return confirm('Delete this document?');"
+                                title="Delete">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </form>
+                </div>
+            <?php endforeach; ?>
+        </div>
+    <?php endif; ?>
+
+    <!-- Upload form for new doc -->
+        <div class="row g-2 align-items-end">
+            <div class="col-md-5">
+                <label class="form-label small fw-semibold">Document type</label>
+                <select name="document_type" class="form-select">
+                    <option value="ownership_proof">Ownership proof (geran, SPA)</option>
+                    <option value="utility_bill">Utility bill (proof of address)</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+            <div class="col-md-5">
+                <label class="form-label small fw-semibold">File</label>
+                <input type="file" name="document_file" class="form-control"
+                    accept="application/pdf,image/jpeg,image/png,image/webp">
+                <small class="text-secondary">PDF, JPG, PNG · max 5MB</small>
+            </div>
+            <div class="col-md-2">
+                <small class="text-secondary d-block mb-2">&nbsp;</small>
+                <small class="text-secondary">
+                    Upload happens<br>with form submit
+                </small>
+            </div>
+        </div>
+
+        <div class="mt-2">
+            <label class="form-label small fw-semibold">Notes (optional)</label>
+            <input type="text" name="document_notes" class="form-control"
+                maxlength="200" placeholder="e.g. Geran issued 2018, lot 234">
+        </div>
     </div>
 
     <!-- ACTIONS -->

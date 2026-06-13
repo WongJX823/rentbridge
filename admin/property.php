@@ -277,6 +277,55 @@ ob_start();
 </div>
 <?php endif; ?>
 
+<!-- DOCUMENTS -->
+<?php
+require_once __DIR__ . '/../includes/uploads.php';
+$documents = get_property_documents($propertyId);
+?>
+<?php if (!empty($documents)): ?>
+<div class="bg-white border rounded-3 p-4 mb-4">
+    <h5 class="mb-3">
+        <i class="bi bi-file-earmark-lock me-2"></i>
+        Ownership documents
+        <span class="badge bg-secondary ms-1 fs-6">Private</span>
+    </h5>
+    <p class="text-secondary small mb-3">
+        Only visible to you, admin, and your assigned agent.
+    </p>
+    <div class="row g-2">
+        <?php foreach ($documents as $d):
+            $typeLabel = match($d['document_type']) {
+                'ownership_proof' => 'Ownership proof',
+                'utility_bill'    => 'Utility bill',
+                default           => 'Other',
+            };
+            $icon = strpos($d['mime_type'], 'pdf') !== false ? 'bi-file-pdf' : 'bi-file-image';
+        ?>
+            <div class="col-md-6">
+                <a href="/rentbridge/<?= e($d['file_path']) ?>" target="_blank"
+                   class="d-flex gap-2 align-items-center p-3 border rounded-3 text-decoration-none text-dark"
+                   style="transition: background 0.1s;"
+                   onmouseover="this.style.background='#FAF8F3'"
+                   onmouseout="this.style.background='white'">
+                    <i class="bi <?= $icon ?> fs-3 text-secondary"></i>
+                    <div class="flex-grow-1">
+                        <strong class="small"><?= e($d['original_name']) ?></strong>
+                        <div class="small text-secondary">
+                            <?= e($typeLabel) ?>
+                            · <?= number_format((float)$d['file_size'] / 1024, 0) ?> KB
+                        </div>
+                        <?php if (!empty($d['notes'])): ?>
+                            <div class="small text-secondary fst-italic">"<?= e($d['notes']) ?>"</div>
+                        <?php endif; ?>
+                    </div>
+                    <i class="bi bi-box-arrow-up-right text-secondary"></i>
+                </a>
+            </div>
+        <?php endforeach; ?>
+    </div>
+</div>
+<?php endif; ?>
+
 <!-- PROPERTY DETAILS + LANDLORD (side-by-side) -->
 <div class="row g-3 mb-4">
     <div class="col-md-7">
