@@ -1,52 +1,50 @@
 <?php
 /**
- * Student layout wrapper — sticky sidebar + sticky tab bar.
+ * Landlord layout wrapper — sticky sidebar + sticky tab bar.
  *
- * Usage in student pages:
- *   $pageTitle  = 'Browse properties';
- *   $activeNav  = 'browse';
+ * Usage:
+ *   $pageTitle  = 'Dashboard';
+ *   $activeNav  = 'dashboard';
  *   ob_start();
  *   ?> ... content ... <?php
  *   $pageContent = ob_get_clean();
- *   require __DIR__ . '/../includes/student_layout.php';
+ *   require __DIR__ . '/../includes/landlord_layout.php';
  */
 
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/chat.php';
+require_role('landlord');
 
-require_role('student');
-$currentRole = 'student';
-
-$pageTitle     = $pageTitle     ?? 'Student';
+$pageTitle     = $pageTitle     ?? 'Landlord';
 $activeNav     = $activeNav     ?? '';
 $pageTabs      = $pageTabs      ?? [];
 $filterContent = $filterContent ?? '';
 $pageContent   = $pageContent   ?? '';
 
-// Current user info for sidebar
 $userId = current_user_id();
 $pdo = db();
-$stmt = $pdo->prepare("SELECT preferred_name, full_name FROM students WHERE user_id = ?");
+$stmt = $pdo->prepare("SELECT preferred_name, full_name FROM landlords WHERE user_id = ?");
 $stmt->execute([$userId]);
 $me = $stmt->fetch() ?: [];
-$myName = ($me['preferred_name'] ?? '') ?: ($me['full_name'] ?? 'User');
+$myName = ($me['preferred_name'] ?? '') ?: ($me['full_name'] ?? 'Landlord');
 
-// Unread chat count
 $unreadChat = chat_unread_total($userId);
-
-// Unread notifications
 $stmt = $pdo->prepare("SELECT COUNT(*) FROM notifications WHERE user_id = ? AND is_read = 0");
 $stmt->execute([$userId]);
 $unreadNotif = (int)$stmt->fetchColumn();
-
 $totalUnread = $unreadChat + $unreadNotif;
+
+// Pending tenancy requests count (for sidebar badge)
+$stmt = $pdo->prepare("SELECT COUNT(*) FROM bookings WHERE landlord_id = ? AND status = 'pending_landlord'");
+$stmt->execute([$userId]);
+$pendingRequests = (int)$stmt->fetchColumn();
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= e($pageTitle) ?> · RentBridge</title>
+    <title><?= e($pageTitle) ?> · Landlord · RentBridge</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -55,18 +53,19 @@ $totalUnread = $unreadChat + $unreadNotif;
     <link href="/rentbridge/assets/css/style.css" rel="stylesheet">
     <link href="/rentbridge/assets/css/student.css" rel="stylesheet">
 </head>
-<body class="student-body">
+<body class="landlord-body">
 
-<!-- TOP BAR -->
 <header class="user-topbar">
-    <button type="button"
-            class="topbar-toggle"
-            id="sidebarToggle"
-            data-tooltip="Hide sidebar"
-            aria-label="Toggle sidebar">
+    <button type="button" class="topbar-toggle" id="sidebarToggle"
+            data-tooltip="Hide sidebar" aria-label="Toggle sidebar">
         <i class="bi bi-list"></i>
     </button>
-    <a href="/rentbridge/student/dashboard.php" class="topbar-brand">        <span class="topbar-name">RentBridge</span>
+    <a href="/rentbridge/landlord/dashboard.php" class="topbar-brand">
+        <span class="topbar-logo">R</span>
+        <span class="topbar-name">RentBridge</span>
+        <span style="opacity:0.5; margin: 0 4px;">·</span>
+        <span style="font-family:'Manrope',sans-serif; font-size:0.85rem; font-weight:500;
+                     letter-spacing:0.5px; text-transform:uppercase; opacity:0.7;">Landlord</span>
     </a>
     <div class="topbar-right">
         <span class="topbar-greeting d-none d-md-inline">
@@ -77,46 +76,48 @@ $totalUnread = $unreadChat + $unreadNotif;
 
 <div class="user-shell">
 
-    <!-- SIDEBAR -->
     <aside class="user-sidebar" id="userSidebar">
         <nav class="sidebar-nav">
-            <a href="/rentbridge/student/dashboard.php"
-            class="sidebar-link <?= $activeNav === 'dashboard' ? 'active' : '' ?>">
+            <a href="/rentbridge/landlord/dashboard.php"
+               class="sidebar-link <?= $activeNav === 'dashboard' ? 'active' : '' ?>">
                 <i class="bi bi-house-door-fill"></i>
                 <span class="sidebar-label">Browse</span>
             </a>
-            <a href="/rentbridge/student/saved.php"
-            class="sidebar-link <?= $activeNav === 'saved' ? 'active' : '' ?>">
+            <a href="/rentbridge/landlord/saved.php"
+               class="sidebar-link <?= $activeNav === 'saved' ? 'active' : '' ?>">
                 <i class="bi bi-bookmark-heart-fill"></i>
                 <span class="sidebar-label">Saved</span>
             </a>
-            <a href="/rentbridge/student/partners.php"
-            class="sidebar-link <?= $activeNav === 'partners' ? 'active' : '' ?>">
-                <i class="bi bi-people-fill"></i>
-                <span class="sidebar-label">Find Partners</span>
+            <a href="/rentbridge/landlord/properties.php"
+               class="sidebar-link <?= $activeNav === 'properties' ? 'active' : '' ?>">
+                <i class="bi bi-buildings-fill"></i>
+                <span class="sidebar-label">Property Register</span>
+                <?php if ($pendingRequests > 0): ?>
+                    <span class="sidebar-badge"><?= $pendingRequests ?></span>
+                <?php endif; ?>
             </a>
             <a href="/rentbridge/chat.php"
-            class="sidebar-link <?= $activeNav === 'chat' ? 'active' : '' ?>">
+               class="sidebar-link <?= $activeNav === 'chat' ? 'active' : '' ?>">
                 <i class="bi bi-chat-dots-fill"></i>
                 <span class="sidebar-label">Chat &amp; Notif</span>
                 <?php if ($totalUnread > 0): ?>
                     <span class="sidebar-badge"><?= $totalUnread > 9 ? '9+' : $totalUnread ?></span>
                 <?php endif; ?>
             </a>
-            <a href="/rentbridge/student/profile.php"
-            class="sidebar-link <?= $activeNav === 'profile_dashboard' ? 'active' : '' ?>">
+            <a href="/rentbridge/landlord/profile.php"
+               class="sidebar-link <?= $activeNav === 'profile_dashboard' ? 'active' : '' ?>">
                 <i class="bi bi-person-circle"></i>
                 <span class="sidebar-label">Profile Dashboard</span>
             </a>
             <a href="/rentbridge/about.php"
-            class="sidebar-link <?= $activeNav === 'about' ? 'active' : '' ?>">
+               class="sidebar-link <?= $activeNav === 'about' ? 'active' : '' ?>">
                 <i class="bi bi-info-circle-fill"></i>
                 <span class="sidebar-label">About RentBridge</span>
             </a>
-        </nav>        
+        </nav>
         <div class="sidebar-footer">
-            <a href="/rentbridge/student/profile.php"
-               class="sidebar-link <?= $activeNav === 'profile' ? 'active' : '' ?>">
+            <a href="/rentbridge/landlord/settings.php"
+               class="sidebar-link <?= $activeNav === 'settings' ? 'active' : '' ?>">
                 <i class="bi bi-gear-fill"></i>
                 <span class="sidebar-label">Settings</span>
             </a>
@@ -127,7 +128,6 @@ $totalUnread = $unreadChat + $unreadNotif;
         </div>
     </aside>
 
-    <!-- MAIN AREA -->
     <main class="user-main">
 
         <?php if (!empty($pageTabs)): ?>
@@ -142,7 +142,6 @@ $totalUnread = $unreadChat + $unreadNotif;
                         <?php endif; ?>
                     </a>
                 <?php endforeach; ?>
-
                 <?php if (!empty($filterContent)): ?>
                     <button type="button" class="user-filter-toggle" id="filterToggle">
                         <i class="bi bi-search"></i>
@@ -150,7 +149,6 @@ $totalUnread = $unreadChat + $unreadNotif;
                     </button>
                 <?php endif; ?>
             </div>
-
             <?php if (!empty($filterContent)): ?>
                 <div class="user-filter-drawer" id="filterDrawer">
                     <?= $filterContent ?>
@@ -183,17 +181,14 @@ $totalUnread = $unreadChat + $unreadNotif;
 (function() {
     const toggle = document.getElementById('sidebarToggle');
     const body = document.body;
-
     function updateTooltip() {
         toggle.setAttribute('data-tooltip',
             body.classList.contains('sidebar-collapsed') ? 'Show sidebar' : 'Hide sidebar');
     }
-
     if (localStorage.getItem('rb-user-sidebar') === 'collapsed') {
         body.classList.add('sidebar-collapsed');
     }
     updateTooltip();
-
     toggle.addEventListener('click', function() {
         body.classList.toggle('sidebar-collapsed');
         localStorage.setItem('rb-user-sidebar',
@@ -201,7 +196,6 @@ $totalUnread = $unreadChat + $unreadNotif;
         updateTooltip();
     });
 })();
-
 (function() {
     const toggle = document.getElementById('filterToggle');
     const drawer = document.getElementById('filterDrawer');

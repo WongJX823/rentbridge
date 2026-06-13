@@ -14,19 +14,23 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
+// Manual CSRF check (uses _csrf field, matches your csrf_field() helper)
+if (!hash_equals($_SESSION['csrf'] ?? '', $_POST['_csrf'] ?? '')) {
+    echo json_encode(['ok' => false, 'error' => 'CSRF token mismatch. Please refresh.']);
+    exit;
+}
+
 try {
-    verify_csrf();
     $conversationId = (int)($_POST['conversation_id'] ?? 0);
     $body = $_POST['body'] ?? '';
 
-    if (!chat_can_view($conversationId, current_user_id())) {
-        echo json_encode(['ok' => false, 'error' => 'Forbidden']);
+    [$ok, $err, $messageId] = send_message($conversationId, current_user_id(), $body);
+
+    if (!$ok) {
+        echo json_encode(['ok' => false, 'error' => $err]);
         exit;
     }
 
-    $messageId = chat_send_message($conversationId, current_user_id(), $body);
-
-    // Fetch the inserted message to return
     $pdo = db();
     $stmt = $pdo->prepare("SELECT id, sender_id, body, sent_at FROM messages WHERE id = ?");
     $stmt->execute([$messageId]);

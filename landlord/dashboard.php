@@ -5,159 +5,274 @@ require_role('landlord');
 $pdo = db();
 $userId = current_user_id();
 
-// Load current data
-$stmt = $pdo->prepare("
-    SELECT u.email, l.full_name, l.preferred_name, l.phone, l.allow_whatsapp, l.address
-      FROM users u
-      JOIN landlords l ON l.user_id = u.id
-     WHERE u.id = ?
-");
+// Landlord profile
+$stmt = $pdo->prepare("SELECT full_name, preferred_name FROM landlords WHERE user_id = ?");
 $stmt->execute([$userId]);
 $me = $stmt->fetch();
 
-if (!$me) {
-    die('Profile not found.');
+// Counts
+$counts = [];
+
+$stmt = $pdo->prepare("SELECT COUNT(*) FROM properties WHERE landlord_id = ?");
+$stmt->execute([$userId]);
+$counts['total_properties'] = (int)$stmt->fetchColumn();
+
+$stmt = $pdo->prepare("SELECT COUNT(*) FROM properties WHERE landlord_id = ? AND status = 'available'");
+$stmt->execute([$userId]);
+$counts['available'] = (int)$stmt->fetchColumn();
+
+$stmt = $pdo->prepare("SELECT COUNT(*) FROM properties WHERE landlord_id = ? AND status = 'pending_approval'");
+$stmt->execute([$userId]);
+$counts['pending_approval'] = (int)$stmt->fetchColumn();
+
+$stmt = $pdo->prepare("SELECT COUNT(*) FROM properties WHERE landlord_id = ? AND status = 'rented'");
+$stmt->execute([$userId]);
+$counts['rented'] = (int)$stmt->fetchColumn();
+
+$stmt = $pdo->prepare("SELECT COUNT(*) FROM bookings WHERE landlord_id = ? AND status = 'pending_landlord'");
+$stmt->execute([$userId]);
+$counts['pending_tenancies'] = (int)$stmt->fetchColumn();
+
+$stmt = $pdo->prepare("SELECT COUNT(*) FROM bookings WHERE landlord_id = ? AND status = 'active'");
+$stmt->execute([$userId]);
+$counts['active_tenancies'] = (int)$stmt->fetchColumn();
+
+// Pending tenancies that need attention
+$stmt = $pdo->prepare("
+    SELECT b.id, b.created_at, b.monthly_rent,
+           p.title AS property_title,
+           s.full_name AS student_name,
+           s.matric_no
+      FROM bookings b
+      JOIN properties p ON p.id = b.property_id
+      JOIN students s ON s.user_id = b.student_id
+     WHERE b.landlord_id = ?
+       AND b.status = 'pending_landlord'
+     ORDER BY b.created_at ASC
+     LIMIT 5
+");
+$stmt->execute([$userId]);
+$pendingTenancies = $stmt->fetchAll();
+
+// Recent properties (top 4)
+$stmt = $pdo->prepare("
+    SELECT p.id, p.title, p.city, p.monthly_rent, p.status,
+           (SELECT image_path FROM property_images
+             WHERE property_id = p.id ORDER BY is_primary DESC, id LIMIT 1) AS image_path
+      FROM properties p
+     WHERE p.landlord_id = ?
+     ORDER BY p.created_at DESC
+     LIMIT 4
+");
+$stmt->execute([$userId]);
+$recentProperties = $stmt->fetchAll();
+
+$pageTitle = 'Dashboard';
+$activeNav = 'dashboard';
+
+function landlord_prop_status_badge(string $status): array {
+    return match ($status) {
+        'pending_approval' => ['Pending review', 'warning'],
+        'available'        => ['Available',      'success'],
+        'booked'           => ['Booked',         'info'],
+        'rented'           => ['Rented',         'primary'],
+        'hidden'           => ['Hidden',         'secondary'],
+        'rejected'         => ['Rejected',       'danger'],
+        default            => [$status,          'secondary'],
+    };
 }
 
-$errors = [];
-$old = [
-    'preferred_name' => $me['preferred_name'],
-    'phone'          => $me['phone'],
-    'allow_whatsapp' => (int)($me['allow_whatsapp'] ?? 0),   // ← NEW
-    'address'        => $me['address'] ?? '',
-];
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    verify_csrf();
-    $old['preferred_name'] = trim($_POST['preferred_name'] ?? '');
-    $old['phone']          = trim($_POST['phone'] ?? '');
-    $old['allow_whatsapp'] = isset($_POST['allow_whatsapp']) ? 1 : 0;
-    $old['address']        = trim($_POST['address'] ?? '');
-
-    if ($old['phone'] === '') {
-        $errors['phone'] = 'Phone is required.';
-    }
-
-    if (empty($errors)) {
-        $stmt = $pdo->prepare("
-            UPDATE landlords
-            SET preferred_name = ?,
-                phone = ?,
-                allow_whatsapp = ?,
-                address = ?
-            WHERE user_id = ?
-        ");
-        $stmt->execute([
-            $old['preferred_name'],
-            $old['phone'],
-            $old['allow_whatsapp'],
-            $old['address'] !== '' ? $old['address'] : null,
-            $userId
-        ]);
-
-        set_flash('success', 'Profile updated.');
-        header('Location: profile.php');
-        exit;
-    }
-}
+ob_start();
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>My Profile · Landlord · RentBridge</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-    <link href="../assets/css/style.css" rel="stylesheet">
-</head>
-<body style="background: var(--rb-cream);">
 
-<?php include '../includes/header.php'; ?>
+<!-- WELCOME -->
+<div class="mb-4">
+    <h4 class="mb-1" style="font-family: 'Fraunces', serif;">
+        Welcome back, <?= e($me['preferred_name'] ?: $me['full_name']) ?>.
+    </h4>
+    <p class="text-secondary mb-0">
+        You have <?= $counts['total_properties'] ?>
+        propert<?= $counts['total_properties'] === 1 ? 'y' : 'ies' ?> listed.
+    </p>
+</div>
 
-<div class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-lg-7">
-
-            <h1 class="mb-1">My profile</h1>
-            <p class="text-secondary mb-4">Manage how students and agents contact you.</p>
-
-            <?php $flash = get_flash(); if ($flash): ?>
-                <div class="alert alert-<?= e($flash['type']) ?>"><?= e($flash['message']) ?></div>
-            <?php endif; ?>
-
-            <form method="POST" class="bg-white border rounded-3 p-4">
-                <?= csrf_field() ?>
-
-                <h6 class="text-secondary text-uppercase small mb-3">Account</h6>
-                <div class="mb-3">
-                    <label class="form-label">Full name</label>
-                    <input type="text" class="form-control" value="<?= e($me['full_name']) ?>" disabled>
-                    <small class="text-secondary">Cannot be changed. Contact admin if needed.</small>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Email</label>
-                    <input type="email" class="form-control" value="<?= e($me['email']) ?>" disabled>
-                </div>
-                <div class="mb-4">
-                    <label class="form-label">Nickname</label>
-                    <input type="text" name="preferred_name" class="form-control"
-                           value="<?= e($old['preferred_name']) ?>"
-                           placeholder="What people call you">
-                </div>
-
-                <h6 class="text-secondary text-uppercase small mb-3">Contact</h6>
-                <div class="mb-3">
-                    <label class="form-label">Phone number <small class="text-danger">*</small></label>
-                    <input type="text" name="phone"
-                           class="form-control <?= isset($errors['phone'])?'is-invalid':'' ?>"
-                           value="<?= e($old['phone']) ?>"
-                           placeholder="012-3456789" required>
-                    <?php if (isset($errors['phone'])): ?>
-                        <div class="invalid-feedback"><?= e($errors['phone']) ?></div>
-                    <?php endif; ?>
-                    <small class="text-secondary">Used by admin and agents to contact you. Not shown publicly unless you add WhatsApp below.</small>
-                </div>
-
-                <div class="mb-4">
-    <div class="form-check border rounded-3 p-3"
-         style="background:#F4F4EE; border-color: rgba(15,44,82,0.1) !important;">
-        <input class="form-check-input" type="checkbox"
-               name="allow_whatsapp" id="allow_whatsapp" value="1"
-               <?= $old['allow_whatsapp'] ? 'checked' : '' ?>>
-        <label class="form-check-label fw-semibold" for="allow_whatsapp">
-            <i class="bi bi-whatsapp text-success me-1"></i>
-            Allow contact via WhatsApp
-        </label>
-        <div class="small text-secondary mt-2">
-            If enabled, your phone number (<strong><?= e($old['phone']) ?></strong>) will be visible
-            to students viewing your property, and a green WhatsApp button will appear next to it.
-            <br><br>
-            If disabled, students must use RentBridge's internal chat — your phone stays private.
+<!-- STAT CARDS -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4 col-lg-3">
+        <div class="bg-white border rounded-3 p-3">
+            <div style="width:40px; height:40px; background:#E4F2EA; color:#2E8B57;
+                        border-radius:10px; display:flex; align-items:center; justify-content:center;">
+                <i class="bi bi-house-check"></i>
+            </div>
+            <div style="font-family:'Fraunces',serif; font-size:1.8rem; font-weight:600; margin-top:8px;">
+                <?= $counts['available'] ?>
+            </div>
+            <div class="small text-secondary">Available</div>
         </div>
     </div>
-</div>
-                <h6 class="text-secondary text-uppercase small mb-3">Address</h6>
-                <div class="mb-4">
-                    <label class="form-label">Your home address <span class="badge bg-secondary">Admin-only</span></label>
-                    <textarea name="address" rows="3" class="form-control"><?= e($old['address']) ?></textarea>
-                    <small class="text-secondary">Used by admin for verification. Never shown publicly.</small>
-                </div>
-
-                <div class="d-flex justify-content-end gap-2">
-                    <a href="/rentbridge/landlord/dashboard.php" class="btn btn-ghost">Cancel</a>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-check2 me-1"></i> Save changes
-                    </button>
-                </div>
-            </form>
-
+    <div class="col-md-4 col-lg-3">
+        <div class="bg-white border rounded-3 p-3">
+            <div style="width:40px; height:40px; background:#FFF4D6; color:#D4A017;
+                        border-radius:10px; display:flex; align-items:center; justify-content:center;">
+                <i class="bi bi-hourglass-split"></i>
+            </div>
+            <div style="font-family:'Fraunces',serif; font-size:1.8rem; font-weight:600; margin-top:8px;">
+                <?= $counts['pending_approval'] ?>
+            </div>
+            <div class="small text-secondary">Pending approval</div>
+        </div>
+    </div>
+    <div class="col-md-4 col-lg-3">
+        <div class="bg-white border rounded-3 p-3">
+            <div style="width:40px; height:40px; background:#E6ECF4; color:#0F2C52;
+                        border-radius:10px; display:flex; align-items:center; justify-content:center;">
+                <i class="bi bi-key-fill"></i>
+            </div>
+            <div style="font-family:'Fraunces',serif; font-size:1.8rem; font-weight:600; margin-top:8px;">
+                <?= $counts['rented'] ?>
+            </div>
+            <div class="small text-secondary">Currently rented</div>
+        </div>
+    </div>
+    <div class="col-md-4 col-lg-3">
+        <div class="bg-white border rounded-3 p-3"
+             style="background: linear-gradient(135deg, #fff 0%, #FFF8E5 100%);">
+            <div style="width:40px; height:40px; background:#D4A017; color:white;
+                        border-radius:10px; display:flex; align-items:center; justify-content:center;">
+                <i class="bi bi-bell-fill"></i>
+            </div>
+            <div style="font-family:'Fraunces',serif; font-size:1.8rem; font-weight:600; margin-top:8px;
+                        color:<?= $counts['pending_tenancies'] > 0 ? '#7C5E0A' : '#0F2C52' ?>;">
+                <?= $counts['pending_tenancies'] ?>
+            </div>
+            <div class="small text-secondary">Tenancy requests</div>
         </div>
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+<!-- PENDING TENANCY REQUESTS -->
+<?php if (!empty($pendingTenancies)): ?>
+    <h5 class="mb-3" style="font-family:'Fraunces',serif;">
+        <i class="bi bi-exclamation-circle text-warning"></i>
+        Tenancy applications waiting for your response
+    </h5>
+    <div class="bg-white border rounded-3 overflow-hidden mb-4">
+        <table class="table mb-0 align-middle">
+            <thead style="background:#F4F4EE;">
+                <tr>
+                    <th class="ps-3">ID</th>
+                    <th>Property</th>
+                    <th>Student</th>
+                    <th>Monthly rent</th>
+                    <th>Submitted</th>
+                    <th class="text-end pe-3"></th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($pendingTenancies as $t): ?>
+                    <tr>
+                        <td class="ps-3">
+                            <code class="text-secondary">#<?= (int)$t['id'] ?></code>
+                        </td>
+                        <td class="small">
+                            <strong><?= e($t['property_title']) ?></strong>
+                        </td>
+                        <td class="small">
+                            <?= e($t['student_name']) ?>
+                            <div class="text-secondary"><code><?= e($t['matric_no']) ?></code></div>
+                        </td>
+                        <td>RM <?= number_format((float)$t['monthly_rent']) ?></td>
+                        <td class="small text-secondary">
+                            <?= e(date('d M Y', strtotime($t['created_at']))) ?>
+                        </td>
+                        <td class="text-end pe-3">
+                            <a href="/rentbridge/landlord/booking.php?id=<?= (int)$t['id'] ?>"
+                               class="btn btn-sm btn-primary">
+                                Review <i class="bi bi-arrow-right"></i>
+                            </a>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+<?php endif; ?>
+
+<!-- QUICK ACTIONS -->
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <a href="/rentbridge/landlord/add_property.php"
+           class="d-block bg-white rounded-3 border p-4 text-decoration-none text-dark h-100">
+            <div class="d-flex align-items-center gap-3">
+                <div style="width:48px; height:48px; background:#E4F2EA; border-radius:12px;
+                            display:flex; align-items:center; justify-content:center; color:#2E8B57;">
+                    <i class="bi bi-plus-square fs-3"></i>
+                </div>
+                <div>
+                    <h5 class="mb-1">List a new property</h5>
+                    <small class="text-secondary">Add a room, studio, or whole unit</small>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-6">
+        <a href="/rentbridge/landlord/properties.php"
+           class="d-block bg-white rounded-3 border p-4 text-decoration-none text-dark h-100">
+            <div class="d-flex align-items-center gap-3">
+                <div style="width:48px; height:48px; background:#E6ECF4; border-radius:12px;
+                            display:flex; align-items:center; justify-content:center; color:#0F2C52;">
+                    <i class="bi bi-buildings fs-3"></i>
+                </div>
+                <div>
+                    <h5 class="mb-1">My properties</h5>
+                    <small class="text-secondary">Manage your listings</small>
+                </div>
+            </div>
+        </a>
+    </div>
+</div>
+
+<!-- RECENT PROPERTIES -->
+<?php if (!empty($recentProperties)): ?>
+<h5 class="mb-3" style="font-family:'Fraunces',serif;">Your recent listings</h5>
+<div class="row g-3">
+    <?php foreach ($recentProperties as $p):
+        [$statusLabel, $statusColor] = landlord_prop_status_badge($p['status']);
+    ?>
+        <div class="col-md-3 col-sm-6">
+            <a href="/rentbridge/landlord/property.php?id=<?= (int)$p['id'] ?>"
+               class="d-block text-decoration-none text-dark">
+                <div class="bg-white border rounded-3 overflow-hidden h-100"
+                     style="transition: transform 0.15s, box-shadow 0.15s;"
+                     onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(15,44,82,0.08)'"
+                     onmouseout="this.style.transform='';this.style.boxShadow=''">
+                    <div style="aspect-ratio: 4/3; background: linear-gradient(135deg,#E6ECF4,#E4F2EA); position:relative;">
+                        <?php if (!empty($p['image_path'])): ?>
+                            <img src="/rentbridge/<?= e($p['image_path']) ?>"
+                                 style="width:100%; height:100%; object-fit:cover;" alt="">
+                        <?php endif; ?>
+                        <span class="badge bg-<?= $statusColor ?>"
+                              style="position:absolute; top:8px; right:8px;">
+                            <?= e($statusLabel) ?>
+                        </span>
+                    </div>
+                    <div class="p-3">
+                        <h6 class="mb-1 small"><?= e($p['title']) ?></h6>
+                        <div class="small text-secondary mb-2">
+                            <i class="bi bi-geo-alt"></i> <?= e($p['city']) ?>
+                        </div>
+                        <strong class="text-emerald">
+                            RM <?= number_format((float)$p['monthly_rent']) ?>
+                        </strong>
+                        <small class="text-secondary">/ month</small>
+                    </div>
+                </div>
+            </a>
+        </div>
+    <?php endforeach; ?>
+</div>
+<?php endif; ?>
+
+<?php
+$pageContent = ob_get_clean();
+require __DIR__ . '/../includes/landlord_layout.php';

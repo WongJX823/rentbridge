@@ -239,3 +239,9 @@ function chat_get_user_display(int $userId): array {
     $stmt->execute([$userId]);
     return $stmt->fetch() ?: ['id'=>$userId, 'name'=>'Unknown', 'nickname'=>'', 'primary_role'=>'unknown'];
 }
+
+/** Alias for legacy code that calls user_display_name(). */
+function user_display_name(int $userId): string {
+    $info = chat_get_user_display($userId);
+    return $info['nickname'] ?: $info['name'];
+}
