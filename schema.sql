@@ -507,3 +507,7 @@ ALTER TABLE landlords
     ADD COLUMN allow_whatsapp TINYINT(1) NOT NULL DEFAULT 0 AFTER phone;
 ALTER TABLE agents
     ADD COLUMN allow_whatsapp TINYINT(1) NOT NULL DEFAULT 0 AFTER phone;
+
+    ALTER TABLE conversations
+    ADD COLUMN is_locked TINYINT(1) NOT NULL DEFAULT 0 AFTER last_sender_id,
+    ADD COLUMN locked_reason VARCHAR(255) DEFAULT NULL AFTER is_locked;
