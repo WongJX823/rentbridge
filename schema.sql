@@ -511,3 +511,41 @@ ALTER TABLE agents
     ALTER TABLE conversations
     ADD COLUMN is_locked TINYINT(1) NOT NULL DEFAULT 0 AFTER last_sender_id,
     ADD COLUMN locked_reason VARCHAR(255) DEFAULT NULL AFTER is_locked;
+
+--===========================================================================
+-- 13.6.26 
+
+CREATE TABLE IF NOT EXISTS property_documents (
+    id              INT NOT NULL AUTO_INCREMENT,
+    property_id     INT NOT NULL,
+    document_type   ENUM('ownership_proof','utility_bill','other') NOT NULL DEFAULT 'other',
+    file_path       VARCHAR(255) NOT NULL,
+    original_name   VARCHAR(150) DEFAULT NULL,
+    file_size       INT NOT NULL DEFAULT 0,
+    mime_type       VARCHAR(80) DEFAULT NULL,
+    uploaded_by     INT NOT NULL,
+    uploaded_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    notes           VARCHAR(255) DEFAULT NULL,
+    PRIMARY KEY (id),
+    FOREIGN KEY (property_id) REFERENCES properties(id) ON DELETE CASCADE,
+    FOREIGN KEY (uploaded_by) REFERENCES users(id)      ON DELETE CASCADE,
+    INDEX idx_property (property_id),
+    INDEX idx_type     (document_type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS co_tenancy_posts (
+    id              INT NOT NULL AUTO_INCREMENT,
+    poster_id       INT NOT NULL,
+    property_id     INT NOT NULL,
+    title           VARCHAR(150) DEFAULT NULL COMMENT 'optional headline, defaults to property title',
+    message         TEXT NOT NULL COMMENT 'why they want housemates, lifestyle preferences',
+    housemates_needed INT NOT NULL DEFAULT 1 COMMENT 'how many more co-tenants wanted',
+    status          ENUM('open','filled','cancelled','expired') NOT NULL DEFAULT 'open',
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    FOREIGN KEY (poster_id)   REFERENCES users(id)      ON DELETE CASCADE,
+    FOREIGN KEY (property_id) REFERENCES properties(id) ON DELETE CASCADE,
+    INDEX idx_status (status),
+    INDEX idx_poster (poster_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

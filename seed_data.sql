@@ -364,3 +364,201 @@ UNION ALL SELECT 'Commissions',   COUNT(*) FROM agent_commissions
 UNION ALL SELECT 'Conversations', COUNT(*) FROM conversations
 UNION ALL SELECT 'Messages',      COUNT(*) FROM messages
 UNION ALL SELECT 'Notifications', COUNT(*) FROM notifications;
+
+--============================================================================
+-- 13.6.26
+--============================================================================
+-- ============================================================================
+-- RentBridge — EXTRA Seed Data for Chart Visualization
+-- ============================================================================
+--
+-- Run AFTER seed_data.sql (the base 18 users + 10 properties)
+-- This adds: more users, more properties, more tenancies SPREAD ACROSS MONTHS
+-- so the trend charts have meaningful data.
+--
+-- TOTAL after this: ~40 users, ~30 properties, ~25 tenancies, ~15 contracts
+-- Spread over 6 months (Jan 2026 → Jun 2026) for time-series charts
+-- ============================================================================
+
+SET FOREIGN_KEY_CHECKS = 0;
+
+-- ============================================================================
+-- MORE STUDENTS (10 extra — ids 19-28)
+-- All passwords = Test1234!
+-- ============================================================================
+INSERT INTO users (id, email, password_hash, primary_role, status, created_at) VALUES
+(19, 'azlan@student.utem.edu.my',   '$2y$10$ZW6h.NJ5J9D0LJZG3LHNoOzCJSDjFJgWnZK5jZ2HxqB7w/N1bL7Bm', 'student', 'active', '2026-01-08 09:00:00'),
+(20, 'devi@student.utem.edu.my',    '$2y$10$ZW6h.NJ5J9D0LJZG3LHNoOzCJSDjFJgWnZK5jZ2HxqB7w/N1bL7Bm', 'student', 'active', '2026-01-22 10:30:00'),
+(21, 'farid@student.utem.edu.my',   '$2y$10$ZW6h.NJ5J9D0LJZG3LHNoOzCJSDjFJgWnZK5jZ2HxqB7w/N1bL7Bm', 'student', 'active', '2026-02-05 11:00:00'),
+(22, 'kavitha@student.utem.edu.my', '$2y$10$ZW6h.NJ5J9D0LJZG3LHNoOzCJSDjFJgWnZK5jZ2HxqB7w/N1bL7Bm', 'student', 'active', '2026-02-18 14:00:00'),
+(23, 'syafiq@student.utem.edu.my',  '$2y$10$ZW6h.NJ5J9D0LJZG3LHNoOzCJSDjFJgWnZK5jZ2HxqB7w/N1bL7Bm', 'student', 'active', '2026-03-02 10:00:00'),
+(24, 'jasmine@student.utem.edu.my', '$2y$10$ZW6h.NJ5J9D0LJZG3LHNoOzCJSDjFJgWnZK5jZ2HxqB7w/N1bL7Bm', 'student', 'active', '2026-03-15 09:30:00'),
+(25, 'hafiz@student.utem.edu.my',   '$2y$10$ZW6h.NJ5J9D0LJZG3LHNoOzCJSDjFJgWnZK5jZ2HxqB7w/N1bL7Bm', 'student', 'active', '2026-04-08 16:00:00'),
+(26, 'amelia@student.utem.edu.my',  '$2y$10$ZW6h.NJ5J9D0LJZG3LHNoOzCJSDjFJgWnZK5jZ2HxqB7w/N1bL7Bm', 'student', 'active', '2026-04-25 13:00:00'),
+(27, 'zafri@student.utem.edu.my',   '$2y$10$ZW6h.NJ5J9D0LJZG3LHNoOzCJSDjFJgWnZK5jZ2HxqB7w/N1bL7Bm', 'student', 'active', '2026-05-12 11:00:00'),
+(28, 'nadia@student.utem.edu.my',   '$2y$10$ZW6h.NJ5J9D0LJZG3LHNoOzCJSDjFJgWnZK5jZ2HxqB7w/N1bL7Bm', 'student', 'active', '2026-06-01 10:00:00');
+
+INSERT INTO students (user_id, full_name, preferred_name, matric_no, university, phone, looking_for_housing) VALUES
+(19, 'Mohd Azlan Bin Ismail',     'Azlan',    'B032310890', 'UTeM', '012-7890123', 0),
+(20, 'Devi A/P Murugan',          'Devi',     'B032310901', 'UTeM', '012-8901234', 1),
+(21, 'Mohd Farid Bin Hashim',     'Farid',    'B032310912', 'UTeM', '011-9012345', 0),
+(22, 'Kavitha A/P Selvaraj',      'Kavitha',  'B032310923', 'UTeM', '019-0123456', 1),
+(23, 'Mohd Syafiq Bin Adnan',     'Syafiq',   'B032310934', 'UTeM', '012-1234560', 0),
+(24, 'Jasmine Tan',               'Jasmine',  'B032310945', 'UTeM', '013-2345601', 0),
+(25, 'Mohd Hafiz Bin Yusoff',     'Hafiz',    'B032310956', 'UTeM', '014-3456012', 0),
+(26, 'Amelia Wong',               'Amelia',   'B032310967', 'UTeM', '012-4560123', 1),
+(27, 'Mohd Zafri Bin Karim',      'Zafri',    'B032310978', 'UTeM', '015-5601234', 0),
+(28, 'Nadia Binti Razak',         'Nadia',    'B032310989', 'UTeM', '016-6012345', 1);
+
+-- ============================================================================
+-- MORE LANDLORDS (5 extra — ids 29-33)
+-- ============================================================================
+INSERT INTO users (id, email, password_hash, primary_role, status, created_at) VALUES
+(29, 'fauziah@landlord.com', '$2y$10$ZW6h.NJ5J9D0LJZG3LHNoOzCJSDjFJgWnZK5jZ2HxqB7w/N1bL7Bm', 'landlord', 'active', '2026-01-10 11:00:00'),
+(30, 'tan@landlord.com',     '$2y$10$ZW6h.NJ5J9D0LJZG3LHNoOzCJSDjFJgWnZK5jZ2HxqB7w/N1bL7Bm', 'landlord', 'active', '2026-02-08 14:00:00'),
+(31, 'ismail@landlord.com',  '$2y$10$ZW6h.NJ5J9D0LJZG3LHNoOzCJSDjFJgWnZK5jZ2HxqB7w/N1bL7Bm', 'landlord', 'active', '2026-03-12 10:00:00'),
+(32, 'kumar@landlord.com',   '$2y$10$ZW6h.NJ5J9D0LJZG3LHNoOzCJSDjFJgWnZK5jZ2HxqB7w/N1bL7Bm', 'landlord', 'active', '2026-04-20 15:00:00'),
+(33, 'lim@landlord.com',     '$2y$10$ZW6h.NJ5J9D0LJZG3LHNoOzCJSDjFJgWnZK5jZ2HxqB7w/N1bL7Bm', 'landlord', 'active', '2026-05-25 11:00:00');
+
+INSERT INTO landlords (user_id, full_name, preferred_name, ic_no, phone, allow_whatsapp) VALUES
+(29, 'Fauziah Binti Saad',    'Fauziah', '760412-04-1122', '012-7771234', 1),
+(30, 'Tan Boon Heng',         'Tan',     '690819-08-3344', '012-7772345', 0),
+(31, 'Ismail Bin Yaakub',     'Ismail',  '720625-06-5566', '012-7773456', 1),
+(32, 'Kumar A/L Raman',       'Kumar',   '801107-10-7788', '012-7774567', 1),
+(33, 'Lim Soo Mei',           'Lim',     '850314-08-9900', '012-7775678', 0);
+
+-- ============================================================================
+-- MORE AGENTS (2 extra — ids 34-35)
+-- ============================================================================
+INSERT INTO users (id, email, password_hash, primary_role, status, created_at) VALUES
+(34, 'inspector5@utem.edu.my', '$2y$10$ZW6h.NJ5J9D0LJZG3LHNoOzCJSDjFJgWnZK5jZ2HxqB7w/N1bL7Bm', 'agent', 'active', '2026-02-15 09:00:00'),
+(35, 'inspector6@utem.edu.my', '$2y$10$ZW6h.NJ5J9D0LJZG3LHNoOzCJSDjFJgWnZK5jZ2HxqB7w/N1bL7Bm', 'agent', 'active', '2026-03-20 10:00:00');
+
+INSERT INTO agents (user_id, full_name, preferred_name, staff_id, department, phone, availability, max_caseload, current_caseload, allow_whatsapp) VALUES
+(34, 'Dr. Hairul Bin Anuar',    'Hairul', 'AGT005', 'FTMK', '012-9991111', 'available', 5, 2, 1),
+(35, 'Pn. Salmah Binti Hasan',  'Salmah', 'AGT006', 'FKE',  '012-9992222', 'available', 5, 1, 1);
+
+-- ============================================================================
+-- MORE PROPERTIES (20 extra — ids 11-30)
+-- Spread across cities + price ranges for meaningful chart data
+-- ============================================================================
+INSERT INTO properties (id, landlord_id, title, property_type, address, city, postcode, state, monthly_rent, deposit, description, facilities, furnishing, status, viewing_mode, agent_verified_at, agent_verified_by, created_at) VALUES
+-- AYER KEROH (cluster of properties for "highest demand area" story)
+(11, 10, 'Sutera Single Room A1', 'room', 'No 23A, Jalan Sutera 5', 'Ayer Keroh', '75450', 'Melaka', 420.00, 420.00, 'Affordable single room near campus.', 'WiFi, fan', 'partial', 'available', 'either', '2026-02-15 10:00:00', 15, '2026-02-10 09:00:00'),
+(12, 10, 'Sutera Single Room A2', 'room', 'No 23B, Jalan Sutera 5', 'Ayer Keroh', '75450', 'Melaka', 460.00, 460.00, 'Slightly larger room with aircond.', 'WiFi, aircond', 'partial', 'rented', 'either', '2026-02-20 10:00:00', 15, '2026-02-12 09:00:00'),
+(13, 29, 'Indah Studio Premium', 'studio', 'No 8, Jalan Indah 10', 'Ayer Keroh', '75450', 'Melaka', 900.00, 900.00, 'High-end studio with full kitchen.', 'WiFi, aircond, kitchen, gym', 'full', 'available', 'either', '2026-03-05 14:00:00', 16, '2026-02-28 11:00:00'),
+(14, 29, 'Indah Studio Budget', 'studio', 'No 9, Jalan Indah 10', 'Ayer Keroh', '75450', 'Melaka', 700.00, 700.00, 'Budget studio option in same building.', 'WiFi, fan, kitchen', 'partial', 'rented', 'either', '2026-03-08 14:00:00', 16, '2026-03-01 11:00:00'),
+(15, 31, 'Keroh Heights Unit 3A', 'whole_unit', 'Block A-3-2, Keroh Heights', 'Ayer Keroh', '75450', 'Melaka', 2200.00, 2200.00, '3-bedroom apartment for groups.', 'WiFi, aircond, parking', 'partial', 'available', 'either', '2026-04-10 09:00:00', 18, '2026-04-02 10:00:00'),
+
+-- BUKIT BERUANG (mid-tier area)
+(16, 12, 'Beruang Premium Room', 'room', 'No 92, Lorong Permai 2', 'Bukit Beruang', '75450', 'Melaka', 550.00, 550.00, 'Larger master room with attached bath.', 'WiFi, aircond, private bath', 'full', 'rented', 'either', '2026-02-18 10:00:00', 16, '2026-02-10 14:00:00'),
+(17, 12, 'Beruang Garden View Room', 'room', 'No 94, Lorong Permai 2', 'Bukit Beruang', '75450', 'Melaka', 480.00, 480.00, 'Room facing garden.', 'WiFi, fan, garden access', 'partial', 'available', 'either', '2026-03-22 11:00:00', 18, '2026-03-15 10:00:00'),
+(18, 30, 'Bukit Beruang 2-Bed', 'whole_unit', 'No 56, Jalan Permai 4', 'Bukit Beruang', '75450', 'Melaka', 1600.00, 1600.00, '2-bedroom unit for 2-3 students.', 'WiFi, aircond, parking', 'partial', 'available', 'either', '2026-04-15 14:00:00', 15, '2026-04-08 10:00:00'),
+
+-- DURIAN TUNGGAL (cheaper area)
+(19, 13, 'Tunggal Family House Room', 'room', 'No 12, Jalan Durian 3', 'Durian Tunggal', '76100', 'Melaka', 350.00, 350.00, 'Affordable room with friendly landlord.', 'WiFi, parking, garden', 'partial', 'available', 'landlord_led', '2026-03-25 09:00:00', 16, '2026-03-18 11:00:00'),
+(20, 31, 'Tunggal Budget Room', 'room', 'No 45, Jalan Durian 7', 'Durian Tunggal', '76100', 'Melaka', 320.00, 320.00, 'Cheapest option near transport hub.', 'WiFi, fan', 'none', 'rented', 'landlord_led', '2026-04-02 14:00:00', 18, '2026-03-28 09:00:00'),
+
+-- MELAKA CITY (premium area)
+(21, 32, 'Melaka City Loft Studio', 'studio', 'Unit 12-3, Melaka City Tower', 'Melaka City', '75100', 'Melaka', 1100.00, 1100.00, 'Modern loft studio in city center.', 'WiFi, aircond, gym, pool', 'full', 'rented', 'either', '2026-04-25 15:00:00', 15, '2026-04-18 13:00:00'),
+(22, 32, 'Melaka City Standard Studio', 'studio', 'Unit 8-5, Melaka City Tower', 'Melaka City', '75100', 'Melaka', 950.00, 950.00, 'Same building, smaller unit.', 'WiFi, aircond, gym', 'full', 'available', 'either', '2026-05-10 11:00:00', 16, '2026-05-02 09:00:00'),
+
+-- CHENG (suburban)
+(23, 33, 'Cheng Family Home Room A', 'room', 'No 18, Taman Cheng Indah', 'Cheng', '75250', 'Melaka', 380.00, 380.00, 'Quiet suburban room.', 'WiFi, parking', 'partial', 'available', 'either', '2026-05-15 10:00:00', 18, '2026-05-08 11:00:00'),
+(24, 33, 'Cheng Family Home Room B', 'room', 'No 18A, Taman Cheng Indah', 'Cheng', '75250', 'Melaka', 360.00, 360.00, 'Sister room to Room A.', 'WiFi, parking', 'partial', 'rented', 'either', '2026-05-18 10:00:00', 18, '2026-05-08 11:00:00'),
+
+-- More for variety / status diversity
+(25, 11, 'Newly Listed Studio', 'studio', 'Block C-2-1, Indah Heights', 'Ayer Keroh', '75450', 'Melaka', 850.00, 850.00, 'Just listed, looking for tenants.', 'WiFi, aircond', 'full', 'pending_approval', 'either', NULL, NULL, '2026-06-05 14:00:00'),
+(26, 30, 'Yet Another Pending', 'room', 'No 78, Jalan Mawar', 'Bukit Beruang', '75450', 'Melaka', 500.00, 500.00, 'Recent listing awaiting approval.', 'WiFi', 'partial', 'pending_approval', 'either', NULL, NULL, '2026-06-08 10:00:00'),
+(27, 14, 'Suspicious Cheap Room', 'room', 'No 99, Jalan ABC', 'Melaka City', '75100', 'Melaka', 180.00, 0.00, 'Very cheap, no deposit.', 'Nothing', 'none', 'rejected', 'either', NULL, NULL, '2026-04-30 17:00:00'),
+(28, 12, 'Premium Beruang Studio', 'studio', 'Block B-3-1, Permai Heights', 'Bukit Beruang', '75450', 'Melaka', 1050.00, 1050.00, 'Premium studio with full furnishing.', 'WiFi, aircond, kitchen, gym', 'full', 'rented', 'either', '2026-05-25 14:00:00', 16, '2026-05-18 09:00:00'),
+(29, 13, 'Quiet Studio Cheng', 'studio', 'Unit 5, Taman Cheng Permai', 'Cheng', '75250', 'Melaka', 750.00, 750.00, 'Peaceful studio in residential area.', 'WiFi, aircond', 'partial', 'available', 'either', '2026-05-28 10:00:00', 15, '2026-05-22 11:00:00'),
+(30, 29, 'Hidden Maintenance', 'room', 'No 9, Jalan Indah 10', 'Ayer Keroh', '75450', 'Melaka', 430.00, 430.00, 'Temporarily off market.', 'WiFi, fan', 'partial', 'hidden', 'either', NULL, NULL, '2026-03-10 11:00:00');
+
+-- ============================================================================
+-- MORE BOOKINGS (15 extra — ids 9-23) — spread across months for trend charts
+-- ============================================================================
+INSERT INTO bookings (id, student_id, property_id, landlord_id, agent_id, start_date, end_date, duration_type, monthly_rent, deposit, status, created_at) VALUES
+-- January
+(9,  19, 11, 10, 15, '2026-02-01', '2027-01-31', '1_year',    420.00, 420.00, 'completed',           '2026-01-15 10:00:00'),
+(10, 20, 16, 12, 16, '2026-02-15', '2027-02-14', '1_year',    550.00, 550.00, 'active',              '2026-01-20 11:00:00'),
+
+-- February
+(11, 21, 12, 10, 15, '2026-03-01', '2027-02-28', '1_year',    460.00, 460.00, 'active',              '2026-02-15 09:00:00'),
+(12, 22, 14, 29, 16, '2026-03-15', '2027-03-14', '1_year',    700.00, 700.00, 'active',              '2026-02-28 14:00:00'),
+
+-- March
+(13, 23, 20, 31, 18, '2026-04-01', '2026-07-31', 'custom',    320.00, 320.00, 'active',              '2026-03-20 10:00:00'),
+(14, 24, 21, 32, 15, '2026-04-15', '2027-04-14', '1_year',   1100.00,1100.00, 'active',              '2026-03-25 16:00:00'),
+
+-- April
+(15, 25, 24, 33, 18, '2026-05-01', '2026-08-31', 'custom',    360.00, 360.00, 'active',              '2026-04-18 09:00:00'),
+(16, 26, 28, 12, 16, '2026-05-15', '2027-05-14', '1_year',   1050.00,1050.00, 'active',              '2026-04-25 14:00:00'),
+
+-- May
+(17, 27, 17, 12, 16, '2026-06-01', '2026-10-31', 'custom',    480.00, 480.00, 'contract_pending',    '2026-05-20 11:00:00'),
+(18, 28, 22, 32, 34, '2026-06-15', '2027-06-14', '1_year',    950.00, 950.00, 'agent_verifying',     '2026-05-30 10:00:00'),
+
+-- June (recent, various statuses)
+(19, 19, 18, 30, NULL, '2026-07-01', '2027-06-30', '1_year', 1600.00,1600.00, 'pending_agent',       '2026-06-05 14:00:00'),
+(20, 20, 13, 29, 35,  '2026-07-01', '2026-12-31', 'custom',  900.00, 900.00, 'agent_verifying',     '2026-06-07 11:00:00'),
+(21, 21, 25, 11, NULL, '2026-08-01', '2027-07-31', '1_year',  850.00, 850.00, 'pending_landlord',    '2026-06-08 09:00:00'),
+(22, 22, 15, 31, NULL, '2026-08-01', '2027-07-31', '1_year', 2200.00,2200.00, 'pending_landlord',    '2026-06-10 10:00:00'),
+(23, 24, 23, 33, NULL, '2026-09-01', '2027-08-31', '1_year',  380.00, 380.00, 'pending_landlord',    '2026-06-11 13:00:00');
+
+-- ============================================================================
+-- MORE CONTRACTS (8 extra — for active/completed tenancies)
+-- ============================================================================
+INSERT INTO contracts (id, contract_code, booking_id, student_id, landlord_id, agent_id, property_id, start_date, end_date, monthly_rent, deposit, terms, status, activated_at, student_signed_at, landlord_signed_at, agent_signed_at, created_at) VALUES
+(4, 'RB-2026-00004', 9,  19, 10, 15, 11, '2026-02-01', '2027-01-31',  420.00, 420.00, 'Standard 1-year tenancy.', 'completed', '2026-01-25 14:00:00', '2026-01-22 11:00:00', '2026-01-23 10:00:00', '2026-01-25 09:00:00', '2026-01-20 10:00:00'),
+(5, 'RB-2026-00005', 10, 20, 12, 16, 16, '2026-02-15', '2027-02-14',  550.00, 550.00, 'Standard 1-year tenancy.', 'active',    '2026-02-10 16:00:00', '2026-02-05 10:00:00', '2026-02-08 11:00:00', '2026-02-10 14:00:00', '2026-02-01 09:00:00'),
+(6, 'RB-2026-00006', 11, 21, 10, 15, 12, '2026-03-01', '2027-02-28',  460.00, 460.00, 'Standard 1-year tenancy.', 'active',    '2026-02-25 11:00:00', '2026-02-22 10:00:00', '2026-02-23 14:00:00', '2026-02-25 09:00:00', '2026-02-18 10:00:00'),
+(7, 'RB-2026-00007', 12, 22, 29, 16, 14, '2026-03-15', '2027-03-14',  700.00, 700.00, 'Standard 1-year tenancy.', 'active',    '2026-03-10 15:00:00', '2026-03-07 09:00:00', '2026-03-08 11:00:00', '2026-03-10 13:00:00', '2026-03-02 14:00:00'),
+(8, 'RB-2026-00008', 13, 23, 31, 18, 20, '2026-04-01', '2026-07-31',  320.00, 320.00, 'Standard 4-month tenancy.','active',    '2026-03-28 16:00:00', '2026-03-25 10:00:00', '2026-03-26 11:00:00', '2026-03-28 14:00:00', '2026-03-22 09:00:00'),
+(9, 'RB-2026-00009', 14, 24, 32, 15, 21, '2026-04-15', '2027-04-14', 1100.00,1100.00, 'Standard 1-year tenancy.', 'active',    '2026-04-10 17:00:00', '2026-04-05 11:00:00', '2026-04-08 14:00:00', '2026-04-10 15:00:00', '2026-04-01 13:00:00'),
+(10,'RB-2026-00010', 15, 25, 33, 18, 24, '2026-05-01', '2026-08-31',  360.00, 360.00, 'Standard 4-month tenancy.','active',    '2026-04-26 14:00:00', '2026-04-23 09:00:00', '2026-04-24 11:00:00', '2026-04-26 12:00:00', '2026-04-20 10:00:00'),
+(11,'RB-2026-00011', 16, 26, 12, 16, 28, '2026-05-15', '2027-05-14', 1050.00,1050.00, 'Standard 1-year tenancy.', 'active',    '2026-05-10 18:00:00', '2026-05-05 14:00:00', '2026-05-08 11:00:00', '2026-05-10 16:00:00', '2026-04-30 12:00:00');
+
+-- ============================================================================
+-- MORE COMMISSIONS (for chart visualization of revenue)
+-- ============================================================================
+INSERT INTO agent_commissions (contract_id, agent_id, base_rent, commission_pct, commission_amt, sst_pct, sst_amt, total_payable, status, earned_at, released_at, paid_at) VALUES
+(4,  15,  420.00, 100.00,  420.00, 6.00,  25.20,  445.20, 'paid',    '2026-01-25 14:00:00', '2026-02-01 10:00:00', '2026-02-10 09:00:00'),
+(5,  16,  550.00, 100.00,  550.00, 6.00,  33.00,  583.00, 'paid',    '2026-02-10 16:00:00', '2026-02-15 09:00:00', '2026-02-25 10:00:00'),
+(6,  15,  460.00, 100.00,  460.00, 6.00,  27.60,  487.60, 'paid',    '2026-02-25 11:00:00', '2026-03-01 09:00:00', '2026-03-10 11:00:00'),
+(7,  16,  700.00, 100.00,  700.00, 6.00,  42.00,  742.00, 'paid',    '2026-03-10 15:00:00', '2026-03-15 09:00:00', '2026-03-25 10:00:00'),
+(8,  18,  320.00, 100.00,  320.00, 6.00,  19.20,  339.20, 'paid',    '2026-03-28 16:00:00', '2026-04-01 09:00:00', '2026-04-10 10:00:00'),
+(9,  15, 1100.00, 100.00, 1100.00, 6.00,  66.00, 1166.00, 'paid',    '2026-04-10 17:00:00', '2026-04-15 09:00:00', '2026-04-25 10:00:00'),
+(10, 18,  360.00, 100.00,  360.00, 6.00,  21.60,  381.60, 'released','2026-04-26 14:00:00', '2026-05-01 10:00:00', NULL),
+(11, 16, 1050.00, 100.00, 1050.00, 6.00,  63.00, 1113.00, 'earned',  '2026-05-10 18:00:00', NULL, NULL);
+
+-- ============================================================================
+-- VERIFY
+-- ============================================================================
+SELECT 'Users'         AS table_name, COUNT(*) AS row_count FROM users
+UNION ALL SELECT 'Students',      COUNT(*) FROM students
+UNION ALL SELECT 'Landlords',     COUNT(*) FROM landlords
+UNION ALL SELECT 'Agents',        COUNT(*) FROM agents
+UNION ALL SELECT 'Properties',    COUNT(*) FROM properties
+UNION ALL SELECT 'Bookings',      COUNT(*) FROM bookings
+UNION ALL SELECT 'Contracts',     COUNT(*) FROM contracts
+UNION ALL SELECT 'Commissions',   COUNT(*) FROM agent_commissions;
+
+-- EXPECTED:
+--   Users:       35  (admin + 18 students + 10 landlords + 6 agents)
+--   Students:    18
+--   Landlords:   10
+--   Agents:      6
+--   Properties:  30
+--   Bookings:    23
+--   Contracts:   11
+--   Commissions: 11
+
+SET FOREIGN_KEY_CHECKS = 1;
+
+-- Sample co-tenancy posts
+INSERT INTO co_tenancy_posts (poster_id, property_id, message, housemates_needed, created_at) VALUES
+(20, 4, 'Looking for 2 quiet female housemates for this 3BR. I''m Year 3 CS, non-smoker. Move-in Aug 1.', 2, '2026-06-05 09:00:00'),
+(22, 15, 'Found this 3-bed apartment near UTeM, too pricey alone. Need 2 more housemates, prefer engineering students.', 2, '2026-06-08 11:30:00'),
+(26, 10, 'Whole single-storey house, perfect for 3 students. I''m friendly, like cooking. Move-in flexible.', 2, '2026-06-10 14:00:00'),
+(24, 21, 'Premium loft studio in city center but expensive alone. Looking for 1 housemate to share. Year 4 student.', 1, '2026-06-09 16:00:00');
