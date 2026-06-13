@@ -1,197 +1,218 @@
 <?php
 require_once __DIR__ . '/includes/auth.php';
 
-// ---- Read filter params from URL ----
-$city     = trim($_GET['city'] ?? '');
-$type     = $_GET['type'] ?? '';
-$max_rent = $_GET['max_rent'] ?? '';
-$page     = max(1, (int)($_GET['page'] ?? 1));
-$perPage  = 9;
+$pdo = db();
 
-// ---- Build dynamic SQL ----
-$where  = ["p.status = 'available'"];
+// Filters
+$searchQuery = trim($_GET['q'] ?? '');
+$filterCity  = trim($_GET['city'] ?? '');
+$filterType  = trim($_GET['type'] ?? '');
+$filterMin   = trim($_GET['min_rent'] ?? '');
+$filterMax   = trim($_GET['max_rent'] ?? '');
+$sortBy      = $_GET['sort'] ?? 'recent';
+
+// Build query
+$where = "p.status = 'available'";
 $params = [];
 
-if ($city !== '') {
-    $where[]  = "(p.city LIKE ? OR p.address LIKE ?)";
-    $params[] = '%' . $city . '%';
-    $params[] = '%' . $city . '%';
+if ($searchQuery !== '') {
+    $where .= " AND (p.title LIKE ? OR p.address LIKE ? OR p.city LIKE ?)";
+    $like = '%' . $searchQuery . '%';
+    array_push($params, $like, $like, $like);
+}
+if ($filterCity !== '') {
+    $where .= " AND p.city = ?";
+    $params[] = $filterCity;
+}
+if ($filterType !== '') {
+    $where .= " AND p.property_type = ?";
+    $params[] = $filterType;
+}
+if ($filterMin !== '' && is_numeric($filterMin)) {
+    $where .= " AND p.monthly_rent >= ?";
+    $params[] = (float)$filterMin;
+}
+if ($filterMax !== '' && is_numeric($filterMax)) {
+    $where .= " AND p.monthly_rent <= ?";
+    $params[] = (float)$filterMax;
 }
 
-if (in_array($type, ['room', 'studio', 'whole_unit'], true)) {
-    $where[]  = "p.property_type = ?";
-    $params[] = $type;
-}
+$orderBy = match($sortBy) {
+    'price_asc'  => 'p.monthly_rent ASC',
+    'price_desc' => 'p.monthly_rent DESC',
+    'verified'   => 'p.agent_verified_at DESC, p.created_at DESC',
+    default      => 'p.created_at DESC',
+};
 
-if (is_numeric($max_rent) && (float)$max_rent > 0) {
-    $where[]  = "p.monthly_rent <= ?";
-    $params[] = (float)$max_rent;
-}
-
-$whereSql = implode(' AND ', $where);
-
-// ---- Count total (for pagination) ----
-$countStmt = db()->prepare("SELECT COUNT(*) FROM properties p WHERE $whereSql");
-$countStmt->execute($params);
-$total      = (int)$countStmt->fetchColumn();
-$totalPages = max(1, (int)ceil($total / $perPage));
-$page       = min($page, $totalPages);
-$offset     = ($page - 1) * $perPage;
-
-// ---- Fetch this page's listings + their primary image ----
-$sql = "
+$stmt = $pdo->prepare("
     SELECT p.*,
            (SELECT image_path FROM property_images
-             WHERE property_id = p.id
-             ORDER BY is_primary DESC, id ASC
-             LIMIT 1) AS image_path
+             WHERE property_id = p.id ORDER BY is_primary DESC, id LIMIT 1) AS image_path
       FROM properties p
-     WHERE $whereSql
-     ORDER BY p.created_at DESC
-     LIMIT $perPage OFFSET $offset
-";
-$stmt = db()->prepare($sql);
+     WHERE $where
+     ORDER BY $orderBy
+");
 $stmt->execute($params);
-$listings = $stmt->fetchAll();
+$properties = $stmt->fetchAll();
+
+// Cities for filter
+$cities = $pdo->query("SELECT DISTINCT city FROM properties WHERE status='available' ORDER BY city")->fetchAll(PDO::FETCH_COLUMN);
+
+$pageTitle = 'Browse Properties';
+$activeNav = 'browse';
+
+ob_start();
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Browse listings · RentBridge</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-    <link href="assets/css/style.css" rel="stylesheet">
-</head>
-<body>
 
-<?php include 'includes/header.php'; ?>
-
-<div class="container py-5">
-
-    <!-- Header -->
-    <div class="mb-4">
-        <h1 class="mb-1">Browse listings</h1>
-        <p class="text-secondary mb-0">
-            <?= $total ?> propert<?= $total === 1 ? 'y' : 'ies' ?> found
+<!-- HEADER -->
+<div class="d-flex justify-content-between align-items-end mb-3 flex-wrap gap-2">
+    <div>
+        <h2 class="mb-1" style="font-family:'Fraunces',serif;">Browse properties</h2>
+        <p class="text-secondary mb-0 small">
+            <?= count($properties) ?> propert<?= count($properties)===1?'y':'ies' ?> available
         </p>
     </div>
+    <select name="sort" class="form-select form-select-sm" style="max-width:200px;"
+            onchange="window.location='?<?= http_build_query(array_filter(array_merge($_GET, ['sort' => '__SORT__']))) ?>'.replace('__SORT__', this.value)">
+        <option value="recent"     <?= $sortBy==='recent'?'selected':'' ?>>Sort: Newest first</option>
+        <option value="verified"   <?= $sortBy==='verified'?'selected':'' ?>>Sort: Verified first</option>
+        <option value="price_asc"  <?= $sortBy==='price_asc'?'selected':'' ?>>Sort: Price (low to high)</option>
+        <option value="price_desc" <?= $sortBy==='price_desc'?'selected':'' ?>>Sort: Price (high to low)</option>
+    </select>
+</div>
 
-    <!-- Filter form -->
-    <form method="GET" class="bg-white border rounded-3 p-3 mb-4">
-        <div class="row g-2 align-items-end">
-            <div class="col-md-4">
-                <label class="form-label small fw-semibold text-secondary">CITY OR AREA</label>
-                <input type="text" name="city" value="<?= e($city) ?>"
-                       class="form-control" placeholder="Melaka, Ayer Keroh...">
-            </div>
-            <div class="col-md-3">
-                <label class="form-label small fw-semibold text-secondary">TYPE</label>
-                <select name="type" class="form-select">
-                    <option value="">Any</option>
-                    <option value="room"       <?= $type==='room'?'selected':'' ?>>Room</option>
-                    <option value="studio"     <?= $type==='studio'?'selected':'' ?>>Studio</option>
-                    <option value="whole_unit" <?= $type==='whole_unit'?'selected':'' ?>>Whole unit</option>
-                </select>
-            </div>
-            <div class="col-md-3">
-                <label class="form-label small fw-semibold text-secondary">MAX RENT (RM)</label>
-                <select name="max_rent" class="form-select">
-                    <option value="">Any</option>
-                    <option value="500"  <?= $max_rent==='500' ?'selected':'' ?>>RM 500</option>
-                    <option value="800"  <?= $max_rent==='800' ?'selected':'' ?>>RM 800</option>
-                    <option value="1200" <?= $max_rent==='1200'?'selected':'' ?>>RM 1,200</option>
-                    <option value="2000" <?= $max_rent==='2000'?'selected':'' ?>>RM 2,000</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <button type="submit" class="btn btn-primary w-100">
-                    <i class="bi bi-search"></i> Search
-                </button>
-            </div>
+<!-- FILTERS (compact inline) -->
+<form method="GET" class="bg-white border rounded-3 p-3 mb-4">
+    <div class="row g-2 align-items-end">
+        <div class="col-md-4">
+            <input type="text" name="q" value="<?= e($searchQuery) ?>"
+                   class="form-control form-control-sm" placeholder="Search by title or area">
         </div>
-    </form>
-
-    <!-- Empty state -->
-    <?php if (empty($listings)): ?>
-        <div class="text-center py-5">
-            <i class="bi bi-house-x" style="font-size: 3rem; color: var(--rb-line);"></i>
-            <h3 class="mt-3">No properties match your search</h3>
-            <p class="text-secondary">Try a wider search or remove some filters.</p>
-            <a href="listings.php" class="btn btn-ghost">Clear all filters</a>
+        <div class="col-md-2">
+            <select name="city" class="form-select form-select-sm">
+                <option value="">All cities</option>
+                <?php foreach ($cities as $c): ?>
+                    <option value="<?= e($c) ?>" <?= $filterCity===$c?'selected':'' ?>><?= e($c) ?></option>
+                <?php endforeach; ?>
+            </select>
         </div>
-    <?php else: ?>
+        <div class="col-md-2">
+            <select name="type" class="form-select form-select-sm">
+                <option value="">Any type</option>
+                <option value="room"       <?= $filterType==='room'?'selected':'' ?>>Room</option>
+                <option value="studio"     <?= $filterType==='studio'?'selected':'' ?>>Studio</option>
+                <option value="whole_unit" <?= $filterType==='whole_unit'?'selected':'' ?>>Whole unit</option>
+            </select>
+        </div>
+        <div class="col-md-1">
+            <input type="number" name="min_rent" value="<?= e($filterMin) ?>"
+                   class="form-control form-control-sm" placeholder="Min" step="50">
+        </div>
+        <div class="col-md-1">
+            <input type="number" name="max_rent" value="<?= e($filterMax) ?>"
+                   class="form-control form-control-sm" placeholder="Max" step="50">
+        </div>
+        <div class="col-md-2 d-flex gap-2">
+            <button type="submit" class="btn btn-sm btn-primary flex-fill">
+                <i class="bi bi-funnel"></i> Filter
+            </button>
+            <?php if ($searchQuery || $filterCity || $filterType || $filterMin || $filterMax): ?>
+                <a href="?" class="btn btn-sm btn-outline-secondary">Clear</a>
+            <?php endif; ?>
+        </div>
+    </div>
+</form>
 
-    <!-- Listings grid -->
-    <div class="row g-4">
-        <?php foreach ($listings as $p): ?>
-            <div class="col-md-6 col-lg-4">
-                <a href="property.php?id=<?= (int)$p['id'] ?>" class="rb-card text-decoration-none">
-                    <div class="rb-card__media">
-                        <span class="rb-card__badge">
-                            <?= e(ucfirst(str_replace('_', ' ', $p['property_type']))) ?>
-                        </span>
-                        <?php if (!empty($p['image_path'])): ?>
-                            <img src="<?= e($p['image_path']) ?>" alt="<?= e($p['title']) ?>">
-                        <?php endif; ?>
-                    </div>
-                    <div class="rb-card__body">
-                        <h3 class="rb-card__title"><?= e($p['title']) ?></h3>
-                        <div class="rb-card__meta">
-                            <i class="bi bi-geo-alt"></i> <?= e($p['city'] . ', ' . $p['state']) ?>
+<!-- LOGIN PROMPT for guests -->
+<?php if (!is_logged_in()): ?>
+<div class="alert alert-light border d-flex gap-3 align-items-center mb-4 small">
+    <i class="bi bi-info-circle text-secondary fs-4"></i>
+    <div class="flex-grow-1">
+        Browsing as guest. <strong>Sign up</strong> or <strong>log in</strong>
+        to save listings, message landlords, and book properties.
+    </div>
+    <div class="d-flex gap-2">
+        <a href="/rentbridge/auth/login.php" class="btn btn-sm btn-outline-dark">Log in</a>
+        <a href="/rentbridge/auth/register_student.php" class="btn btn-sm btn-primary">Sign up</a>
+    </div>
+</div>
+<?php endif; ?>
+
+<!-- PROPERTY GRID -->
+<?php if (empty($properties)): ?>
+    <div class="text-center py-5 bg-white rounded-3 border">
+        <i class="bi bi-house" style="font-size: 3rem; color: rgba(15,44,82,0.15);"></i>
+        <h4 class="mt-3">No properties match your filters</h4>
+        <p class="text-secondary small">Try clearing some filters or broadening your search.</p>
+        <a href="/rentbridge/listings.php" class="btn btn-outline-dark mt-2">
+            Clear all filters
+        </a>
+    </div>
+<?php else: ?>
+    <div class="row g-3">
+        <?php foreach ($properties as $p): ?>
+            <div class="col-md-6 col-lg-4 col-xl-3">
+                <a href="/rentbridge/property.php?id=<?= (int)$p['id'] ?>"
+                   class="text-decoration-none text-dark">
+                    <div class="bg-white border rounded-3 overflow-hidden h-100"
+                         style="transition: transform 0.15s, box-shadow 0.15s;"
+                         onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(15,44,82,0.08)'"
+                         onmouseout="this.style.transform='';this.style.boxShadow=''">
+
+                        <div style="aspect-ratio: 4/3; background: linear-gradient(135deg,#E6ECF4,#E4F2EA); position:relative;">
+                            <?php if (!empty($p['image_path'])): ?>
+                                <img src="/rentbridge/<?= e($p['image_path']) ?>"
+                                     style="width:100%; height:100%; object-fit:cover;" alt="">
+                            <?php endif; ?>
+                            <?php if (!empty($p['agent_verified_at'])): ?>
+                                <span class="badge bg-success"
+                                      style="position:absolute; top:10px; right:10px;">
+                                    <i class="bi bi-patch-check-fill"></i> Verified
+                                </span>
+                            <?php endif; ?>
                         </div>
-                        <div class="rb-card__price">
-                            <strong>RM <?= number_format((float)$p['monthly_rent']) ?></strong>
-                            <span>per month</span>
+
+                        <div class="p-3">
+                            <div class="d-flex justify-content-between mb-1">
+                                <small class="text-secondary">
+                                    <?= e(ucfirst(str_replace('_',' ', $p['property_type']))) ?>
+                                </small>
+                                <small class="text-secondary">
+                                    <?= e(ucfirst($p['furnishing'])) ?>
+                                </small>
+                            </div>
+                            <h6 class="mb-2" style="font-size:0.95rem;"><?= e($p['title']) ?></h6>
+                            <div class="small text-secondary mb-2">
+                                <i class="bi bi-geo-alt"></i> <?= e($p['city']) ?>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong class="text-emerald">RM <?= number_format((float)$p['monthly_rent']) ?></strong>
+                                    <small class="text-secondary">/ mo</small>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </a>
             </div>
         <?php endforeach; ?>
     </div>
+<?php endif; ?>
 
-    <!-- Pagination -->
-    <?php if ($totalPages > 1): ?>
-        <nav class="mt-5">
-            <ul class="pagination justify-content-center">
-                <?php
-                // Build query string preserving filters
-                $qs = http_build_query(array_filter([
-                    'city' => $city,
-                    'type' => $type,
-                    'max_rent' => $max_rent,
-                ], fn($v) => $v !== ''));
-                $qsAmp = $qs === '' ? '' : '&' . $qs;
-                ?>
+<?php
+$pageContent = ob_get_clean();
 
-                <li class="page-item <?= $page <= 1 ? 'disabled' : '' ?>">
-                    <a class="page-link" href="?page=<?= $page-1 ?><?= $qsAmp ?>">
-                        ← Previous
-                    </a>
-                </li>
-
-                <?php for ($i = 1; $i <= $totalPages; $i++): ?>
-                    <li class="page-item <?= $i === $page ? 'active' : '' ?>">
-                        <a class="page-link" href="?page=<?= $i ?><?= $qsAmp ?>"><?= $i ?></a>
-                    </li>
-                <?php endfor; ?>
-
-                <li class="page-item <?= $page >= $totalPages ? 'disabled' : '' ?>">
-                    <a class="page-link" href="?page=<?= $page+1 ?><?= $qsAmp ?>">
-                        Next →
-                    </a>
-                </li>
-            </ul>
-        </nav>
-    <?php endif; ?>
-
-    <?php endif; ?>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+// Use appropriate layout: public for guests, role layout for logged-in users
+if (is_logged_in()) {
+    $role = current_role();
+    $layoutFile = match($role) {
+        'student'  => 'student_layout.php',
+        'landlord' => 'landlord_layout.php',
+        'agent'    => 'agent_layout.php',
+        'admin'    => 'admin_layout.php',
+        default    => 'public_layout.php',
+    };
+    require __DIR__ . '/includes/' . $layoutFile;
+} else {
+    require __DIR__ . '/includes/public_layout.php';
+}
