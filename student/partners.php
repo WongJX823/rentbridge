@@ -50,61 +50,38 @@ ob_start();
     </div>
 <?php endif; ?>
 
-<!-- INTRO -->
-<div class="bg-white border rounded-3 p-4 mb-4">
-    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
-        <div class="flex-grow-1">
-            <h5 class="mb-1" style="font-family:'Fraunces',serif;">
-                <i class="bi bi-people-fill text-emerald"></i>
-                Co-tenancy posts
-            </h5>
-            <p class="text-secondary small mb-0">
-                Students looking to share a property they've found.
-                Found a place that's too expensive alone? Post it from any property page.
-            </p>
-        </div>
-        <a href="/rentbridge/listings.php" class="btn btn-outline-dark">
-            <i class="bi bi-search me-1"></i> Browse properties
-        </a>
-    </div>
-</div>
-
 <!-- FILTERS -->
-<form method="GET" class="bg-white border rounded-3 p-3 mb-4">
-    <div class="row g-2 align-items-end">
-        <div class="col-md-5">
-            <label class="form-label small fw-semibold text-secondary text-uppercase">City</label>
-            <select name="city" class="form-select form-select-sm">
-                <option value="">All cities</option>
-                <?php foreach ($cities as $c): ?>
-                    <option value="<?= e($c) ?>" <?= $filterCity===$c?'selected':'' ?>><?= e($c) ?></option>
-                <?php endforeach; ?>
-            </select>
-        </div>
-        <div class="col-md-4">
-            <label class="form-label small fw-semibold text-secondary text-uppercase">Max property rent (RM)</label>
-            <input type="number" name="max_rent" value="<?= e($filterMaxRent) ?>"
-                   class="form-control form-control-sm" placeholder="e.g. 1000" step="50">
-        </div>
-        <div class="col-md-3 d-flex gap-2">
-            <button type="submit" class="btn btn-sm btn-primary flex-fill">
-                <i class="bi bi-funnel me-1"></i> Filter
-            </button>
-            <a href="?" class="btn btn-sm btn-outline-secondary">Clear</a>
-        </div>
-    </div>
+<form method="GET" class="d-flex gap-2 mb-4 flex-wrap align-items-center">
+    <select name="city" class="form-select form-select-sm" style="max-width:200px;">
+        <option value="">All cities</option>
+        <?php foreach ($cities as $c): ?>
+            <option value="<?= e($c) ?>" <?= $filterCity===$c?'selected':'' ?>><?= e($c) ?></option>
+        <?php endforeach; ?>
+    </select>
+    <input type="number" name="max_rent" value="<?= e($filterMaxRent) ?>"
+           class="form-control form-control-sm" placeholder="Max rent RM"
+           style="max-width:150px;" step="50">
+    <button type="submit" class="btn btn-sm btn-primary">
+        <i class="bi bi-funnel"></i> Filter
+    </button>
+    <?php if ($filterCity || $filterMaxRent): ?>
+        <a href="?" class="btn btn-sm btn-outline-secondary">Clear</a>
+    <?php endif; ?>
+    <span class="text-secondary small ms-auto">
+        <?= count($posts) ?> post<?= count($posts) === 1 ? '' : 's' ?>
+    </span>
 </form>
 
 <!-- POSTS FEED -->
 <?php if (empty($posts)): ?>
     <div class="text-center py-5 bg-white rounded-3 border">
         <i class="bi bi-people" style="font-size: 3rem; color: rgba(15,44,82,0.15);"></i>
-        <h4 class="mt-3">No co-tenancy posts yet</h4>
+        <h4 class="mt-3">No co-tenancy posts</h4>
         <p class="text-secondary small">
             <?php if ($filterCity || $filterMaxRent): ?>
-                Try removing some filters.
+                Try removing filters.
             <?php else: ?>
-                Be the first! Browse properties → click "Share with housemates" on any listing.
+                Browse a property → click "Share with housemates" to start.
             <?php endif; ?>
         </p>
         <a href="/rentbridge/listings.php" class="btn btn-primary mt-2">
@@ -117,112 +94,104 @@ ob_start();
             $perPerson = (float)$post['property_rent'] / max(1, ((int)$post['housemates_needed'] + 1));
             $compat = $post['compatibility'];
         ?>
-            <div class="col-md-6">
-                <div class="bg-white border rounded-3 overflow-hidden h-100"
-                     style="transition: transform 0.15s, box-shadow 0.15s;"
-                     onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(15,44,82,0.08)'"
-                     onmouseout="this.style.transform='';this.style.boxShadow=''">
+            <div class="col-md-6 col-lg-4">
+                <a href="/rentbridge/property.php?id=<?= (int)$post['property_id'] ?>&from_post=<?= (int)$post['id'] ?>"
+                    class="text-decoration-none text-dark d-block h-100">
+                    <div class="bg-white border rounded-3 overflow-hidden h-100"
+                         style="transition: transform 0.15s, box-shadow 0.15s;"
+                         onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(15,44,82,0.08)'"
+                         onmouseout="this.style.transform='';this.style.boxShadow=''">
 
-                    <!-- HEADER: Poster info + match badge -->
-                    <div class="p-3 d-flex justify-content-between align-items-start"
-                         style="border-bottom: 1px solid rgba(15,44,82,0.06);">
-                        <div class="d-flex gap-3 align-items-center flex-grow-1">
-                            <div style="width:40px; height:40px; border-radius:50%;
-                                        background:#E4F2EA; color:#0F2C52;
-                                        display:flex; align-items:center; justify-content:center;
-                                        font-weight:600;">
-                                <?= strtoupper(substr($post['poster_nickname'] ?: $post['poster_name'], 0, 1)) ?>
-                            </div>
-                            <div>
-                                <strong class="small"><?= e($post['poster_nickname'] ?: $post['poster_name']) ?></strong>
-                                <div class="small text-secondary">
-                                    <code><?= e($post['poster_matric']) ?></code>
-                                    · posted <?= e(human_time_diff($post['post_created_at'])) ?>
+                        <!-- HEADER: Poster + match badge (compact) -->
+                        <div class="p-2 d-flex justify-content-between align-items-center"
+                             style="border-bottom: 1px solid rgba(15,44,82,0.06);">
+                            <div class="d-flex gap-2 align-items-center">
+                                <div style="width:28px; height:28px; border-radius:50%;
+                                            background:#E4F2EA; color:#0F2C52;
+                                            display:flex; align-items:center; justify-content:center;
+                                            font-weight:600; font-size:0.85rem;">
+                                    <?= strtoupper(substr($post['poster_nickname'] ?: $post['poster_name'], 0, 1)) ?>
+                                </div>
+                                <div>
+                                    <strong style="font-size:0.85rem;"><?= e($post['poster_nickname'] ?: $post['poster_name']) ?></strong>
+                                    <div class="text-secondary" style="font-size:0.7rem;">
+                                        <?= e(human_time_diff($post['post_created_at'])) ?>
+                                    </div>
                                 </div>
                             </div>
+                            <span class="badge bg-<?= $compat['color'] ?>" style="font-size:0.65rem;"
+                                  title="<?= e($compat['description']) ?>">
+                                <?= e($compat['label']) ?>
+                            </span>
                         </div>
-                        <span class="badge bg-<?= $compat['color'] ?>"
-                              title="<?= e($compat['description']) ?>">
-                            <?= e($compat['label']) ?>
-                        </span>
-                    </div>
 
-                    <!-- PROPERTY THUMBNAIL -->
-                    <div style="aspect-ratio: 16/9; background: linear-gradient(135deg,#E6ECF4,#E4F2EA); position:relative;">
-                        <?php if (!empty($post['property_image'])): ?>
-                            <img src="/rentbridge/<?= e($post['property_image']) ?>"
-                                 style="width:100%; height:100%; object-fit:cover;" alt="">
-                        <?php endif; ?>
-                        <span class="badge bg-dark"
-                              style="position:absolute; bottom:10px; right:10px;">
-                            <i class="bi bi-people-fill"></i>
-                            Need <?= (int)$post['housemates_needed'] ?> more
-                        </span>
-                    </div>
+                        <!-- PROPERTY THUMBNAIL (compact 16/9 or just 4/3) -->
+                        <div style="aspect-ratio: 4/3; background: linear-gradient(135deg,#E6ECF4,#E4F2EA); position:relative;">
+                            <?php if (!empty($post['property_image'])): ?>
+                                <img src="/rentbridge/<?= e($post['property_image']) ?>"
+                                     style="width:100%; height:100%; object-fit:cover;" alt="">
+                            <?php else: ?>
+                                <div style="display:flex; align-items:center; justify-content:center; height:100%; color:rgba(15,44,82,0.2);">
+                                    <i class="bi bi-camera" style="font-size:2rem;"></i>
+                                </div>
+                            <?php endif; ?>
+                            <span class="badge bg-dark"
+                                  style="position:absolute; bottom:8px; right:8px; font-size:0.7rem;">
+                                <i class="bi bi-people-fill"></i> Need <?= (int)$post['housemates_needed'] ?>
+                            </span>
+                        </div>
 
-                    <!-- BODY -->
-                    <div class="p-3">
-                        <h6 class="mb-1">
-                            <a href="/rentbridge/properties/<?= (int)$post['property_id'] ?>"
-                               class="text-decoration-none text-dark">
+                        <!-- BODY (tight) -->
+                        <div class="p-3">
+                            <h6 class="mb-1" style="font-size:0.95rem;">
                                 <?= e($post['property_title']) ?>
-                            </a>
-                        </h6>
-                        <div class="small text-secondary mb-2">
-                            <i class="bi bi-geo-alt"></i> <?= e($post['property_city']) ?>
-                            · <?= e(ucfirst(str_replace('_',' ', $post['property_type']))) ?>
-                        </div>
-
-                        <!-- Pricing -->
-                        <div class="row g-2 mb-2 small">
-                            <div class="col-6">
-                                <div class="text-secondary">Total monthly</div>
-                                <strong>RM <?= number_format((float)$post['property_rent']) ?></strong>
+                            </h6>
+                            <div class="text-secondary mb-2" style="font-size:0.75rem;">
+                                <i class="bi bi-geo-alt"></i> <?= e($post['property_city']) ?>
+                                · <?= e(ucfirst(str_replace('_',' ', $post['property_type']))) ?>
                             </div>
-                            <div class="col-6">
-                                <div class="text-secondary">Per person (est.)</div>
-                                <strong class="text-emerald">RM <?= number_format($perPerson) ?></strong>
-                            </div>
-                        </div>
 
-                        <!-- Message -->
-                        <?php if (!empty($post['message'])): ?>
-                            <div class="small mt-2"
-                                 style="background:#F4F4EE; border-radius:6px; padding:8px 12px;">
-                                "<?= e($post['message']) ?>"
+                            <!-- Pricing row -->
+                            <div class="d-flex justify-content-between mb-2" style="font-size:0.8rem;">
+                                <div>
+                                    <span class="text-secondary">Total:</span>
+                                    <strong>RM <?= number_format((float)$post['property_rent']) ?></strong>
+                                </div>
+                                <div>
+                                    <span class="text-secondary">Per-person:</span>
+                                    <strong class="text-emerald">RM <?= number_format($perPerson) ?></strong>
+                                </div>
                             </div>
-                        <?php endif; ?>
 
-                        <!-- Bio -->
-                        <?php if (!empty($post['poster_bio'])): ?>
-                            <div class="small text-secondary mt-2">
-                                <i class="bi bi-info-circle"></i> About <?= e($post['poster_nickname'] ?: 'them') ?>:
-                                <?= e($post['poster_bio']) ?>
+                            <!-- Message (truncated) -->
+                            <?php if (!empty($post['message'])): ?>
+                                <div style="background:#F4F4EE; border-radius:6px; padding:6px 10px;
+                                            font-size:0.75rem; line-height:1.4;
+                                            display:-webkit-box; -webkit-line-clamp:2;
+                                            -webkit-box-orient:vertical; overflow:hidden;">
+                                    "<?= e($post['message']) ?>"
+                                </div>
+                            <?php endif; ?>
+
+                            <!-- CTA: single button, text-based -->
+                            <div class="d-flex justify-content-between align-items-center mt-3 pt-2"
+                                 style="border-top: 1px solid rgba(15,44,82,0.06);">
+                                <button type="button"
+                                        onclick="event.preventDefault(); event.stopPropagation(); window.location='/rentbridge/chat/start.php?with=<?= (int)$post['poster_id'] ?>&property_id=<?= (int)$post['property_id'] ?>'; return false;"
+                                        class="btn btn-sm btn-outline-primary"
+                                        style="font-size:0.75rem;">
+                                    <i class="bi bi-chat-dots"></i> Message
+                                </button>
+                                <span class="small text-emerald fw-semibold">
+                                    Property <i class="bi bi-arrow-right"></i>
+                                </span>
                             </div>
-                        <?php endif; ?>
-
-                        <!-- Actions -->
-                        <div class="d-flex gap-2 mt-3">
-                            <a href="/rentbridge/chat/start.php?with=<?= (int)$post['poster_id'] ?>&property_id=<?= (int)$post['property_id'] ?>"
-                               class="btn btn-sm btn-primary flex-fill">
-                                <i class="bi bi-chat-dots me-1"></i> Message
-                            </a>
-                            <a href="/rentbridge/properties/<?= (int)$post['property_id'] ?>"
-                               class="btn btn-sm btn-outline-dark">
-                                <i class="bi bi-house"></i>
-                            </a>
                         </div>
                     </div>
-                </div>
+                </a>
             </div>
         <?php endforeach; ?>
     </div>
-
-    <p class="text-secondary small mt-3">
-        Showing <?= count($posts) ?>
-        <?= count($posts) === 1 ? 'post' : 'posts' ?>
-        <?php if ($filterCity || $filterMaxRent): ?>(filtered)<?php endif; ?>
-    </p>
 <?php endif; ?>
 
 <?php
