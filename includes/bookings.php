@@ -24,86 +24,40 @@ require_once __DIR__ . '/auth.php';
  */
 function auto_assign_agent(int $bookingId): ?int {
     $pdo = db();
-
-    // Get booking + its rejected_agents list + landlord_id
-    $stmt = $pdo->prepare(
-        'SELECT id, landlord_id, rejected_agents, status
-           FROM bookings WHERE id = ? LIMIT 1'
-    );
-    $stmt->execute([$bookingId]);
-    $booking = $stmt->fetch();
-
-    if (!$booking)                                return null;
-    if ($booking['status'] !== 'pending_agent')   return null;
-
-    // Build exclusion list: rejected agents + the landlord
-    $rejected = [];
-    if (!empty($booking['rejected_agents'])) {
-        $decoded = json_decode($booking['rejected_agents'], true);
-        if (is_array($decoded)) $rejected = array_map('intval', $decoded);
-    }
-    $rejected[] = (int)$booking['landlord_id'];
-    $rejected = array_unique($rejected);
-
-    // Build the NOT IN placeholder dynamically
-    $excludeSql = '';
-    if (!empty($rejected)) {
-        $placeholders = implode(',', array_fill(0, count($rejected), '?'));
-        $excludeSql = " AND a.user_id NOT IN ($placeholders)";
-    }
-
-    // Find best candidate
-    $sql = "
-        SELECT a.user_id, a.current_caseload, a.max_caseload
-          FROM agents a
-          JOIN users u ON u.id = a.user_id
-         WHERE u.status       = 'active'
-           AND a.availability = 'available'
-           AND a.current_caseload < a.max_caseload
-           $excludeSql
-         ORDER BY a.current_caseload ASC, RAND()
+    // Find agent with lowest caseload + available
+    $stmt = $pdo->prepare("
+        SELECT user_id FROM agents
+         WHERE availability = 'available'
+           AND current_caseload < max_caseload
+         ORDER BY current_caseload ASC, RAND()
          LIMIT 1
-    ";
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute($rejected);
-    $agent = $stmt->fetch();
-
-    if (!$agent) {
-        // No eligible agent — admin should be alerted
-        notify_admins_no_agent($bookingId);
-        return null;
-    }
-
-    $agentUserId = (int)$agent['user_id'];
-
-    // Assign agent + increment caseload (transaction for safety)
+    ");
+    $stmt->execute();
+    $agentId = $stmt->fetchColumn();
+    
+    if (!$agentId) return null;
+    
+    $pdo->beginTransaction();
     try {
-        $pdo->beginTransaction();
-
-        $stmt = $pdo->prepare('UPDATE bookings SET agent_id = ? WHERE id = ?');
-        $stmt->execute([$agentUserId, $bookingId]);
-
-        $stmt = $pdo->prepare(
-            'UPDATE agents SET current_caseload = current_caseload + 1 WHERE user_id = ?'
-        );
-        $stmt->execute([$agentUserId]);
-
+        // Assign
+        $stmt = $pdo->prepare("UPDATE bookings SET agent_id = ?, status = 'agent_assigned' WHERE id = ?");
+        $stmt->execute([$agentId, $bookingId]);
+        
+        // Increment caseload
+        $stmt = $pdo->prepare("UPDATE agents SET current_caseload = current_caseload + 1 WHERE user_id = ?");
+        $stmt->execute([$agentId]);
+        
+        // Notify agent
+        notify((int)$agentId, 'agent_assigned', 'New case assigned',
+            'You have been assigned to inspect a new tenancy.',
+            '/rentbridge/agent/case.php?id=' . $bookingId);
+        
         $pdo->commit();
+        return (int)$agentId;
     } catch (Throwable $e) {
-        if ($pdo->inTransaction()) $pdo->rollBack();
+        $pdo->rollBack();
         return null;
     }
-
-    // Notify the assigned agent
-    notify(
-        $agentUserId,
-        'agent_assignment',
-        'New case waiting for your acceptance',
-        'You have been assigned as the witness agent for a new booking (#' . $bookingId . ').',
-        '/rentbridge/agent/cases.php'
-    );
-
-    return $agentUserId;
 }
 
 /**

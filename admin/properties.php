@@ -46,31 +46,26 @@ if ($filterCity !== '') {
 
 // Build query — JOIN current active booking's agent if any
 $stmt = $pdo->prepare("
-    SELECT p.id, p.title, p.property_type, p.city, p.state, p.monthly_rent,
-           p.status, p.agent_verified_at, p.created_at,
+    SELECT p.*,
+           p.landlord_id AS landlord_user_id,
            l.full_name AS landlord_name,
-           u.id        AS landlord_user_id,
-           -- Find most recent active booking with assigned agent
-           (SELECT b.id FROM bookings b
-              WHERE b.property_id = p.id
-                AND b.status IN ('agent_verifying','agent_verified','contract_pending','active')
-              ORDER BY b.created_at DESC LIMIT 1) AS active_booking_id,
-           (SELECT a.full_name FROM bookings b
+           (SELECT a.full_name
+              FROM bookings b
               JOIN agents a ON a.user_id = b.agent_id
-              WHERE b.property_id = p.id
-                AND b.status IN ('agent_verifying','agent_verified','contract_pending','active')
-              ORDER BY b.created_at DESC LIMIT 1) AS active_agent_name,
-           (SELECT b.status FROM bookings b
-              WHERE b.property_id = p.id
-                AND b.status IN ('agent_verifying','agent_verified','contract_pending','active')
-              ORDER BY b.created_at DESC LIMIT 1) AS active_booking_status
+             WHERE b.property_id = p.id
+               AND b.status IN ('agent_verifying','agent_assigned','contract_pending','active')
+             ORDER BY b.id DESC LIMIT 1
+           ) AS current_inspector,
+           (SELECT a.full_name
+              FROM users a
+              JOIN agents ag ON ag.user_id = p.agent_verified_by
+             WHERE a.id = p.agent_verified_by
+           ) AS verifier_name
       FROM properties p
       JOIN users u ON u.id = p.landlord_id
-      JOIN landlords l ON l.user_id = u.id
-     WHERE $where
-     ORDER BY
-       CASE p.status WHEN 'pending_approval' THEN 0 ELSE 1 END,
-       p.created_at DESC
+      JOIN landlords l ON l.user_id = p.landlord_id
+      WHERE $where
+      ORDER BY p.created_at DESC
 ");
 $stmt->execute($params);
 $properties = $stmt->fetchAll();
@@ -173,8 +168,9 @@ ob_start();
         <table class="table mb-0 align-middle">
             <thead style="background:#F4F4EE;">
                 <tr>
-<th class="ps-3">ID</th>
-        <th>Property</th>                    <th>Landlord</th>
+                    <th class="ps-3">ID</th>
+                    <th>Property</th>                    
+                    <th>Landlord</th>
                     <th>Rent</th>
                     <th>Status</th>
                     <th>Inspecting agent</th>
@@ -211,18 +207,15 @@ ob_start();
                             <div class="small text-secondary">/ month</div>
                         </td>
                         <td><span class="badge bg-<?= $color ?>"><?= e($label) ?></span></td>
-                        <td>
-                            <?php if (!empty($p['active_agent_name'])): ?>
-                                <strong class="small"><?= e($p['active_agent_name']) ?></strong>
-                                <div class="small text-secondary">
-                                    <?= e(booking_short_label($p['active_booking_status'])) ?>
-                                    <a href="/rentbridge/admin/booking.php?id=<?= (int)$p['active_booking_id'] ?>"
-                                       class="text-decoration-none ms-1">
-                                        #<?= (int)$p['active_booking_id'] ?>
-                                    </a>
-                                </div>
+                        <td class="small">
+                            <?php if (!empty($p['current_inspector'])): ?>
+                                <?= e($p['current_inspector']) ?>
+                            <?php elseif (!empty($p['verifier_name'])): ?>
+                                <span class="text-secondary">
+                                    ✓ <?= e($p['verifier_name']) ?>
+                                </span>
                             <?php else: ?>
-                                <span class="text-secondary small">—</span>
+                                <span class="text-secondary">—</span>
                             <?php endif; ?>
                         </td>
                         <td class="text-end pe-3">
