@@ -1,6 +1,6 @@
 <mxfile host="app.diagrams.net">
   <diagram name="Page-1" id="CNTMdKkPQs8V5Xc73TAt">
-    <mxGraphModel dx="564" dy="873" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+    <mxGraphModel dx="718" dy="742" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -12,18 +12,6 @@
         </mxCell>
         <mxCell id="P7X8Y7d44DvnIPpRGwec-3" parent="1" style="rounded=0;whiteSpace=wrap;html=1;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;" value="" vertex="1">
           <mxGeometry height="370" width="180" x="827.5" y="150" as="geometry" />
-        </mxCell>
-        <mxCell id="P7X8Y7d44DvnIPpRGwec-5" parent="1" style="rounded=0;whiteSpace=wrap;html=1;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;fillColor=#d5e8d4;strokeColor=#82b366;" value="Profile Dashboard" vertex="1">
-          <mxGeometry height="60" width="180" x="827.5" y="150" as="geometry" />
-        </mxCell>
-        <mxCell id="P7X8Y7d44DvnIPpRGwec-6" parent="1" style="rounded=0;whiteSpace=wrap;html=1;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;" value="Saved Search" vertex="1">
-          <mxGeometry height="60" width="180" x="827.5" y="210" as="geometry" />
-        </mxCell>
-        <mxCell id="P7X8Y7d44DvnIPpRGwec-7" parent="1" style="rounded=0;whiteSpace=wrap;html=1;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;" value="Partner List" vertex="1">
-          <mxGeometry height="60" width="180" x="827.5" y="270" as="geometry" />
-        </mxCell>
-        <mxCell id="P7X8Y7d44DvnIPpRGwec-8" parent="1" style="rounded=0;whiteSpace=wrap;html=1;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;" value="Chat &amp;amp; Notification" vertex="1">
-          <mxGeometry height="60" width="180" x="827.5" y="330" as="geometry" />
         </mxCell>
         <mxCell id="P7X8Y7d44DvnIPpRGwec-9" parent="1" style="rounded=0;whiteSpace=wrap;html=1;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;" value="Rentbridge Logo" vertex="1">
           <mxGeometry height="60" width="150" x="897.5" y="90" as="geometry" />
@@ -197,7 +185,7 @@
           <mxGeometry height="40" width="180" x="2190" y="450" as="geometry" />
         </mxCell>
         <mxCell id="-VVQp-Q06sIB8XbFQBM6-46" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Students" vertex="1">
-          <mxGeometry height="30" width="60" x="1092.5" y="40" as="geometry" />
+          <mxGeometry height="30" width="60" x="1362.5" y="105" as="geometry" />
         </mxCell>
         <mxCell id="-VVQp-Q06sIB8XbFQBM6-47" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Admin" vertex="1">
           <mxGeometry height="30" width="60" x="1810" y="40" as="geometry" />
@@ -306,6 +294,93 @@
         </mxCell>
         <mxCell id="-VVQp-Q06sIB8XbFQBM6-71" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Change Profile" vertex="1">
           <mxGeometry height="50" width="120" x="2482" y="460" as="geometry" />
+        </mxCell>
+        <mxCell id="-VVQp-Q06sIB8XbFQBM6-72" parent="1" style="rounded=0;whiteSpace=wrap;html=1;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;container=0;" value="Browse" vertex="1">
+          <mxGeometry height="40" width="180" x="828" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="-VVQp-Q06sIB8XbFQBM6-73" parent="1" style="rounded=0;whiteSpace=wrap;html=1;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;container=0;" value="Saved" vertex="1">
+          <mxGeometry height="40" width="180" x="828" y="190" as="geometry" />
+        </mxCell>
+        <mxCell id="-VVQp-Q06sIB8XbFQBM6-74" parent="1" style="rounded=0;whiteSpace=wrap;html=1;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;container=0;" value="Find Partners" vertex="1">
+          <mxGeometry height="40" width="180" x="828" y="230" as="geometry" />
+        </mxCell>
+        <mxCell id="-VVQp-Q06sIB8XbFQBM6-75" parent="1" style="rounded=0;whiteSpace=wrap;html=1;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;container=0;" value="Chat &amp;amp; Notif" vertex="1">
+          <mxGeometry height="40" width="180" x="828" y="270" as="geometry" />
+        </mxCell>
+        <mxCell id="-VVQp-Q06sIB8XbFQBM6-76" parent="1" style="rounded=0;whiteSpace=wrap;html=1;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;container=0;fillColor=#d5e8d4;strokeColor=#82b366;" value="Profile Dashboard" vertex="1">
+          <mxGeometry height="40" width="180" x="828" y="310" as="geometry" />
+        </mxCell>
+        <mxCell id="-VVQp-Q06sIB8XbFQBM6-86" parent="1" style="rounded=0;whiteSpace=wrap;html=1;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;" value="" vertex="1">
+          <mxGeometry height="430" width="602.5" x="1507.5" y="600" as="geometry" />
+        </mxCell>
+        <mxCell id="-VVQp-Q06sIB8XbFQBM6-87" parent="1" style="rounded=0;whiteSpace=wrap;html=1;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;" value="" vertex="1">
+          <mxGeometry height="60" width="600" x="1510" y="600" as="geometry" />
+        </mxCell>
+        <mxCell id="-VVQp-Q06sIB8XbFQBM6-88" parent="1" style="rounded=0;whiteSpace=wrap;html=1;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;" value="" vertex="1">
+          <mxGeometry height="370" width="180" x="1507.5" y="660" as="geometry" />
+        </mxCell>
+        <mxCell id="-VVQp-Q06sIB8XbFQBM6-89" parent="1" style="rounded=0;whiteSpace=wrap;html=1;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;" value="Rentbridge Logo" vertex="1">
+          <mxGeometry height="60" width="150" x="1577.5" y="600" as="geometry" />
+        </mxCell>
+        <mxCell id="-VVQp-Q06sIB8XbFQBM6-90" parent="1" style="rounded=0;whiteSpace=wrap;html=1;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;" value="Sign Out" vertex="1">
+          <mxGeometry height="30" width="180" x="1507.5" y="1000" as="geometry" />
+        </mxCell>
+        <mxCell id="-VVQp-Q06sIB8XbFQBM6-91" parent="1" style="rounded=0;whiteSpace=wrap;html=1;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;" value="Setting" vertex="1">
+          <mxGeometry height="40" width="180" x="1507.5" y="960" as="geometry" />
+        </mxCell>
+        <mxCell id="-VVQp-Q06sIB8XbFQBM6-92" connectable="0" parent="1" style="group" value="" vertex="1">
+          <mxGeometry height="60" width="70" x="1507" y="600" as="geometry" />
+        </mxCell>
+        <mxCell id="-VVQp-Q06sIB8XbFQBM6-93" parent="-VVQp-Q06sIB8XbFQBM6-92" style="rounded=0;whiteSpace=wrap;html=1;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;" value="" vertex="1">
+          <mxGeometry height="60" width="70" as="geometry" />
+        </mxCell>
+        <mxCell id="-VVQp-Q06sIB8XbFQBM6-94" edge="1" parent="-VVQp-Q06sIB8XbFQBM6-92" style="endArrow=none;html=1;rounded=0;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="15" y="40" as="sourcePoint" />
+            <mxPoint x="55" y="40" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="-VVQp-Q06sIB8XbFQBM6-95" edge="1" parent="-VVQp-Q06sIB8XbFQBM6-92" style="endArrow=none;html=1;rounded=0;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="15" y="30" as="sourcePoint" />
+            <mxPoint x="55" y="30" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="-VVQp-Q06sIB8XbFQBM6-96" edge="1" parent="-VVQp-Q06sIB8XbFQBM6-92" style="endArrow=none;html=1;rounded=0;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="15" y="20" as="sourcePoint" />
+            <mxPoint x="55" y="20" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="-VVQp-Q06sIB8XbFQBM6-97" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Profile&lt;div&gt;Details&lt;/div&gt;" vertex="1">
+          <mxGeometry height="300" width="422" x="1688" y="660" as="geometry" />
+        </mxCell>
+        <mxCell id="-VVQp-Q06sIB8XbFQBM6-98" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="Change Profile" vertex="1">
+          <mxGeometry height="50" width="120" x="1800" y="970" as="geometry" />
+        </mxCell>
+        <mxCell id="-VVQp-Q06sIB8XbFQBM6-99" parent="1" style="rounded=0;whiteSpace=wrap;html=1;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;container=0;" value="Browse" vertex="1">
+          <mxGeometry height="40" width="180" x="1508" y="660" as="geometry" />
+        </mxCell>
+        <mxCell id="-VVQp-Q06sIB8XbFQBM6-100" parent="1" style="rounded=0;whiteSpace=wrap;html=1;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;container=0;" value="Saved" vertex="1">
+          <mxGeometry height="40" width="180" x="1508" y="700" as="geometry" />
+        </mxCell>
+        <mxCell id="-VVQp-Q06sIB8XbFQBM6-101" parent="1" style="rounded=0;whiteSpace=wrap;html=1;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;container=0;" value="Property Register" vertex="1">
+          <mxGeometry height="40" width="180" x="1508" y="740" as="geometry" />
+        </mxCell>
+        <mxCell id="-VVQp-Q06sIB8XbFQBM6-102" parent="1" style="rounded=0;whiteSpace=wrap;html=1;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;container=0;" value="Chat &amp;amp; Notif" vertex="1">
+          <mxGeometry height="40" width="180" x="1508" y="780" as="geometry" />
+        </mxCell>
+        <mxCell id="-VVQp-Q06sIB8XbFQBM6-103" parent="1" style="rounded=0;whiteSpace=wrap;html=1;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;container=0;fillColor=#d5e8d4;strokeColor=#82b366;" value="Profile Dashboard" vertex="1">
+          <mxGeometry height="40" width="180" x="1508" y="820" as="geometry" />
+        </mxCell>
+        <mxCell id="-VVQp-Q06sIB8XbFQBM6-104" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Landlord" vertex="1">
+          <mxGeometry height="30" width="60" x="2040" y="615" as="geometry" />
+        </mxCell>
+        <mxCell id="-VVQp-Q06sIB8XbFQBM6-105" parent="1" style="rounded=0;whiteSpace=wrap;html=1;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;container=0;" value="About RentBridge" vertex="1">
+          <mxGeometry height="40" width="180" x="828" y="350" as="geometry" />
+        </mxCell>
+        <mxCell id="-VVQp-Q06sIB8XbFQBM6-106" parent="1" style="rounded=0;whiteSpace=wrap;html=1;movable=1;resizable=1;rotatable=1;deletable=1;editable=1;locked=0;connectable=1;container=0;" value="About RentBridge" vertex="1">
+          <mxGeometry height="40" width="180" x="1508" y="860" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
