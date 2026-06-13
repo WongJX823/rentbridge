@@ -100,7 +100,8 @@ $pageContent   = $pageContent   ?? '';
                 <i class="bi bi-clipboard-data-fill"></i>
                 <span class="sidebar-label">Tenancies</span>
             </a>
-            <a href="/rentbridge/admin/reports.php"
+            
+            <a href="/rentbridge/admin/statistics/summary.php"
                class="sidebar-link <?= $activeNav === 'reports' ? 'active' : '' ?>">
                 <i class="bi bi-bar-chart-fill"></i>
                 <span class="sidebar-label">Statistics</span>
