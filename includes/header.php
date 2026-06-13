@@ -37,10 +37,17 @@ require_once __DIR__ . '/auth.php';
                 require_once __DIR__ . '/chat.php';
                 $unreadCount = unread_message_count(current_user_id());
             ?>
-                <a href="/rentbridge/chat.php" class="btn btn-ghost position-relative me-2">
-                    <i class="bi bi-chat-dots"></i>
+                <a href="/rentbridge/chat.php"
+                    class="position-relative me-3 d-inline-flex align-items-center justify-content-center"
+                    style="width: 40px; height: 40px; color: white; border-radius: 50%;
+                            text-decoration: none; transition: background 0.15s;"
+                    onmouseover="this.style.background='rgba(255,255,255,0.15)'"
+                    onmouseout="this.style.background='transparent'"
+                    title="Messages">
+                    <i class="bi bi-chat-dots" style="font-size: 1.25rem;"></i>
                     <?php if ($unreadCount > 0): ?>
-                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.65rem;">
+                        <span class="position-absolute translate-middle badge rounded-pill bg-danger"
+                            style="top: 8px; right: -4px; font-size: 0.65rem;">
                             <?= $unreadCount > 99 ? '99+' : $unreadCount ?>
                         </span>
                     <?php endif; ?>

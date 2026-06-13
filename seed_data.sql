@@ -71,34 +71,34 @@ SET FOREIGN_KEY_CHECKS = 1;
 
 -- ============================================================================
 -- USERS (all passwords =Test1234!)
--- Hash: $2y$10$ZW6h.NJ5J9D0LJZG3LHNoOzCJSDjFJgWnZK5jZ2HxqB7w/N1bL7Bm
+-- Hash: $2y$10$.ZJXyHDKbUB7R5LjhYZonOmdvV5iXdwrI2.90VnHbxk...
 -- ============================================================================
 
 -- STUDENTS (ids 2-9)
 INSERT INTO users (id, email, password_hash, primary_role, status, created_at) VALUES
-(2, 'jiaxi@student.utem.edu.my',  '$2y$10$ZW6h.NJ5J9D0LJZG3LHNoOzCJSDjFJgWnZK5jZ2HxqB7w/N1bL7Bm', 'student', 'active',    '2026-01-15 10:00:00'),
-(3, 'meiling@student.utem.edu.my','$2y$10$ZW6h.NJ5J9D0LJZG3LHNoOzCJSDjFJgWnZK5jZ2HxqB7w/N1bL7Bm', 'student', 'active',    '2026-02-03 14:22:00'),
-(4, 'alibaba@student.utem.edu.my','$2y$10$ZW6h.NJ5J9D0LJZG3LHNoOzCJSDjFJgWnZK5jZ2HxqB7w/N1bL7Bm', 'student', 'active',    '2026-03-10 09:15:00'),
-(5, 'ramesh@student.utem.edu.my', '$2y$10$ZW6h.NJ5J9D0LJZG3LHNoOzCJSDjFJgWnZK5jZ2HxqB7w/N1bL7Bm', 'student', 'active',    '2026-03-20 11:00:00'),
-(6, 'siti@student.utem.edu.my',   '$2y$10$ZW6h.NJ5J9D0LJZG3LHNoOzCJSDjFJgWnZK5jZ2HxqB7w/N1bL7Bm', 'student', 'active',    '2026-04-05 16:45:00'),
-(7, 'weizhe@student.utem.edu.my', '$2y$10$ZW6h.NJ5J9D0LJZG3LHNoOzCJSDjFJgWnZK5jZ2HxqB7w/N1bL7Bm', 'student', 'active',    '2026-04-12 08:30:00'),
-(8, 'farah@student.utem.edu.my',  '$2y$10$ZW6h.NJ5J9D0LJZG3LHNoOzCJSDjFJgWnZK5jZ2HxqB7w/N1bL7Bm', 'student', 'suspended', '2026-04-20 13:00:00'),
-(9, 'kelvin@student.utem.edu.my', '$2y$10$ZW6h.NJ5J9D0LJZG3LHNoOzCJSDjFJgWnZK5jZ2HxqB7w/N1bL7Bm', 'student', 'active',    '2026-05-01 10:10:00');
+(2, 'jiaxi@student.utem.edu.my',  '$2y$10$.ZJXyHDKbUB7R5LjhYZonOmdvV5iXdwrI2.90VnHbxk...', 'student', 'active',    '2026-01-15 10:00:00'),
+(3, 'meiling@student.utem.edu.my','$2y$10$.ZJXyHDKbUB7R5LjhYZonOmdvV5iXdwrI2.90VnHbxk...', 'student', 'active',    '2026-02-03 14:22:00'),
+(4, 'alibaba@student.utem.edu.my','$2y$10$.ZJXyHDKbUB7R5LjhYZonOmdvV5iXdwrI2.90VnHbxk...', 'student', 'active',    '2026-03-10 09:15:00'),
+(5, 'ramesh@student.utem.edu.my', '$2y$10$.ZJXyHDKbUB7R5LjhYZonOmdvV5iXdwrI2.90VnHbxk...', 'student', 'active',    '2026-03-20 11:00:00'),
+(6, 'siti@student.utem.edu.my',   '$2y$10$.ZJXyHDKbUB7R5LjhYZonOmdvV5iXdwrI2.90VnHbxk...', 'student', 'active',    '2026-04-05 16:45:00'),
+(7, 'weizhe@student.utem.edu.my', '$2y$10$.ZJXyHDKbUB7R5LjhYZonOmdvV5iXdwrI2.90VnHbxk...', 'student', 'active',    '2026-04-12 08:30:00'),
+(8, 'farah@student.utem.edu.my',  '$2y$10$.ZJXyHDKbUB7R5LjhYZonOmdvV5iXdwrI2.90VnHbxk...', 'student', 'suspended', '2026-04-20 13:00:00'),
+(9, 'kelvin@student.utem.edu.my', '$2y$10$.ZJXyHDKbUB7R5LjhYZonOmdvV5iXdwrI2.90VnHbxk...', 'student', 'active',    '2026-05-01 10:10:00');
 
 -- LANDLORDS (ids 10-14)
 INSERT INTO users (id, email, password_hash, primary_role, status, created_at) VALUES
-(10, 'ahmad@landlord.com', '$2y$10$ZW6h.NJ5J9D0LJZG3LHNoOzCJSDjFJgWnZK5jZ2HxqB7w/N1bL7Bm', 'landlord', 'active', '2026-01-20 09:00:00'),
-(11, 'wong@landlord.com',  '$2y$10$ZW6h.NJ5J9D0LJZG3LHNoOzCJSDjFJgWnZK5jZ2HxqB7w/N1bL7Bm', 'landlord', 'active', '2026-02-15 11:30:00'),
-(12, 'priya@landlord.com', '$2y$10$ZW6h.NJ5J9D0LJZG3LHNoOzCJSDjFJgWnZK5jZ2HxqB7w/N1bL7Bm', 'landlord', 'active', '2026-02-28 14:15:00'),
-(13, 'chen@landlord.com',  '$2y$10$ZW6h.NJ5J9D0LJZG3LHNoOzCJSDjFJgWnZK5jZ2HxqB7w/N1bL7Bm', 'landlord', 'active', '2026-03-08 16:00:00'),
-(14, 'raj@landlord.com',   '$2y$10$ZW6h.NJ5J9D0LJZG3LHNoOzCJSDjFJgWnZK5jZ2HxqB7w/N1bL7Bm', 'landlord', 'active', '2026-04-12 10:45:00');
+(10, 'ahmad@landlord.com', '$2y$10$.ZJXyHDKbUB7R5LjhYZonOmdvV5iXdwrI2.90VnHbxk...', 'landlord', 'active', '2026-01-20 09:00:00'),
+(11, 'wong@landlord.com',  '$2y$10$.ZJXyHDKbUB7R5LjhYZonOmdvV5iXdwrI2.90VnHbxk...', 'landlord', 'active', '2026-02-15 11:30:00'),
+(12, 'priya@landlord.com', '$2y$10$.ZJXyHDKbUB7R5LjhYZonOmdvV5iXdwrI2.90VnHbxk...', 'landlord', 'active', '2026-02-28 14:15:00'),
+(13, 'chen@landlord.com',  '$2y$10$.ZJXyHDKbUB7R5LjhYZonOmdvV5iXdwrI2.90VnHbxk...', 'landlord', 'active', '2026-03-08 16:00:00'),
+(14, 'raj@landlord.com',   '$2y$10$.ZJXyHDKbUB7R5LjhYZonOmdvV5iXdwrI2.90VnHbxk...', 'landlord', 'active', '2026-04-12 10:45:00');
 
 -- AGENTS (ids 15-18)
 INSERT INTO users (id, email, password_hash, primary_role, status, created_at) VALUES
-(15, 'inspector1@utem.edu.my', '$2y$10$ZW6h.NJ5J9D0LJZG3LHNoOzCJSDjFJgWnZK5jZ2HxqB7w/N1bL7Bm', 'agent', 'active',  '2026-01-05 08:00:00'),
-(16, 'inspector2@utem.edu.my', '$2y$10$ZW6h.NJ5J9D0LJZG3LHNoOzCJSDjFJgWnZK5jZ2HxqB7w/N1bL7Bm', 'agent', 'active',  '2026-01-10 09:30:00'),
-(17, 'inspector3@utem.edu.my', '$2y$10$ZW6h.NJ5J9D0LJZG3LHNoOzCJSDjFJgWnZK5jZ2HxqB7w/N1bL7Bm', 'agent', 'pending', '2026-05-15 14:00:00'),
-(18, 'inspector4@utem.edu.my', '$2y$10$ZW6h.NJ5J9D0LJZG3LHNoOzCJSDjFJgWnZK5jZ2HxqB7w/N1bL7Bm', 'agent', 'active',  '2026-02-01 10:00:00');
+(15, 'inspector1@utem.edu.my', '$2y$10$.ZJXyHDKbUB7R5LjhYZonOmdvV5iXdwrI2.90VnHbxk...', 'agent', 'active',  '2026-01-05 08:00:00'),
+(16, 'inspector2@utem.edu.my', '$2y$10$.ZJXyHDKbUB7R5LjhYZonOmdvV5iXdwrI2.90VnHbxk...', 'agent', 'active',  '2026-01-10 09:30:00'),
+(17, 'inspector3@utem.edu.my', '$2y$10$.ZJXyHDKbUB7R5LjhYZonOmdvV5iXdwrI2.90VnHbxk...', 'agent', 'pending', '2026-05-15 14:00:00'),
+(18, 'inspector4@utem.edu.my', '$2y$10$.ZJXyHDKbUB7R5LjhYZonOmdvV5iXdwrI2.90VnHbxk...', 'agent', 'active',  '2026-02-01 10:00:00');
 
 -- ============================================================================
 -- STUDENT PROFILES
