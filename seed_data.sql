@@ -562,3 +562,11 @@ INSERT INTO co_tenancy_posts (poster_id, property_id, message, housemates_needed
 (22, 15, 'Found this 3-bed apartment near UTeM, too pricey alone. Need 2 more housemates, prefer engineering students.', 2, '2026-06-08 11:30:00'),
 (26, 10, 'Whole single-storey house, perfect for 3 students. I''m friendly, like cooking. Move-in flexible.', 2, '2026-06-10 14:00:00'),
 (24, 21, 'Premium loft studio in city center but expensive alone. Looking for 1 housemate to share. Year 4 student.', 1, '2026-06-09 16:00:00');
+
+
+
+
+
+
+--Change pswd to Test@123
+UPDATE `users` SET password_hash = '$2y$10$i/gJoP6kqSaRPkSzU7Ud5OsauO7MddrtBsLDbC.COEfjThJ0hEI9u' WHERE primary_role != 'admin';

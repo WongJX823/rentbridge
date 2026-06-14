@@ -549,3 +549,71 @@ CREATE TABLE IF NOT EXISTS co_tenancy_posts (
     INDEX idx_status (status),
     INDEX idx_poster (poster_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Drop if you ran the earlier version
+DROP TABLE IF EXISTS co_tenants;
+
+CREATE TABLE co_tenants (
+    id              INT NOT NULL AUTO_INCREMENT,
+    booking_id      INT NOT NULL,
+    student_id      INT DEFAULT NULL COMMENT 'RentBridge user_id if linked (leader only typically)',
+    is_primary      TINYINT(1) NOT NULL DEFAULT 0 COMMENT '1 = leader who applied, 0 = additional co-tenant',
+
+    -- Personal data (always required, even if student_id is set, for contract printing)
+    full_name       VARCHAR(150) NOT NULL,
+    ic_number       VARCHAR(20) NOT NULL  COMMENT 'NRIC e.g. 030823-02-0465',
+    phone           VARCHAR(20)  DEFAULT NULL,
+    email           VARCHAR(150) DEFAULT NULL,
+    home_address    VARCHAR(255) DEFAULT NULL,
+
+    sign_order      INT NOT NULL DEFAULT 1,
+    signed_at       TIMESTAMP NULL DEFAULT NULL,
+    signature_data  TEXT DEFAULT NULL COMMENT 'base64 PNG of signature (Phase 2)',
+
+    added_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    added_by        INT NOT NULL COMMENT 'user_id who added this row',
+    status          ENUM('pending','signed','removed') NOT NULL DEFAULT 'pending',
+    notes           VARCHAR(255) DEFAULT NULL,
+
+    PRIMARY KEY (id),
+    FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE,
+    FOREIGN KEY (student_id) REFERENCES users(id)    ON DELETE SET NULL,
+    FOREIGN KEY (added_by)   REFERENCES users(id)    ON DELETE CASCADE,
+    INDEX idx_booking (booking_id),
+    INDEX idx_student (student_id),
+    INDEX idx_status  (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO co_tenants (booking_id, student_id, is_primary, full_name, ic_number, phone, email, sign_order, status, added_by, added_at)
+SELECT b.id,
+       b.student_id,
+       1,
+       s.full_name,
+       'PENDING',
+       s.phone,
+       u.email,
+       1,
+       CASE WHEN c.student_signed_at IS NOT NULL THEN 'signed' ELSE 'pending' END,
+       b.student_id,
+       b.created_at
+  FROM bookings b
+  JOIN students s ON s.user_id = b.student_id
+  JOIN users u    ON u.id = b.student_id
+  LEFT JOIN contracts c ON c.booking_id = b.id;
+
+  ALTER TABLE messages
+   ADD COLUMN message_type VARCHAR(40) NOT NULL DEFAULT 'text'
+       AFTER body,
+   ADD COLUMN metadata JSON DEFAULT NULL
+       AFTER message_type;
+       
+
+ALTER TABLE contracts
+    ADD COLUMN generated_pdf_path   VARCHAR(255) DEFAULT NULL AFTER contract_pdf_path,
+    ADD COLUMN generated_at         TIMESTAMP NULL DEFAULT NULL AFTER generated_pdf_path,
+    ADD COLUMN generated_by         INT NULL DEFAULT NULL AFTER generated_at,
+    ADD COLUMN signed_pdf_path      VARCHAR(255) DEFAULT NULL AFTER generated_by,
+    ADD COLUMN signed_uploaded_at   TIMESTAMP NULL DEFAULT NULL AFTER signed_pdf_path,
+    ADD COLUMN signed_uploaded_by   INT NULL DEFAULT NULL AFTER signed_uploaded_at,
+    ADD COLUMN doc_hash             VARCHAR(64) DEFAULT NULL AFTER signed_uploaded_by,
+    ADD COLUMN upload_method        ENUM('generated','external_upload','legacy_canvas') NOT NULL DEFAULT 'generated' AFTER doc_hash;
