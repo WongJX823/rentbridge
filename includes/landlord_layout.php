@@ -78,12 +78,18 @@ $pendingRequests = (int)$stmt->fetchColumn();
 
     <aside class="user-sidebar" id="userSidebar">
         <nav class="sidebar-nav">
+            <nav class="sidebar-nav">
             <a href="/rentbridge/landlord/dashboard.php"
                class="sidebar-link <?= $activeNav === 'dashboard' ? 'active' : '' ?>">
                 <i class="bi bi-house-door-fill"></i>
+                <span class="sidebar-label">Dashboard</span>
+            </a>
+            <a href="/rentbridge/listings.php"
+               class="sidebar-link <?= $activeNav === 'browse' ? 'active' : '' ?>">
+                <i class="bi bi-search"></i>
                 <span class="sidebar-label">Browse</span>
             </a>
-            <a href="/rentbridge/landlord/saved.php"
+            <a href="/rentbridge/saved.php"
                class="sidebar-link <?= $activeNav === 'saved' ? 'active' : '' ?>">
                 <i class="bi bi-bookmark-heart-fill"></i>
                 <span class="sidebar-label">Saved</span>
@@ -105,9 +111,9 @@ $pendingRequests = (int)$stmt->fetchColumn();
                 <?php endif; ?>
             </a>
             <a href="/rentbridge/landlord/profile.php"
-               class="sidebar-link <?= $activeNav === 'profile_dashboard' ? 'active' : '' ?>">
+               class="sidebar-link <?= $activeNav === 'profile' ? 'active' : '' ?>">
                 <i class="bi bi-person-circle"></i>
-                <span class="sidebar-label">Profile Dashboard</span>
+                <span class="sidebar-label">Profile</span>
             </a>
             <a href="/rentbridge/about.php"
                class="sidebar-link <?= $activeNav === 'about' ? 'active' : '' ?>">

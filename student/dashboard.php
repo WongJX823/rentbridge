@@ -91,7 +91,7 @@ ob_start();
         </a>
     </div>
     <div class="col-md-6">
-        <a href="/rentbridge/student/saved.php"
+        <a href="/rentbridge/saved.php"
            class="d-block bg-white rounded-3 border p-4 text-decoration-none text-dark h-100">
             <div class="d-flex align-items-center gap-3">
                 <div style="width:48px; height:48px; background:#FFF4D6; border-radius:12px;
@@ -113,7 +113,7 @@ ob_start();
 <div class="row g-3 mb-4">
     <?php foreach ($recentProperties as $p): ?>
         <div class="col-md-4">
-            <a href="/rentbridge/properties/<?= (int)$p['id'] ?>"
+                <a href="/rentbridge/property.php?id=<?= (int)$p['id'] ?>"
                class="d-block text-decoration-none text-dark">
                 <div class="bg-white border rounded-3 overflow-hidden h-100"
                      style="transition: transform 0.15s, box-shadow 0.15s;"

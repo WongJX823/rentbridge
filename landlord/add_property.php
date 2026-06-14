@@ -285,30 +285,6 @@ ob_start();
                 <div class="invalid-feedback"><?= e($errors['title']) ?></div>
             <?php endif; ?>
         </div>
-
-        <div class="row g-3">
-            <div class="col-md-6">
-                <label class="form-label fw-semibold">
-                    Type <small class="text-danger">*</small>
-                </label>
-                <select name="property_type" class="form-select" required>
-                    <option value="room"       <?= $old['property_type']==='room'?'selected':'' ?>>Room (single)</option>
-                    <option value="studio"     <?= $old['property_type']==='studio'?'selected':'' ?>>Studio apartment</option>
-                    <option value="whole_unit" <?= $old['property_type']==='whole_unit'?'selected':'' ?>>Whole unit (for sharing)</option>
-                </select>
-            </div>
-            <div class="col-md-6">
-                <label class="form-label fw-semibold">Furnishing</label>
-                <select name="furnishing" class="form-select">
-                    <option value="none"    <?= $old['furnishing'] === 'none'    ? 'selected' : '' ?>>Unfurnished</option>
-                    <option value="partial" <?= $old['furnishing'] === 'partial' ? 'selected' : '' ?>>Partially furnished</option>
-                    <option value="full"    <?= $old['furnishing'] === 'full'    ? 'selected' : '' ?>>Fully furnished</option>
-                </select>
-                <small class="text-secondary">
-                    Furnishing significantly affects rental value.
-                </small>
-            </div>
-        </div>
     </div>
 
     <!-- ADDRESS -->
@@ -382,6 +358,30 @@ ob_start();
             <label class="form-label fw-semibold">Description</label>
             <textarea name="description" rows="4" class="form-control"
                       placeholder="Describe the property — what's special about it, the neighborhood, etc."><?= e($old['description']) ?></textarea>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label fw-semibold">
+                    Type <small class="text-danger">*</small>
+                </label>
+                <select name="property_type" class="form-select" required>
+                    <option value="room"       <?= $old['property_type']==='room'?'selected':'' ?>>Room (single)</option>
+                    <option value="studio"     <?= $old['property_type']==='studio'?'selected':'' ?>>Studio apartment</option>
+                    <option value="whole_unit" <?= $old['property_type']==='whole_unit'?'selected':'' ?>>Whole unit (for sharing)</option>
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label fw-semibold">Furnishing</label>
+                <select name="furnishing" class="form-select">
+                    <option value="none"    <?= $old['furnishing'] === 'none'    ? 'selected' : '' ?>>Unfurnished</option>
+                    <option value="partial" <?= $old['furnishing'] === 'partial' ? 'selected' : '' ?>>Partially furnished</option>
+                    <option value="full"    <?= $old['furnishing'] === 'full'    ? 'selected' : '' ?>>Fully furnished</option>
+                </select>
+                <small class="text-secondary">
+                    Furnishing significantly affects rental value.
+                </small>
+            </div>
         </div>
 
         <div class="mb-3">
@@ -503,6 +503,7 @@ ob_start();
         const dropzone    = document.getElementById('photoDropzone');
         const previewArea = document.getElementById('photoPreview');
         const counter     = document.getElementById('photoCounter');
+
 
         // Maintained file list (persists across multiple "add files" clicks)
         let collectedFiles = [];
@@ -666,106 +667,93 @@ ob_start();
     })();
     </script>
 
-    <!-- DOCUMENTS -->
+<!-- OWNERSHIP DOCUMENTS -->
 <div class="bg-white border rounded-3 p-4 mb-3">
     <h6 class="text-secondary text-uppercase small mb-3">
-        Ownership documents
-        <span class="badge bg-secondary ms-1">Private</span>
+        Ownership Documents
+        <span class="badge bg-secondary ms-1" style="font-size: 0.7rem; text-transform: none;">private</span>
     </h6>
 
-    <div class="alert alert-light border d-flex gap-2 small mb-3">
+    <div class="alert alert-light border small mb-3" style="background:#FAF8F3;">
         <i class="bi bi-shield-lock text-secondary"></i>
-        <div>
-            <strong>Only you, admin, and your assigned agent can see these.</strong>
-            Students never see your documents. Used to verify you're the legitimate owner.
+        <strong>Only you, admin, and your assigned agent can see these.</strong>
+        Students never see your documents. Used to verify you're the legitimate owner.
+    </div>
+
+    <div class="row g-3">
+        <div class="col-md-4">
+            <label class="form-label fw-semibold">Document type</label>
+            <select name="document_type" class="form-select">
+                <option value="ownership_proof">Ownership proof (geran, SPA)</option>
+                <option value="ic_copy">IC copy</option>
+                <option value="utility_bill">Utility bill (proof of address)</option>
+                <option value="other">Other supporting document</option>
+            </select>
+        </div>
+        <div class="col-md-5">
+            <label class="form-label fw-semibold">File</label>
+            <input type="file" name="document_file" class="form-control"
+                   accept=".pdf,.jpg,.jpeg,.png">
+            <small class="text-secondary">PDF, JPG, PNG · max 5MB</small>
+        </div>
+        <div class="col-12">
+            <label class="form-label fw-semibold">Notes <small class="text-secondary fw-normal">(optional)</small></label>
+            <input type="text" name="document_notes" class="form-control"
+                   placeholder="e.g. Geran issued 2018, lot 234">
         </div>
     </div>
 
     <?php
-    // Show existing documents if edit mode
-    $existingDocs = $isEdit ? get_property_documents($editId) : [];
-    if (!empty($existingDocs)):
+    // Show existing documents if editing
+    if ($isEdit) {
+        require_once __DIR__ . '/../includes/uploads.php';
+        $existingDocs = function_exists('get_property_documents')
+            ? get_property_documents($editId)
+            : [];
+        if (!empty($existingDocs)):
     ?>
-        <div class="mb-3">
-            <div class="small text-secondary text-uppercase mb-2">Uploaded</div>
-            <?php foreach ($existingDocs as $d):
-                $typeLabel = match($d['document_type']) {
-                    'ownership_proof' => 'Ownership proof',
-                    'utility_bill'    => 'Utility bill',
-                    default           => 'Other',
-                };
-                $icon = strpos($d['mime_type'], 'pdf') !== false ? 'bi-file-pdf' : 'bi-file-image';
-            ?>
-                <div class="d-flex gap-2 align-items-center p-2 border rounded-3 mb-2">
-                    <i class="bi <?= $icon ?> fs-4 text-secondary"></i>
-                    <div class="flex-grow-1">
-                        <a href="/rentbridge/<?= e($d['file_path']) ?>" target="_blank"
-                           class="text-decoration-none text-dark">
-                            <strong class="small"><?= e($d['original_name']) ?></strong>
-                        </a>
-                        <div class="small text-secondary">
-                            <?= e($typeLabel) ?>
-                            · <?= number_format((float)$d['file_size'] / 1024, 0) ?> KB
-                            · <?= e(date('d M Y', strtotime($d['uploaded_at']))) ?>
-                        </div>
-                    </div>
-                    <form method="POST" class="m-0">
-                        <?= csrf_field() ?>
-                        <input type="hidden" name="action" value="delete_doc">
-                        <input type="hidden" name="doc_id" value="<?= (int)$d['id'] ?>">
-                        <button type="submit" class="btn btn-sm btn-outline-danger"
-                                onclick="return confirm('Delete this document?');"
-                                title="Delete">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </form>
-                </div>
-            <?php endforeach; ?>
+        <div class="mt-3">
+            <h6 class="small text-secondary mb-2">Existing documents</h6>
+            <table class="table table-sm border">
+                <thead style="background:#F4F4EE;">
+                    <tr>
+                        <th>Type</th>
+                        <th>File</th>
+                        <th>Notes</th>
+                        <th>Uploaded</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($existingDocs as $doc): ?>
+                        <tr>
+                            <td><small><?= e(ucwords(str_replace('_', ' ', $doc['document_type']))) ?></small></td>
+                            <td><small><a href="/rentbridge/<?= e($doc['file_path']) ?>" target="_blank">View</a></small></td>
+                            <td><small><?= e($doc['notes'] ?: '—') ?></small></td>
+                            <td><small><?= e(date('d M Y', strtotime($doc['uploaded_at']))) ?></small></td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
         </div>
-    <?php endif; ?>
+    <?php
+        endif;
+    }
+    ?>
+</div>
 
-    <!-- Upload form for new doc -->
-        <div class="row g-2 align-items-end">
-            <div class="col-md-5">
-                <label class="form-label small fw-semibold">Document type</label>
-                <select name="document_type" class="form-select">
-                    <option value="ownership_proof">Ownership proof (geran, SPA)</option>
-                    <option value="utility_bill">Utility bill (proof of address)</option>
-                    <option value="other">Other</option>
-                </select>
-            </div>
-            <div class="col-md-5">
-                <label class="form-label small fw-semibold">File</label>
-                <input type="file" name="document_file" class="form-control"
-                    accept="application/pdf,image/jpeg,image/png,image/webp">
-                <small class="text-secondary">PDF, JPG, PNG · max 5MB</small>
-            </div>
-            <div class="col-md-2">
-                <small class="text-secondary d-block mb-2">&nbsp;</small>
-                <small class="text-secondary">
-                    Upload happens<br>with form submit
-                </small>
-            </div>
-        </div>
+<!-- SUBMIT -->
+<div class="d-flex justify-content-end gap-2 mb-5">
+    <a href="<?= $isEdit ? '/rentbridge/landlord/property.php?id=' . $editId : '/rentbridge/landlord/properties.php' ?>"
+       class="btn btn-outline-secondary">
+        Cancel
+    </a>
+    <button type="submit" class="btn btn-primary px-4">
+        <i class="bi bi-check-circle me-1"></i>
+        <?= $isEdit ? 'Save changes' : 'Upload property' ?>
+    </button>
+</div>
 
-        <div class="mt-2">
-            <label class="form-label small fw-semibold">Notes (optional)</label>
-            <input type="text" name="document_notes" class="form-control"
-                maxlength="200" placeholder="e.g. Geran issued 2018, lot 234">
-        </div>
-    </div>
-
-    <!-- ACTIONS -->
-    <div class="d-flex justify-content-end gap-2">
-        <a href="<?= $isEdit ? '/rentbridge/landlord/property.php?id=' . $editId : '/rentbridge/landlord/properties.php' ?>"
-           class="btn btn-outline-secondary">Cancel</a>
-        <button type="submit" class="btn btn-primary">
-            <i class="bi bi-check2 me-1"></i>
-            <?= $isEdit ? 'Save changes' : 'Submit listing' ?>
-        </button>
-    </div>
 </form>
-
 <script>
 (function() {
     const benchmarkBox = document.getElementById('pricingBenchmark');
@@ -779,39 +767,64 @@ ob_start();
     const typeInput  = document.querySelector('select[name="property_type"]');
     const furnInput  = document.querySelector('select[name="furnishing"]');
     const rentInput  = document.getElementById('monthlyRentInput');
+    const facilitiesInput = document.querySelector('textarea[name="facilities"]');
+    const mapsUrlInput    = document.getElementById('mapsUrlInput');
+    const mapsStatusEl    = document.getElementById('mapsUrlStatus');
 
     let lastQuery = '';
     let timer = null;
 
-    async function fetchBenchmark() {
+async function fetchBenchmark() {
         const city = (cityInput?.value || '').trim();
         const type = typeInput?.value || '';
         const furn = furnInput?.value || '';
-        const query = `${city}|${type}|${furn}`;
-
+        const facilities = (facilitiesInput?.value || '').trim();
+        const mapsUrl = (mapsUrlInput?.value || '').trim();
+        const query = `${city}|${type}|${furn}|${facilities}|${mapsUrl}`;
+        
         if (query === lastQuery) return;
         lastQuery = query;
 
-        if (!city) {
+        // Don't bother fetching if NOTHING is filled in
+        const anyInput = city || facilities || mapsUrl;
+        if (!anyInput) {
             benchmarkBox.classList.add('d-none');
             noDataBox.classList.add('d-none');
+            if (mapsStatusEl) mapsStatusEl.innerHTML = '';
             return;
         }
 
         try {
-            const url = `/rentbridge/landlord/pricing_check.php?city=${encodeURIComponent(city)}&type=${type}&furnishing=${furn}`;
-            const resp = await fetch(url);
+            const params = new URLSearchParams({
+                city, type, furnishing: furn, facilities, maps_url: mapsUrl,
+            });
+            const resp = await fetch('/rentbridge/landlord/pricing_check.php?' + params);
             const data = await resp.json();
+            console.log('[pricing] response:', data);
 
-            if (!data.has_data) {
+            // Show maps URL status
+            if (mapsStatusEl) {
+                if (mapsUrl && data.coords_extracted) {
+                    mapsStatusEl.innerHTML = `<i class="bi bi-check-circle text-success"></i> Coordinates extracted · ${data.distance_km} km from UTeM`;
+                    mapsStatusEl.className = 'small text-success mt-1';
+                } else if (mapsUrl && !data.coords_extracted) {
+                    mapsStatusEl.innerHTML = `<i class="bi bi-exclamation-circle text-warning"></i> Couldn't extract coordinates from this link`;
+                    mapsStatusEl.className = 'small text-warning mt-1';
+                } else {
+                    mapsStatusEl.innerHTML = '';
+                }
+            }
+
+            const hasAnyValue = data.has_data || data.partial_preview;
+
+            if (!hasAnyValue) {
                 benchmarkBox.classList.add('d-none');
                 noDataBox.classList.remove('d-none');
                 return;
             }
 
-            // Show benchmark
             noDataBox.classList.add('d-none');
-            benchmarkBox.classList.remove('d-none');
+            benchmarkBox.classList.remove('d-none');    
 
             const tierLabel = data.match_tier === 'exact'
                 ? 'exact match'
@@ -819,8 +832,11 @@ ob_start();
                     ? 'same city + same type'
                     : 'same city';
 
-                    titleEl.textContent = `Suggested: RM ${formatRM(data.suggested)}`;
-
+            if (data.has_data) {
+                titleEl.textContent = `Suggested: RM ${formatRM(data.suggested)}`;
+            } else {
+                titleEl.textContent = `Partial estimate: +RM ${formatRM(data.suggested)} from features`;
+            }
 
             const confColor = data.confidence === 'high' ? 'success'
                             : data.confidence === 'medium' ? 'warning'
@@ -829,9 +845,16 @@ ob_start();
             confidenceEl.textContent = `${data.confidence} confidence`;
 
             // Build breakdown
-            let breakdown = `
-                <strong>Base market:</strong> RM ${formatRM(data.base_market)}
-                <small class="text-secondary">(median of ${data.count} ${tierLabel} listings)</small>`;
+            let breakdown = '';
+            if (data.has_data) {
+                breakdown += `
+                    <strong>Base market:</strong> RM ${formatRM(data.base_market)}
+                    <small class="text-secondary">(median of ${data.count} ${tierLabel} listings)</small>`;
+            } else {
+                breakdown += `
+                    <em class="text-secondary">No city filled yet — base market price not available.
+                    Showing premium estimates from filled fields:</em>`;
+            }
 
             if (data.distance_km !== null) {
                 const distSign = data.distance_premium >= 0 ? '+' : '−';
@@ -846,9 +869,11 @@ ob_start();
                     <small class="text-secondary">${data.amenities_matched.join(', ')}</small>`;
             }
 
-            if (data.furnishing_premium > 0) {
+            if (data.furnishing_premium !== 0) {
+                const sign = data.furnishing_premium >= 0 ? '+' : '−';
                 breakdown += `<br>
-                    <strong>Furnishing premium:</strong> +RM ${formatRM(data.furnishing_premium)}`;
+                    <strong>Furnishing (${furn}):</strong>
+                    ${sign}RM ${formatRM(Math.abs(data.furnishing_premium))}`;
             }
 
             breakdown += `<br><br>
@@ -896,10 +921,21 @@ ob_start();
     typeInput?.addEventListener('change', debouncedFetch);
     furnInput?.addEventListener('change', debouncedFetch);
     rentInput?.addEventListener('input', debouncedFetch);
+    facilitiesInput?.addEventListener('input', debouncedFetch);
+    mapsUrlInput?.addEventListener('input', debouncedFetch);
 
-    // Initial fetch if city is pre-filled (edit mode)
-    if (cityInput?.value) fetchBenchmark();
-})();
+// Force initial fetch always (avoids stale state)
+    setTimeout(fetchBenchmark, 200);
+
+    // Sanity log
+    console.log('[pricing] inputs:', {
+        city: !!cityInput,
+        type: !!typeInput,
+        furn: !!furnInput,
+        rent: !!rentInput,
+        facilities: !!facilitiesInput,
+        maps: !!mapsUrlInput,
+    });})();
 </script>
 
 <?php

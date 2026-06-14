@@ -20,7 +20,15 @@ SET time_zone = "+00:00";
 --
 -- Database: `dbrb_2026`
 --
+DROP DATABASE IF EXISTS `dbrb_2026`;
 
+-- Create fresh database
+CREATE DATABASE `dbrb_2026` 
+CHARACTER SET utf8mb4 
+COLLATE utf8mb4_unicode_ci;
+
+-- Use the database
+USE `dbrb_2026`;
 -- --------------------------------------------------------
 
 --
@@ -1336,3 +1344,17 @@ COMMIT;
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+
+CREATE TABLE IF NOT EXISTS saved_properties (
+    id           INT NOT NULL AUTO_INCREMENT,
+    user_id      INT NOT NULL,
+    property_id  INT NOT NULL,
+    saved_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (id),
+    UNIQUE KEY uniq_user_property (user_id, property_id),
+    FOREIGN KEY (user_id)     REFERENCES users(id)      ON DELETE CASCADE,
+    FOREIGN KEY (property_id) REFERENCES properties(id) ON DELETE CASCADE,
+    INDEX idx_user  (user_id),
+    INDEX idx_saved (saved_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

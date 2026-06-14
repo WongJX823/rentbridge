@@ -107,8 +107,8 @@ function score_amenities(?string $facilitiesText): array {
 function furnishing_premium_rm(string $furnishing): float {
     return match ($furnishing) {
         'full'    => 120,
-        'partial' => 40,
-        'none'    => 0,
+        'partial' => 0,    // baseline (most common)
+        'none'    => -60,  // unfurnished discount
         default   => 0,
     };
 }
@@ -240,7 +240,8 @@ function get_pricing_benchmark(
         'has_data'           => false,
     ];
 
-    if ($city === '') return $result;
+    // If no city — skip the market base, but still compute premiums
+    $skipMarketBase = ($city === '');
 
     // Tiered comparable search
     $tiers = [
@@ -249,47 +250,47 @@ function get_pricing_benchmark(
         ['type' => false, 'furn' => false, 'label' => 'same city'],
     ];
 
-    foreach ($tiers as $tier) {
-        $where = ["status IN ('available','booked','rented')", "city = ?"];
-        $params = [$city];
+if (!$skipMarketBase) {
+        foreach ($tiers as $tier) {
+            $where = ["status IN ('available','booked','rented')", "city = ?"];
+            $params = [$city];
 
-        if ($tier['type']) { $where[] = "property_type = ?"; $params[] = $propertyType; }
-        if ($tier['furn']) { $where[] = "furnishing = ?"; $params[] = $furnishing; }
+            if ($tier['type']) { $where[] = "property_type = ?"; $params[] = $propertyType; }
+            if ($tier['furn']) { $where[] = "furnishing = ?"; $params[] = $furnishing; }
 
-        $whereClause = implode(' AND ', $where);
+            $whereClause = implode(' AND ', $where);
 
-        $stmt = $pdo->prepare("
-            SELECT monthly_rent FROM properties WHERE $whereClause
-        ");
-        $stmt->execute($params);
-        $rents = array_column($stmt->fetchAll(), 'monthly_rent');
-        $count = count($rents);
+            $stmt = $pdo->prepare("
+                SELECT monthly_rent FROM properties WHERE $whereClause
+            ");
+            $stmt->execute($params);
+            $rents = array_column($stmt->fetchAll(), 'monthly_rent');
+            $count = count($rents);
 
-        if ($count < 3) continue;
+            if ($count < 3) continue;
 
-        // Found enough data — compute base
-        $floatRents = array_map('floatval', $rents);
-        $median = compute_median($floatRents);
-        $min = min($floatRents);
-        $max = max($floatRents);
+            $floatRents = array_map('floatval', $rents);
+            $median = compute_median($floatRents);
+            $min = min($floatRents);
+            $max = max($floatRents);
 
-        $confidence = 'low';
-        if ($count >= 10 && $tier['label'] === 'exact') $confidence = 'high';
-        elseif ($count >= 5) $confidence = 'medium';
+            $confidence = 'low';
+            if ($count >= 10 && $tier['label'] === 'exact') $confidence = 'high';
+            elseif ($count >= 5) $confidence = 'medium';
 
-        $result['base_market'] = $median;
-        $result['count'] = $count;
-        $result['min'] = $min;
-        $result['max'] = $max;
-        $result['confidence'] = $confidence;
-        $result['match_tier'] = $tier['label'];
-        $result['has_data'] = true;
-        break;
+            $result['base_market'] = $median;
+            $result['count'] = $count;
+            $result['min'] = $min;
+            $result['max'] = $max;
+            $result['confidence'] = $confidence;
+            $result['match_tier'] = $tier['label'];
+            $result['has_data'] = true;
+            break;
+        }
     }
 
-    if (!$result['has_data']) return $result;
-
-    // Distance premium
+    
+// Distance premium
     if ($lat !== null && $lng !== null) {
         $distanceKm = haversine_km($lat, $lng, UTEM_LAT, UTEM_LNG);
         $result['distance_km'] = round($distanceKm, 2);
@@ -301,16 +302,22 @@ function get_pricing_benchmark(
     $result['amenity_premium'] = $amenityScore['premium'];
     $result['amenities_matched'] = $amenityScore['matched'];
 
-    // Furnishing premium (note: median already reflects same furnishing in tier1, so apply only on non-exact tier)
-    if ($result['match_tier'] !== 'exact') {
+    // Furnishing premium
+    if (!$result['has_data'] || $result['match_tier'] !== 'exact') {
         $result['furnishing_premium'] = furnishing_premium_rm($furnishing);
     }
 
-    // Suggested = base + premiums
+    // Suggested = base + premiums (base could be 0 if no comparables)
     $result['suggested'] = $result['base_market']
                          + $result['distance_premium']
                          + $result['amenity_premium']
                          + $result['furnishing_premium'];
+
+    // Mark "partial preview" if no market base but we have premium contributions
+    $result['partial_preview'] = (!$result['has_data'] &&
+        ($result['distance_premium'] != 0 ||
+         $result['amenity_premium'] > 0 ||
+         $result['furnishing_premium'] > 0));
 
     return $result;
 }

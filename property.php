@@ -1,6 +1,9 @@
 <?php
-require_once __DIR__ . '/includes/auth.php';
+require_once __DIR__ . '/includes/saved.php';
+require_once __DIR__ . '/includes/save_button.php';
+?>
 
+<?php
 $id = (int)($_GET['id'] ?? 0);
 if ($id <= 0) {
     http_response_code(404);
@@ -25,6 +28,11 @@ $prop = $stmt->fetch();
 if (!$prop) {
     http_response_code(404);
     die('Property not found or no longer available.');
+}
+
+$isSaved = false;
+if (is_logged_in()) {
+    $isSaved = is_property_saved(current_user_id(), (int)$prop['id']);
 }
 
 // Fetch all photos
@@ -61,6 +69,8 @@ $photos = $stmt->fetchAll();
             <i class="bi bi-arrow-left"></i> Back to listings
         </a>
     </p>
+
+
 
     <!-- Photo gallery -->
 <?php if (!empty($photos)): ?>
@@ -180,7 +190,11 @@ $allPosts = $stmt->fetchAll();
             <span class="badge bg-light text-secondary border mb-2">
                 <?= e(ucfirst(str_replace('_', ' ', $prop['property_type']))) ?>
             </span>
-            <h1 class="mb-2"><?= e($prop['title']) ?></h1>
+    <!-- Wherever the title is displayed -->
+<div class="d-flex justify-content-between align-items-start">
+    <h1><?= e($prop['title']) ?></h1>
+    <?php render_save_button((int)$prop['id'], $isSaved, 'lg', 'inline'); ?>
+</div>
             <p class="text-secondary">
                 <i class="bi bi-geo-alt"></i>
                 <?= e($prop['address']) ?>,
@@ -306,7 +320,7 @@ $allPosts = $stmt->fetchAll();
     </div>
 </div>
 <?php endif; ?>
-
+<?php render_save_button_script(); ?>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

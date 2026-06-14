@@ -5,84 +5,93 @@ require_role('student');
 $pdo = db();
 $userId = current_user_id();
 
-// Load current profile
+$errors = [];
+$flashSuccess = '';
+
+// Fetch existing data
 $stmt = $pdo->prepare("
-    SELECT u.email, u.created_at,
-           s.full_name, s.preferred_name, s.matric_no, s.university, s.phone,
-           s.looking_for_housing,
-           s.housing_pref_city, s.housing_pref_max_rent,
-           s.housing_pref_move_in, s.housing_bio
-      FROM users u
-      JOIN students s ON s.user_id = u.id
-     WHERE u.id = ?
+    SELECT s.*, u.email, u.created_at AS joined_at
+      FROM students s
+      JOIN users u ON u.id = s.user_id
+     WHERE s.user_id = ?
 ");
 $stmt->execute([$userId]);
-$me = $stmt->fetch();
+$student = $stmt->fetch();
 
-if (!$me) {
-    die('Profile not found.');
+if (!$student) {
+    die('Student profile not found.');
 }
 
-$errors = [];
-$old = [
-    'preferred_name'        => $me['preferred_name'],
-    'phone'                 => $me['phone'],
-    'looking_for_housing'   => (int)$me['looking_for_housing'],
-    'housing_pref_city'     => $me['housing_pref_city'] ?? '',
-    'housing_pref_max_rent' => $me['housing_pref_max_rent'] ?? '',
-    'housing_pref_move_in'  => $me['housing_pref_move_in'] ?? '',
-    'housing_bio'           => $me['housing_bio'] ?? '',
-];
+$isEditMode = isset($_GET['edit']) && $_GET['edit'] === '1';
 
+// Handle update
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
 
-    $old['preferred_name']        = trim($_POST['preferred_name'] ?? '');
-    $old['phone']                 = trim($_POST['phone'] ?? '');
-    $old['looking_for_housing']   = isset($_POST['looking_for_housing']) ? 1 : 0;
-    $old['housing_pref_city']     = trim($_POST['housing_pref_city'] ?? '');
-    $old['housing_pref_max_rent'] = trim($_POST['housing_pref_max_rent'] ?? '');
-    $old['housing_pref_move_in']  = trim($_POST['housing_pref_move_in'] ?? '');
-    $old['housing_bio']           = trim($_POST['housing_bio'] ?? '');
+    $full_name      = trim($_POST['full_name'] ?? '');
+    $preferred_name = trim($_POST['preferred_name'] ?? '');
+    $matric_no      = trim($_POST['matric_no'] ?? '');
+    $university     = trim($_POST['university'] ?? 'UTeM');
+    $phone          = trim($_POST['phone'] ?? '');
+    $looking        = isset($_POST['looking_for_housing']) ? 1 : 0;
+    $pref_city      = trim($_POST['housing_pref_city'] ?? '');
+    $pref_max_rent  = $_POST['housing_pref_max_rent'] ?? '';
+    $pref_move_in   = trim($_POST['housing_pref_move_in'] ?? '');
+    $housing_bio    = trim($_POST['housing_bio'] ?? '');
 
-    // Validate
-    if ($old['phone'] === '') {
-        $errors['phone'] = 'Phone number is required.';
-    }
-    if ($old['housing_pref_max_rent'] !== '' && !is_numeric($old['housing_pref_max_rent'])) {
-        $errors['housing_pref_max_rent'] = 'Must be a number.';
-    }
-    if ($old['housing_pref_move_in'] !== '' && !strtotime($old['housing_pref_move_in'])) {
-        $errors['housing_pref_move_in'] = 'Invalid date.';
-    }
+    if ($full_name === '')  $errors['full_name'] = 'Full name required';
+    if ($matric_no === '')  $errors['matric_no'] = 'Matric number required';
+    if ($phone === '')      $errors['phone']     = 'Phone required';
+    if (strlen($housing_bio) > 255) $errors['housing_bio'] = 'Max 255 characters';
 
     if (empty($errors)) {
-        $stmt = $pdo->prepare("
-            UPDATE students
-               SET preferred_name = ?,
-                   phone = ?,
-                   looking_for_housing = ?,
-                   housing_pref_city = ?,
-                   housing_pref_max_rent = ?,
-                   housing_pref_move_in = ?,
-                   housing_bio = ?
-             WHERE user_id = ?
-        ");
-        $stmt->execute([
-            $old['preferred_name'],
-            $old['phone'],
-            $old['looking_for_housing'],
-            $old['housing_pref_city']     !== '' ? $old['housing_pref_city'] : null,
-            $old['housing_pref_max_rent'] !== '' ? (float)$old['housing_pref_max_rent'] : null,
-            $old['housing_pref_move_in']  !== '' ? $old['housing_pref_move_in'] : null,
-            $old['housing_bio']           !== '' ? $old['housing_bio'] : null,
-            $userId
-        ]);
+        try {
+            $stmt = $pdo->prepare("
+                UPDATE students
+                   SET full_name = ?,
+                       preferred_name = ?,
+                       matric_no = ?,
+                       university = ?,
+                       phone = ?,
+                       looking_for_housing = ?,
+                       housing_pref_city = ?,
+                       housing_pref_max_rent = ?,
+                       housing_pref_move_in = ?,
+                       housing_bio = ?
+                 WHERE user_id = ?
+            ");
+            $stmt->execute([
+                $full_name, $preferred_name, $matric_no, $university, $phone,
+                $looking,
+                $pref_city ?: null,
+                $pref_max_rent !== '' ? (float)$pref_max_rent : null,
+                $pref_move_in ?: null,
+                $housing_bio ?: null,
+                $userId,
+            ]);
 
-        set_flash('success', 'Profile updated successfully.');
-        header('Location: /rentbridge/student/profile.php');
-        exit;
+            set_flash('success', 'Profile updated successfully.');
+            header('Location: /rentbridge/student/profile.php');
+            exit;
+        } catch (Throwable $e) {
+            $errors['general'] = 'Failed to save: ' . $e->getMessage();
+        }
     }
+
+    // Re-fetch for the form
+    $student = array_merge($student, [
+        'full_name' => $full_name,
+        'preferred_name' => $preferred_name,
+        'matric_no' => $matric_no,
+        'university' => $university,
+        'phone' => $phone,
+        'looking_for_housing' => $looking,
+        'housing_pref_city' => $pref_city,
+        'housing_pref_max_rent' => $pref_max_rent,
+        'housing_pref_move_in' => $pref_move_in,
+        'housing_bio' => $housing_bio,
+    ]);
+    $isEditMode = true;
 }
 
 $pageTitle = 'My Profile';
@@ -91,187 +100,176 @@ $activeNav = 'profile';
 ob_start();
 ?>
 
-<div class="row g-4">
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="mb-1" style="font-family:'Fraunces',serif;">My Profile</h1>
+        <p class="text-secondary mb-0">
+            Member since <?= e(date('M Y', strtotime($student['joined_at']))) ?>
+        </p>
+    </div>
+    <?php if (!$isEditMode): ?>
+        <a href="?edit=1" class="btn btn-primary">
+            <i class="bi bi-pencil-square me-1"></i> Edit profile
+        </a>
+    <?php endif; ?>
+</div>
 
-    <div class="col-lg-8">
-        <form method="POST" novalidate>
-            <?= csrf_field() ?>
+<?php if (!empty($errors['general'])): ?>
+    <div class="alert alert-danger"><?= e($errors['general']) ?></div>
+<?php endif; ?>
 
-            <!-- IDENTITY (read-only) -->
-            <div class="bg-white border rounded-3 p-4 mb-3">
-                <h6 class="text-secondary text-uppercase small mb-3">Account info</h6>
+<?php if ($isEditMode): ?>
+    <!-- EDIT MODE -->
+    <form method="POST">
+        <?= csrf_field() ?>
 
-                <div class="mb-3">
-                    <label class="form-label fw-semibold">Full name</label>
-                    <input type="text" class="form-control" value="<?= e($me['full_name']) ?>" disabled>
-                    <small class="text-secondary">Cannot be changed. Contact admin if needed.</small>
+        <div class="bg-white border rounded-3 p-4 mb-3">
+            <h6 class="text-secondary text-uppercase small mb-3">Basic info</h6>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Full name <small class="text-danger">*</small></label>
+                    <input type="text" name="full_name"
+                           class="form-control <?= isset($errors['full_name']) ? 'is-invalid' : '' ?>"
+                           value="<?= e($student['full_name']) ?>" required>
+                    <?php if (isset($errors['full_name'])): ?><div class="invalid-feedback"><?= e($errors['full_name']) ?></div><?php endif; ?>
                 </div>
-
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">Matric number</label>
-                        <input type="text" class="form-control" value="<?= e($me['matric_no']) ?>" disabled>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">University</label>
-                        <input type="text" class="form-control" value="<?= e($me['university']) ?>" disabled>
-                    </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Preferred name <small class="text-secondary fw-normal">(nickname)</small></label>
+                    <input type="text" name="preferred_name" class="form-control"
+                           value="<?= e($student['preferred_name']) ?>" placeholder="e.g. Jia">
                 </div>
-
-                <div class="mt-3">
-                    <label class="form-label fw-semibold">Email</label>
-                    <input type="email" class="form-control" value="<?= e($me['email']) ?>" disabled>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Matric number <small class="text-danger">*</small></label>
+                    <input type="text" name="matric_no"
+                           class="form-control <?= isset($errors['matric_no']) ? 'is-invalid' : '' ?>"
+                           value="<?= e($student['matric_no']) ?>" required>
+                    <?php if (isset($errors['matric_no'])): ?><div class="invalid-feedback"><?= e($errors['matric_no']) ?></div><?php endif; ?>
                 </div>
-            </div>
-
-            <!-- EDITABLE INFO -->
-            <div class="bg-white border rounded-3 p-4 mb-3">
-                <h6 class="text-secondary text-uppercase small mb-3">Personal</h6>
-
-                <div class="mb-3">
-                    <label class="form-label fw-semibold">Nickname</label>
-                    <input type="text" name="preferred_name"
-                           class="form-control"
-                           value="<?= e($old['preferred_name']) ?>"
-                           placeholder="What people call you">
-                    <small class="text-secondary">Used across RentBridge instead of your full name.</small>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">University</label>
+                    <input type="text" name="university" class="form-control"
+                           value="<?= e($student['university']) ?>">
                 </div>
-
-                <div class="mb-1">
-                    <label class="form-label fw-semibold">
-                        Phone <small class="text-danger">*</small>
-                    </label>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Phone <small class="text-danger">*</small></label>
                     <input type="text" name="phone"
                            class="form-control <?= isset($errors['phone']) ? 'is-invalid' : '' ?>"
-                           value="<?= e($old['phone']) ?>"
-                           placeholder="012-3456789" required>
-                    <?php if (isset($errors['phone'])): ?>
-                        <div class="invalid-feedback"><?= e($errors['phone']) ?></div>
-                    <?php endif; ?>
-                    <small class="text-secondary">
-                        Visible only to landlords and agents you contact via RentBridge.
-                    </small>
+                           value="<?= e($student['phone']) ?>" required>
+                    <?php if (isset($errors['phone'])): ?><div class="invalid-feedback"><?= e($errors['phone']) ?></div><?php endif; ?>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Email</label>
+                    <input type="email" class="form-control" value="<?= e($student['email']) ?>" disabled>
+                    <small class="text-secondary">Email cannot be changed here.</small>
                 </div>
             </div>
+        </div>
 
-            <!-- HOUSING PREFERENCES -->
-            <div class="bg-white border rounded-3 p-4 mb-3">
-                <div class="d-flex justify-content-between align-items-start mb-3">
-                    <h6 class="text-secondary text-uppercase small mb-0">Housing preferences</h6>
-                </div>
-
-                <div class="form-check form-switch mb-3 p-3 rounded-3"
-                     style="background:#F4F4EE; padding-left: 3rem !important;">
-                    <input class="form-check-input" type="checkbox" role="switch"
-                           name="looking_for_housing" id="looking_for_housing" value="1"
-                           <?= $old['looking_for_housing'] ? 'checked' : '' ?>>
-                    <label class="form-check-label fw-semibold" for="looking_for_housing">
-                        I'm looking for housing
-                    </label>
-                    <div class="small text-secondary">
-                        Enable to appear in "Find stranger" discovery and let others know
-                        you're searching for housemates.
-                    </div>
-                </div>
-
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">Preferred area</label>
-                        <input type="text" name="housing_pref_city"
-                               class="form-control"
-                               value="<?= e($old['housing_pref_city']) ?>"
-                               placeholder="e.g. Ayer Keroh, Durian Tunggal">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">Max monthly budget (RM)</label>
-                        <input type="number" name="housing_pref_max_rent"
-                               class="form-control <?= isset($errors['housing_pref_max_rent']) ? 'is-invalid' : '' ?>"
-                               value="<?= e($old['housing_pref_max_rent']) ?>"
-                               placeholder="500"
-                               min="0" step="50">
-                        <?php if (isset($errors['housing_pref_max_rent'])): ?>
-                            <div class="invalid-feedback"><?= e($errors['housing_pref_max_rent']) ?></div>
-                        <?php endif; ?>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">Earliest move-in date</label>
-                        <input type="date" name="housing_pref_move_in"
-                               class="form-control <?= isset($errors['housing_pref_move_in']) ? 'is-invalid' : '' ?>"
-                               value="<?= e($old['housing_pref_move_in']) ?>">
-                        <?php if (isset($errors['housing_pref_move_in'])): ?>
-                            <div class="invalid-feedback"><?= e($errors['housing_pref_move_in']) ?></div>
-                        <?php endif; ?>
-                    </div>
-                </div>
-
-                <div class="mt-3">
-                    <label class="form-label fw-semibold">About me (optional)</label>
-                    <textarea name="housing_bio" rows="3" class="form-control"
-                              placeholder="Tell potential housemates a bit about yourself — what you study, your habits, what you're looking for..."
-                              maxlength="500"><?= e($old['housing_bio']) ?></textarea>
-                    <small class="text-secondary">Max 500 characters.</small>
-                </div>
-            </div>
-
-            <!-- SAVE -->
-            <div class="d-flex justify-content-end gap-2">
-                <a href="/rentbridge/student/dashboard.php" class="btn btn-outline-secondary">Cancel</a>
-                <button type="submit" class="btn btn-primary">
-                    <i class="bi bi-check2 me-1"></i> Save changes
-                </button>
-            </div>
-        </form>
-    </div>
-
-    <!-- RIGHT SIDEBAR — account summary -->
-    <div class="col-lg-4">
         <div class="bg-white border rounded-3 p-4 mb-3">
-            <h6 class="text-secondary text-uppercase small mb-3">Account summary</h6>
+            <h6 class="text-secondary text-uppercase small mb-3">Housing preferences</h6>
 
-            <div class="d-flex align-items-center gap-3 mb-3">
-                <div style="width: 56px; height: 56px; background: #E4F2EA; color: #2E8B57;
-                            border-radius: 50%; display:flex; align-items:center;
-                            justify-content:center; font-size: 1.5rem;">
-                    <i class="bi bi-mortarboard-fill"></i>
+            <div class="form-check mb-3">
+                <input type="checkbox" name="looking_for_housing" id="looking" class="form-check-input"
+                       <?= (int)$student['looking_for_housing'] === 1 ? 'checked' : '' ?>>
+                <label for="looking" class="form-check-label fw-semibold">
+                    I'm currently looking for housing
+                </label>
+                <div class="small text-secondary">
+                    When checked, you'll appear in housemate-search results.
                 </div>
-                <div>
-                    <div class="fw-semibold"><?= e($me['preferred_name'] ?: $me['full_name']) ?></div>
-                    <small class="text-secondary">Student · <?= e($me['university']) ?></small>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Preferred city</label>
+                    <input type="text" name="housing_pref_city" class="form-control"
+                           value="<?= e($student['housing_pref_city'] ?? '') ?>" placeholder="e.g. Ayer Keroh">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Max rent (RM)</label>
+                    <input type="number" name="housing_pref_max_rent" class="form-control" min="0" step="50"
+                           value="<?= e($student['housing_pref_max_rent'] ?? '') ?>" placeholder="e.g. 500">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Move-in date</label>
+                    <input type="date" name="housing_pref_move_in" class="form-control"
+                           value="<?= e($student['housing_pref_move_in'] ?? '') ?>">
+                </div>
+                <div class="col-12">
+                    <label class="form-label fw-semibold">
+                        About you <small class="text-secondary fw-normal">(255 chars max)</small>
+                    </label>
+                    <textarea name="housing_bio" rows="2" maxlength="255"
+                              class="form-control <?= isset($errors['housing_bio']) ? 'is-invalid' : '' ?>"
+                              placeholder="A short bio for potential housemates — your habits, study schedule, hobbies."><?= e($student['housing_bio'] ?? '') ?></textarea>
+                    <?php if (isset($errors['housing_bio'])): ?><div class="invalid-feedback"><?= e($errors['housing_bio']) ?></div><?php endif; ?>
                 </div>
             </div>
-
-            <div class="small text-secondary mb-1">
-                <i class="bi bi-calendar3"></i> Joined
-                <?= e(date('M Y', strtotime($me['created_at']))) ?>
-            </div>
-            <div class="small text-secondary">
-                <i class="bi bi-envelope"></i> <?= e($me['email']) ?>
-            </div>
         </div>
 
-        <!-- Quick links -->
-        <div class="bg-white border rounded-3 p-3">
-            <h6 class="text-secondary text-uppercase small mb-3 px-1">Account</h6>
-            <a href="/rentbridge/auth/logout.php"
-               class="d-flex align-items-center gap-2 p-2 text-decoration-none text-danger rounded-3"
-               style="transition: background 0.15s;"
-               onmouseover="this.style.background='#FFE8E8'"
-               onmouseout="this.style.background='transparent'">
-                <i class="bi bi-box-arrow-right"></i>
-                <span>Sign out</span>
-            </a>
+        <div class="d-flex justify-content-end gap-2">
+            <a href="/rentbridge/student/profile.php" class="btn btn-outline-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check-circle me-1"></i> Save changes
+            </button>
         </div>
+    </form>
 
-        <!-- Tip card -->
-        <div class="bg-light border rounded-3 p-3 mt-3 small">
-            <i class="bi bi-lightbulb text-warning"></i>
-            <strong>Tip:</strong>
-            Enabling "looking for housing" makes your profile discoverable.
-            Others looking for housemates can see your preferences and contact you.
-        </div>
+<?php else: ?>
+    <!-- VIEW MODE -->
+    <div class="bg-white border rounded-3 p-4 mb-3">
+        <h6 class="text-secondary text-uppercase small mb-3">Basic info</h6>
+        <table class="table table-sm mb-0">
+            <tr><th class="text-secondary" style="width:200px;">Full name</th><td><?= e($student['full_name']) ?></td></tr>
+            <?php if (!empty($student['preferred_name'])): ?>
+                <tr><th class="text-secondary">Preferred name</th><td><?= e($student['preferred_name']) ?></td></tr>
+            <?php endif; ?>
+            <tr><th class="text-secondary">Matric number</th><td><code><?= e($student['matric_no']) ?></code></td></tr>
+            <tr><th class="text-secondary">University</th><td><?= e($student['university']) ?></td></tr>
+            <tr><th class="text-secondary">Email</th><td><?= e($student['email']) ?></td></tr>
+            <tr><th class="text-secondary">Phone</th><td><?= e($student['phone']) ?></td></tr>
+        </table>
     </div>
 
-</div>
+    <div class="bg-white border rounded-3 p-4 mb-3">
+        <h6 class="text-secondary text-uppercase small mb-3">
+            Housing preferences
+            <?php if ((int)$student['looking_for_housing'] === 1): ?>
+                <span class="badge bg-success ms-1">Actively looking</span>
+            <?php else: ?>
+                <span class="badge bg-secondary ms-1">Not actively looking</span>
+            <?php endif; ?>
+        </h6>
+        <table class="table table-sm mb-0">
+            <tr>
+                <th class="text-secondary" style="width:200px;">Preferred city</th>
+                <td><?= e($student['housing_pref_city'] ?: '—') ?></td>
+            </tr>
+            <tr>
+                <th class="text-secondary">Max rent</th>
+                <td><?= !empty($student['housing_pref_max_rent']) ? 'RM ' . number_format((float)$student['housing_pref_max_rent']) : '—' ?></td>
+            </tr>
+            <tr>
+                <th class="text-secondary">Move-in date</th>
+                <td><?= !empty($student['housing_pref_move_in']) ? e(date('d M Y', strtotime($student['housing_pref_move_in']))) : '—' ?></td>
+            </tr>
+            <tr>
+                <th class="text-secondary">About you</th>
+                <td><?= !empty($student['housing_bio']) ? nl2br(e($student['housing_bio'])) : '<span class="text-secondary">No bio yet</span>' ?></td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="bg-white border rounded-3 p-4 mb-3" style="background:#FAF8F3 !important;">
+        <h6 class="text-secondary text-uppercase small mb-3">Account security</h6>
+        <p class="small mb-2">
+            Password change with email verification — coming soon.
+        </p>
+        <button class="btn btn-outline-secondary btn-sm" disabled>
+            <i class="bi bi-key me-1"></i> Change password
+        </button>
+    </div>
+<?php endif; ?>
 
 <?php
 $pageContent = ob_get_clean();

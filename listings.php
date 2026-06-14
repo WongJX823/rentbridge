@@ -1,5 +1,14 @@
 <?php
 require_once __DIR__ . '/includes/auth.php';
+require_once __DIR__ . '/includes/saved.php';
+require_once __DIR__ . '/includes/save_button.php';
+
+// Pre-fetch saved status for all properties on this page (if logged in)
+$savedMap = [];
+if (is_logged_in() && !empty($properties)) {
+    $propertyIds = array_column($properties, 'id');
+    $savedMap = get_saved_property_ids(current_user_id(), $propertyIds);
+}
 
 $pdo = db();
 
@@ -170,6 +179,8 @@ ob_start();
                                     <i class="bi bi-patch-check-fill"></i> Verified
                                 </span>
                             <?php endif; ?>
+                                <?php render_save_button((int)$p['id'], isset($savedMap[$p['id']]), 'md', 'overlay'); ?>
+
                         </div>
 
                         <div class="p-3">
@@ -198,9 +209,11 @@ ob_start();
         <?php endforeach; ?>
     </div>
 <?php endif; ?>
+<?php render_save_button_script(); ?>
 
 <?php
 $pageContent = ob_get_clean();
+
 
 // Use appropriate layout: public for guests, role layout for logged-in users
 if (is_logged_in()) {
@@ -216,3 +229,4 @@ if (is_logged_in()) {
 } else {
     require __DIR__ . '/includes/public_layout.php';
 }
+
