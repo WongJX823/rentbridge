@@ -176,8 +176,8 @@ ob_start();
                             <!-- CTA: single button, text-based -->
                             <div class="d-flex justify-content-between align-items-center mt-3 pt-2"
                                  style="border-top: 1px solid rgba(15,44,82,0.06);">
-                                <button type="button"
-                                        onclick="event.preventDefault(); event.stopPropagation(); window.location='/rentbridge/chat/start.php?with=<?= (int)$post['poster_id'] ?>&property_id=<?= (int)$post['property_id'] ?>'; return false;"
+                                 <button type="button"
+                                        onclick="event.preventDefault(); event.stopPropagation(); window.location='/rentbridge/chat/start.php?type=partner_inquiry&with=<?= (int)$post['poster_id'] ?>&post_id=<?= (int)$post['id'] ?>'; return false;"
                                         class="btn btn-sm btn-outline-primary"
                                         style="font-size:0.75rem;">
                                     <i class="bi bi-chat-dots"></i> Message

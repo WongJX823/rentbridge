@@ -63,31 +63,30 @@ $photos = $stmt->fetchAll();
     </p>
 
     <!-- Photo gallery -->
-    <?php if (!empty($photos)): ?>
-        <div class="row g-2 mb-4">
-            <div class="col-lg-8">
-                <img src="<?= e($photos[0]['image_path']) ?>"
-                     class="w-100 rounded-3"
-                     style="aspect-ratio: 4/3; object-fit: cover;"
-                     alt="<?= e($prop['title']) ?>">
-            </div>
-            <?php if (count($photos) > 1): ?>
-            <div class="col-lg-4">
-                <div class="row g-2">
-                    <?php foreach (array_slice($photos, 1, 3) as $img): ?>
-                        <div class="col-12 col-md-6 col-lg-12">
-                            <img src="<?= e($img['image_path']) ?>"
-                                 class="w-100 rounded-3"
-                                 style="aspect-ratio: 4/3; object-fit: cover;"
-                                 alt="">
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-            </div>
-            <?php endif; ?>
+<?php if (!empty($photos)): ?>
+    <div class="row g-2 mb-4">
+        <div class="col-lg-8">
+            <img src="/rentbridge/<?= e($photos[0]['image_path']) ?>"
+                 class="w-100 rounded-3"
+                 style="aspect-ratio: 4/3; object-fit: cover;"
+                 alt="<?= e($prop['title']) ?>">
         </div>
-    <?php endif; ?>
-
+        <?php if (count($photos) > 1): ?>
+        <div class="col-lg-4">
+            <div class="row g-2">
+                <?php foreach (array_slice($photos, 1, 3) as $img): ?>
+                    <div class="col-12 col-md-6 col-lg-12">
+                        <img src="/rentbridge/<?= e($img['image_path']) ?>"
+                             class="w-100 rounded-3"
+                             style="aspect-ratio: 4/3; object-fit: cover;"
+                             alt="">
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        <?php endif; ?>
+    </div>
+<?php endif; ?>
     <?php
 // === Check if user arrived via a co-tenancy post ===
 $fromPostId = (int)($_GET['from_post'] ?? 0);
@@ -146,8 +145,8 @@ $allPosts = $stmt->fetchAll();
             </div>
         <?php endif; ?>
     </div>
-    <a href="/rentbridge/chat/start.php?with=<?= (int)$fromPost['poster_id'] ?>&property_id=<?= (int)$prop['id'] ?>"
-       class="btn btn-success btn-sm" style="flex-shrink:0;">
+    <a href="/rentbridge/chat/start.php?type=partner_inquiry&with=<?= (int)$fromPost['poster_id'] ?>&post_id=<?= (int)$fromPost['id'] ?>"
+        class="btn btn-success btn-sm" style="flex-shrink:0;">
         <i class="bi bi-chat-dots me-1"></i> Message
     </a>
 </div>
@@ -274,36 +273,39 @@ $allPosts = $stmt->fetchAll();
                             data-bs-toggle="modal" data-bs-target="#loginPromptModal">
                         <i class="bi bi-chat-left-text me-1"></i> Message landlord
                     </button>
-
-                    <!-- Login prompt modal -->
-                    <div class="modal fade" id="loginPromptModal" tabindex="-1" aria-hidden="true">
-                        <div class="modal-dialog modal-dialog-centered modal-sm">
-                            <div class="modal-content">
-                                <div class="modal-body text-center p-4">
-                                    <i class="bi bi-lock" style="font-size:3rem; color: rgba(15,44,82,0.3);"></i>
-                                    <h5 class="mt-3 mb-2">Log in to continue</h5>
-                                    <p class="text-secondary small mb-4">
-                                        Create a free account to message landlords, save properties, and book tenancies.
-                                    </p>
-                                    <div class="d-grid gap-2">
-                                        <a href="/rentbridge/auth/register_student.php"
-                                        class="btn btn-primary">
-                                            <i class="bi bi-person-plus me-1"></i> Sign up free
-                                        </a>
-                                        <a href="/rentbridge/auth/login.php"
-                                        class="btn btn-outline-dark">
-                                            I have an account
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                 <?php endif; ?>
             </div>
         </div>
     </div>
 </div>
+
+<?php if (!is_logged_in()): ?>
+<!-- Login prompt modal — placed at root level to avoid z-index issues -->
+<div class="modal fade" id="loginPromptModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center px-4 pb-4 pt-0">
+                <i class="bi bi-lock" style="font-size:3rem; color: rgba(15,44,82,0.3);"></i>
+                <h5 class="mt-3 mb-2">Log in to continue</h5>
+                <p class="text-secondary small mb-4">
+                    Create a free account to message landlords, save properties, and book tenancies.
+                </p>
+                <div class="d-grid gap-2">
+                    <a href="/rentbridge/auth/login.php" class="btn btn-primary">
+                        <i class="bi bi-person-plus me-1"></i> Log in now
+                    </a>
+                    <a href="/rentbridge/auth/register.php" class="btn btn-outline-dark">
+                        I dont have an account
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
