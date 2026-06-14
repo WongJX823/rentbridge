@@ -273,48 +273,48 @@ $months  = max(1, (int)round(($endTs - $startTs) / (30.44 * 86400)));
                 </div>
                 <?php endif; ?>
                     <?php
-require_once __DIR__ . '/../includes/co_tenants.php';
-$coTenants = get_co_tenants((int)$case['id']);
-$additionalCount = count(array_filter($coTenants, fn($c) => !$c['is_primary']));
-?>
+                    require_once __DIR__ . '/../includes/co_tenants.php';
+                    $coTenants = get_co_tenants((int)$case['id']);
+                    $additionalCount = count(array_filter($coTenants, fn($c) => !$c['is_primary']));
+                    ?>
 
-<div class="bg-white border rounded-3 p-4 mb-3"
-     style="border-left: 4px solid #D4A017 !important;">
-    <h6 class="text-secondary text-uppercase small mb-3">
-        Co-tenants
-        <span class="badge bg-secondary ms-1"><?= count($coTenants) ?> total</span>
-    </h6>
+                    <div class="bg-white border rounded-3 p-4 mb-3"
+                        style="border-left: 4px solid #D4A017 !important;">
+                        <h6 class="text-secondary text-uppercase small mb-3">
+                            Co-tenants
+                            <span class="badge bg-secondary ms-1"><?= count($coTenants) ?> total</span>
+                        </h6>
 
-    <?php if (!empty($coTenants)): ?>
-        <table class="table table-sm mb-3">
-            <thead style="background:#F4F4EE;">
-                <tr>
-                    <th>#</th>
-                    <th>Name</th>
-                    <th>IC</th>
-                    <th>Phone</th>
-                    <th>Role</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($coTenants as $i => $ct): ?>
-                    <tr>
-                        <td><?= $i + 1 ?></td>
-                        <td><strong><?= e($ct['full_name']) ?></strong></td>
-                        <td><code class="small"><?= e($ct['ic_number']) ?></code></td>
-                        <td class="small"><?= e($ct['phone'] ?: '—') ?></td>
-                        <td>
-                            <?php if ((int)$ct['is_primary'] === 1): ?>
-                                <span class="badge bg-primary">Primary (signs)</span>
-                            <?php else: ?>
-                                <span class="badge bg-secondary">Co-tenant</span>
-                            <?php endif; ?>
-                        </td>
-                    </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
-    <?php endif; ?>
+                        <?php if (!empty($coTenants)): ?>
+                            <table class="table table-sm mb-3">
+                                <thead style="background:#F4F4EE;">
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Name</th>
+                                        <th>IC</th>
+                                        <th>Phone</th>
+                                        <th>Role</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($coTenants as $i => $ct): ?>
+                                        <tr>
+                                            <td><?= $i + 1 ?></td>
+                                            <td><strong><?= e($ct['full_name']) ?></strong></td>
+                                            <td><code class="small"><?= e($ct['ic_number']) ?></code></td>
+                                            <td class="small"><?= e($ct['phone'] ?: '—') ?></td>
+                                            <td>
+                                                <?php if ((int)$ct['is_primary'] === 1): ?>
+                                                    <span class="badge bg-primary">Primary (signs)</span>
+                                                <?php else: ?>
+                                                    <span class="badge bg-secondary">Co-tenant</span>
+                                                <?php endif; ?>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        <?php endif; ?>
 
     <form method="POST" action="/rentbridge/agent/send_cotenant_form.php" class="d-inline">
         <?= csrf_field() ?>
@@ -330,6 +330,127 @@ $additionalCount = count(array_filter($coTenants, fn($c) => !$c['is_primary']));
         Required before contract generation.
     </small>
 </div>  
+<!-- CONTRACT GENERATION -->
+<?php
+$stmt = $pdo->prepare("SELECT * FROM contracts WHERE booking_id = ? LIMIT 1");
+$stmt->execute([(int)$case['id']]);
+$contract = $stmt->fetch();
+
+$canGenerate = !empty($coTenants);
+$primaryReady = false;
+foreach ($coTenants as $ct) {
+    if ((int)$ct['is_primary'] === 1 && $ct['ic_number'] !== 'PENDING' && !empty($ct['ic_number'])) {
+        $primaryReady = true;
+        break;
+    }
+}
+?>
+
+<?php if (in_array($case['status'], ['agent_verifying','agent_verified','contract_pending','active'], true)): ?>
+<div class="bg-white border rounded-3 p-4 mb-3"
+     style="border-left: 4px solid #2E8B57 !important;">
+    <h6 class="text-secondary text-uppercase small mb-3">
+        Contract
+        <?php if ($contract && !empty($contract['generated_pdf_path'])): ?>
+            <span class="badge bg-success ms-1">Generated</span>
+        <?php endif; ?>
+    </h6>
+
+    <?php if (!$primaryReady): ?>
+        <div class="alert alert-warning small mb-0">
+            <i class="bi bi-exclamation-triangle"></i>
+            <strong>Cannot generate contract yet.</strong> The primary tenant has not
+            submitted their IC number. Send the co-tenant form first.
+        </div>
+    <?php elseif (empty($contract) || empty($contract['generated_pdf_path'])): ?>
+        <p class="small text-secondary mb-3">
+            Generate the contract PDF. You'll download it and send to all parties
+            (landlord + tenants) for handwritten signing via WhatsApp/email.
+        </p>
+        <a href="/rentbridge/agent/generate_contract.php?booking_id=<?= (int)$case['id'] ?>"
+           class="btn btn-success">
+            <i class="bi bi-file-earmark-pdf me-1"></i> Generate contract PDF
+        </a>
+    <?php else: ?>
+        <div class="row g-3 mb-3">
+            <div class="col-md-4">
+                <small class="text-secondary">Contract code</small>
+                <div><code><?= e($contract['contract_code']) ?></code></div>
+            </div>
+            <div class="col-md-4">
+                <small class="text-secondary">Generated</small>
+                <div><?= e(date('d M Y, H:i', strtotime($contract['generated_at']))) ?></div>
+            </div>
+            <div class="col-md-4">
+                <small class="text-secondary">Status</small>
+                <div>
+                    <?php if ($contract['status'] === 'active'): ?>
+                        <span class="badge bg-success">Active (signed)</span>
+                    <?php else: ?>
+                        <span class="badge bg-warning text-dark">Awaiting signed upload</span>
+                    <?php endif; ?>
+                    
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="/rentbridge/agent/generate_contract.php?booking_id=<?= (int)$case['id'] ?>"
+               target="_blank" class="btn btn-primary">
+                <i class="bi bi-download me-1"></i> Download PDF
+            </a>
+        </div>
+        <small class="text-secondary d-block mt-2">
+            Send via WhatsApp/email to landlord + all tenants for signing.
+            Upload signed copy back (coming next turn).
+        </small>
+    <?php endif; ?>
+    <?php if (!empty($contract['generated_pdf_path']) && empty($contract['signed_pdf_path']) && $contract['status'] !== 'active'): ?>
+    <!-- Upload signed copy section -->
+    <hr class="my-3">
+    <h6 class="text-secondary text-uppercase small mb-3">Upload signed copy</h6>
+    <p class="small text-secondary mb-3">
+        After all parties have signed the printed contract, scan or photograph
+        the signed pages, combine into a single PDF, and upload here.
+    </p>z
+
+    <form method="POST" action="/rentbridge/agent/upload_signed_contract.php"
+          enctype="multipart/form-data">
+        <?= csrf_field() ?>
+        <input type="hidden" name="booking_id" value="<?= (int)$case['id'] ?>">
+
+        <div class="mb-3">
+            <input type="file" name="signed_pdf" class="form-control"
+                   accept="application/pdf" required>
+            <small class="text-secondary">PDF only, max 10MB</small>
+        </div>
+
+        <button type="submit" class="btn btn-success"
+                onclick="return confirm('Upload signed contract? This will mark the tenancy as active and the property as rented.');">
+            <i class="bi bi-upload me-1"></i> Upload signed contract
+        </button>
+    </form>
+<?php elseif (!empty($contract['signed_pdf_path'])): ?>
+    <!-- Signed copy already uploaded -->
+    <hr class="my-3">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h6 class="text-secondary text-uppercase small mb-2">Signed contract</h6>
+            <p class="small mb-0">
+                <span class="badge bg-success">✓ Active</span>
+                Uploaded <?= e(date('d M Y, H:i', strtotime($contract['signed_uploaded_at']))) ?>
+            </p>
+        </div>
+        <a href="/rentbridge/<?= e($contract['signed_pdf_path']) ?>"
+           target="_blank" class="btn btn-outline-dark btn-sm">
+            <i class="bi bi-file-earmark-pdf me-1"></i> Download signed copy
+        </a>
+    </div>
+<?php endif; ?>
+</div>
+<?php endif; ?>
+
+
                 <!-- Action panel — only if pending_agent -->
                 <?php if ($case['status'] === 'pending_agent'): ?>
                 <div class="col-12">
