@@ -138,7 +138,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <input type="text" name="full_name"
                                class="form-control <?= isset($errors['full_name']) ? 'is-invalid' : '' ?>"
                                value="<?= e($old['full_name']) ?>"
-                               placeholder="Wong Jia Xi" required>
+                               placeholder="Abu bin Ahmad" required>
                         <small class="text-secondary">Used on contracts and official documents.</small>
                         <?php if (isset($errors['full_name'])): ?>
                             <div class="invalid-feedback"><?= e($errors['full_name']) ?></div>

@@ -52,7 +52,7 @@ function add_co_tenant(
     // Basic IC format validation (Malaysian: 12 digits, optional dashes)
     $icClean = preg_replace('/[^0-9]/', '', $icNumber);
     if (strlen($icClean) !== 12) {
-        return ['ok' => false, 'id' => null, 'error' => 'IC must be 12 digits (e.g. 030823-02-0465)'];
+        return ['ok' => false, 'id' => null, 'error' => 'IC must be 12 digits (e.g. 030303-03-0303)'];
     }
 
     $pdo = db();

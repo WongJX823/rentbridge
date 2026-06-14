@@ -561,7 +561,7 @@ CREATE TABLE co_tenants (
 
     -- Personal data (always required, even if student_id is set, for contract printing)
     full_name       VARCHAR(150) NOT NULL,
-    ic_number       VARCHAR(20) NOT NULL  COMMENT 'NRIC e.g. 030823-02-0465',
+    ic_number       VARCHAR(20) NOT NULL  COMMENT 'NRIC e.g. 030303-03-0303',
     phone           VARCHAR(20)  DEFAULT NULL,
     email           VARCHAR(150) DEFAULT NULL,
     home_address    VARCHAR(255) DEFAULT NULL,

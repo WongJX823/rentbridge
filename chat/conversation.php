@@ -310,7 +310,7 @@ ob_start();
                             </label>
                             <input type="text" class="form-control form-control-sm"
                                    name="primary_ic" id="primaryIc"
-                                   placeholder="030823-02-0465" required>
+                                   placeholder="030303-03-0303" required>
                         </div>
                     </div>
 
@@ -370,7 +370,7 @@ ob_start();
                 <label class="form-label small">IC number</label>
                 <input type="text" class="form-control form-control-sm"
                        name="cotenant[${idx}][ic_number]"
-                       placeholder="030823-02-0465" required>
+                       placeholder="030303-03-0303" required>
             </div>
             <div class="col-md-2">
                 <label class="form-label small">Phone</label>
