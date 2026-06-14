@@ -298,14 +298,15 @@ ob_start();
                 </select>
             </div>
             <div class="col-md-6">
-                <label class="form-label fw-semibold">
-                    Furnishing <small class="text-danger">*</small>
-                </label>
-                <select name="furnishing" class="form-select" required>
-                    <option value="none"    <?= $old['furnishing']==='none'?'selected':'' ?>>Unfurnished</option>
-                    <option value="partial" <?= $old['furnishing']==='partial'?'selected':'' ?>>Partially furnished</option>
-                    <option value="full"    <?= $old['furnishing']==='full'?'selected':'' ?>>Fully furnished</option>
+                <label class="form-label fw-semibold">Furnishing</label>
+                <select name="furnishing" class="form-select">
+                    <option value="none"    <?= $old['furnishing'] === 'none'    ? 'selected' : '' ?>>Unfurnished</option>
+                    <option value="partial" <?= $old['furnishing'] === 'partial' ? 'selected' : '' ?>>Partially furnished</option>
+                    <option value="full"    <?= $old['furnishing'] === 'full'    ? 'selected' : '' ?>>Fully furnished</option>
                 </select>
+                <small class="text-secondary">
+                    Furnishing significantly affects rental value.
+                </small>
             </div>
         </div>
     </div>
@@ -356,37 +357,19 @@ ob_start();
                 <input type="text" name="state" class="form-control"
                        value="<?= e($old['state']) ?>" placeholder="Melaka">
             </div>
-        </div>
-    </div>
-
-    <!-- PRICING -->
-    <div class="bg-white border rounded-3 p-4 mb-3">
-        <h6 class="text-secondary text-uppercase small mb-3">Pricing</h6>
-
-        <div class="row g-3">
-            <div class="col-md-6">
+            <div class="mt-3">
                 <label class="form-label fw-semibold">
-                    Monthly rent (RM) <small class="text-danger">*</small>
+                    Google Maps link
+                    <small class="text-secondary fw-normal">— helps pricing accuracy</small>
                 </label>
-                <input type="number" name="monthly_rent" min="0" step="50"
-                       class="form-control <?= isset($errors['monthly_rent']) ? 'is-invalid' : '' ?>"
-                       value="<?= e($old['monthly_rent']) ?>" required>
-                <?php if (isset($errors['monthly_rent'])): ?>
-                    <div class="invalid-feedback"><?= e($errors['monthly_rent']) ?></div>
-                <?php endif; ?>
+                <input type="url" name="maps_url" id="mapsUrlInput"
+                    class="form-control"
+                    value="<?= e($old['maps_url'] ?? '') ?>"
+                    placeholder="https://maps.app.goo.gl/... or https://www.google.com/maps/@2.3138,102.3192,17z">
                 <small class="text-secondary">
-                    Pricing helper coming soon — for now, check nearby properties on the listings page.
+                    Open Google Maps, find your property, click "Share" → copy link. The pricing benchmark uses distance to UTeM.
                 </small>
-            </div>
-            <div class="col-md-6">
-                <label class="form-label fw-semibold">Deposit (RM)</label>
-                <input type="number" name="deposit" min="0" step="50"
-                       class="form-control <?= isset($errors['deposit']) ? 'is-invalid' : '' ?>"
-                       value="<?= e($old['deposit']) ?>">
-                <?php if (isset($errors['deposit'])): ?>
-                    <div class="invalid-feedback"><?= e($errors['deposit']) ?></div>
-                <?php endif; ?>
-                <small class="text-secondary">Usually 1-2 months of rent.</small>
+                <div id="mapsUrlStatus" class="small mt-1"></div>
             </div>
         </div>
     </div>
@@ -405,7 +388,13 @@ ob_start();
             <label class="form-label fw-semibold">Facilities</label>
             <textarea name="facilities" rows="3" class="form-control"
                       placeholder="WiFi, aircond, washing machine, parking, etc."><?= e($old['facilities']) ?></textarea>
-        </div>
+            <small class="text-secondary">
+            List one per line or comma-separated. Common items recognized:
+            <code>wifi</code>, <code>aircond</code>, <code>parking</code>, <code>washing machine</code>, 
+            <code>fridge</code>, <code>kitchen</code>, <code>attached bath</code>, <code>balcony</code>, 
+            <code>security</code>, <code>gym</code>, <code>pool</code>, <code>cctv</code>, <code>tv</code>.
+            </small>
+        </div>  
 
         <div>
             <label class="form-label fw-semibold">Viewing arrangement</label>
@@ -415,6 +404,55 @@ ob_start();
                 <option value="agent_led"     <?= $old['viewing_mode']==='agent_led'?'selected':'' ?>>Only agent shows it (I'm not always around)</option>
             </select>
             <small class="text-secondary">Students will never view alone — agent or landlord must be present.</small>
+        </div>
+    </div>
+
+    <!-- PRICING -->
+    <div class="bg-white border rounded-3 p-4 mb-3">
+        <h6 class="text-secondary text-uppercase small mb-3">Pricing</h6>
+
+        <!-- BENCHMARK WIDGET (populated by JS) -->
+        <div id="pricingBenchmark" class="alert d-none mb-3 d-flex gap-3 align-items-start"
+            style="border: 1px solid; background: #F4FBF7;">
+            <i class="bi bi-bar-chart-fill" id="benchmarkIcon"
+            style="font-size: 1.5rem; color: #2E8B57; flex-shrink: 0;"></i>
+            <div class="flex-grow-1">
+                <strong id="benchmarkTitle"></strong>
+                <span id="benchmarkConfidence" class="badge ms-2"></span>
+                <div id="benchmarkBody" class="small mt-1"></div>
+            </div>
+        </div>
+
+        <div id="pricingNoData" class="alert alert-light border d-none small mb-3">
+            <i class="bi bi-info-circle text-secondary"></i>
+            No comparable listings yet in your area — be the first!
+        </div>
+
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label fw-semibold">
+                    Monthly rent (RM) <small class="text-danger">*</small>
+                </label>
+                <input type="number" name="monthly_rent" min="0" step="50" id="monthlyRentInput"
+                    class="form-control <?= isset($errors['monthly_rent']) ? 'is-invalid' : '' ?>"
+                    value="<?= e($old['monthly_rent']) ?>" required>
+                <?php if (isset($errors['monthly_rent'])): ?>
+                    <div class="invalid-feedback"><?= e($errors['monthly_rent']) ?></div>
+                <?php endif; ?>
+                <small class="text-secondary">
+                    See market benchmark above to help price competitively.
+                </small>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label fw-semibold">Deposit (RM)</label>
+                <input type="number" name="deposit" min="0" step="50"
+                    class="form-control <?= isset($errors['deposit']) ? 'is-invalid' : '' ?>"
+                    value="<?= e($old['deposit']) ?>">
+                <?php if (isset($errors['deposit'])): ?>
+                    <div class="invalid-feedback"><?= e($errors['deposit']) ?></div>
+                <?php endif; ?>
+                <small class="text-secondary">Usually 1-2 months of rent.</small>
+            </div>
         </div>
     </div>
 
@@ -727,6 +765,142 @@ ob_start();
         </button>
     </div>
 </form>
+
+<script>
+(function() {
+    const benchmarkBox = document.getElementById('pricingBenchmark');
+    const noDataBox    = document.getElementById('pricingNoData');
+    const titleEl      = document.getElementById('benchmarkTitle');
+    const confidenceEl = document.getElementById('benchmarkConfidence');
+    const bodyEl       = document.getElementById('benchmarkBody');
+    const iconEl       = document.getElementById('benchmarkIcon');
+
+    const cityInput  = document.querySelector('input[name="city"]');
+    const typeInput  = document.querySelector('select[name="property_type"]');
+    const furnInput  = document.querySelector('select[name="furnishing"]');
+    const rentInput  = document.getElementById('monthlyRentInput');
+
+    let lastQuery = '';
+    let timer = null;
+
+    async function fetchBenchmark() {
+        const city = (cityInput?.value || '').trim();
+        const type = typeInput?.value || '';
+        const furn = furnInput?.value || '';
+        const query = `${city}|${type}|${furn}`;
+
+        if (query === lastQuery) return;
+        lastQuery = query;
+
+        if (!city) {
+            benchmarkBox.classList.add('d-none');
+            noDataBox.classList.add('d-none');
+            return;
+        }
+
+        try {
+            const url = `/rentbridge/landlord/pricing_check.php?city=${encodeURIComponent(city)}&type=${type}&furnishing=${furn}`;
+            const resp = await fetch(url);
+            const data = await resp.json();
+
+            if (!data.has_data) {
+                benchmarkBox.classList.add('d-none');
+                noDataBox.classList.remove('d-none');
+                return;
+            }
+
+            // Show benchmark
+            noDataBox.classList.add('d-none');
+            benchmarkBox.classList.remove('d-none');
+
+            const tierLabel = data.match_tier === 'exact'
+                ? 'exact match'
+                : data.match_tier === 'same type'
+                    ? 'same city + same type'
+                    : 'same city';
+
+                    titleEl.textContent = `Suggested: RM ${formatRM(data.suggested)}`;
+
+
+            const confColor = data.confidence === 'high' ? 'success'
+                            : data.confidence === 'medium' ? 'warning'
+                            : 'secondary';
+            confidenceEl.className = `badge bg-${confColor}`;
+            confidenceEl.textContent = `${data.confidence} confidence`;
+
+            // Build breakdown
+            let breakdown = `
+                <strong>Base market:</strong> RM ${formatRM(data.base_market)}
+                <small class="text-secondary">(median of ${data.count} ${tierLabel} listings)</small>`;
+
+            if (data.distance_km !== null) {
+                const distSign = data.distance_premium >= 0 ? '+' : '−';
+                breakdown += `<br>
+                    <strong>Distance (${data.distance_km} km from UTeM):</strong>
+                    ${distSign}RM ${formatRM(Math.abs(data.distance_premium))}`;
+            }
+
+            if (data.amenity_premium > 0) {
+                breakdown += `<br>
+                    <strong>Amenities (+RM ${formatRM(data.amenity_premium)}):</strong>
+                    <small class="text-secondary">${data.amenities_matched.join(', ')}</small>`;
+            }
+
+            if (data.furnishing_premium > 0) {
+                breakdown += `<br>
+                    <strong>Furnishing premium:</strong> +RM ${formatRM(data.furnishing_premium)}`;
+            }
+
+            breakdown += `<br><br>
+                <small class="text-secondary">
+                    Sample range: RM ${formatRM(data.min)} – RM ${formatRM(data.max)}
+                </small>`;
+
+            bodyEl.innerHTML = breakdown;
+
+            // Color tinting based on user's current rent vs benchmark
+            const currentRent = parseFloat(rentInput?.value || 0);
+            if (currentRent > 0) {
+                if (currentRent > data.max * 1.15) {
+                    iconEl.style.color = '#dc3545';
+                    benchmarkBox.style.borderColor = '#dc3545';
+                    benchmarkBox.style.background = '#FFF5F5';
+                    bodyEl.innerHTML += `<div class="mt-2 text-danger small">⚠️ Your rent is significantly above market range — may receive fewer applications.</div>`;
+                } else if (currentRent < data.min * 0.85) {
+                    iconEl.style.color = '#D4A017';
+                    benchmarkBox.style.borderColor = '#D4A017';
+                    benchmarkBox.style.background = '#FFF4D6';
+                    bodyEl.innerHTML += `<div class="mt-2 text-warning small">ℹ️ Your rent is below market — you may be undercharging.</div>`;
+                } else {
+                    iconEl.style.color = '#2E8B57';
+                    benchmarkBox.style.borderColor = '#2E8B57';
+                    benchmarkBox.style.background = '#F4FBF7';
+                    bodyEl.innerHTML += `<div class="mt-2 text-success small">✓ Your price is within market range.</div>`;
+                }
+            }
+        } catch (err) {
+            console.warn('Benchmark fetch failed:', err);
+        }
+    }
+
+    function formatRM(n) {
+        return Number(n).toLocaleString('en-MY', { maximumFractionDigits: 0 });
+    }
+
+    function debouncedFetch() {
+        clearTimeout(timer);
+        timer = setTimeout(fetchBenchmark, 400);
+    }
+
+    cityInput?.addEventListener('input', debouncedFetch);
+    typeInput?.addEventListener('change', debouncedFetch);
+    furnInput?.addEventListener('change', debouncedFetch);
+    rentInput?.addEventListener('input', debouncedFetch);
+
+    // Initial fetch if city is pre-filled (edit mode)
+    if (cityInput?.value) fetchBenchmark();
+})();
+</script>
 
 <?php
 $pageContent = ob_get_clean();
