@@ -135,31 +135,30 @@ function get_conversation_for_user(int $conversationId, int $userId, string $rol
 /**
  * Get messages of a conversation.
  */
-function get_messages(int $conversationId, ?int $afterId = null, int $limit = 100): array {
+function get_messages(int $conversationId, ?int $afterId = null, int $limit = 200): array {
     $pdo = db();
     if ($afterId !== null) {
         $stmt = $pdo->prepare("
-            SELECT id, sender_id, body, sent_at, read_at
+            SELECT id, conversation_id, sender_id, body,
+                   COALESCE(message_type, 'text') AS message_type,
+                   metadata, sent_at
               FROM messages
              WHERE conversation_id = ? AND id > ?
-             ORDER BY sent_at ASC, id ASC
-             LIMIT ?
-        ");
-        $stmt->bindValue(1, $conversationId, PDO::PARAM_INT);
-        $stmt->bindValue(2, $afterId, PDO::PARAM_INT);
-        $stmt->bindValue(3, $limit, PDO::PARAM_INT);
-        $stmt->execute();
+             ORDER BY id ASC
+             LIMIT " . (int)$limit
+        );
+        $stmt->execute([$conversationId, $afterId]);
     } else {
         $stmt = $pdo->prepare("
-            SELECT id, sender_id, body, sent_at, read_at
+            SELECT id, conversation_id, sender_id, body,
+                   COALESCE(message_type, 'text') AS message_type,
+                   metadata, sent_at
               FROM messages
              WHERE conversation_id = ?
-             ORDER BY sent_at ASC, id ASC
-             LIMIT ?
-        ");
-        $stmt->bindValue(1, $conversationId, PDO::PARAM_INT);
-        $stmt->bindValue(2, $limit, PDO::PARAM_INT);
-        $stmt->execute();
+             ORDER BY id ASC
+             LIMIT " . (int)$limit
+        );
+        $stmt->execute([$conversationId]);
     }
     return $stmt->fetchAll();
 }

@@ -272,7 +272,64 @@ $months  = max(1, (int)round(($endTs - $startTs) / (30.44 * 86400)));
                     </div>
                 </div>
                 <?php endif; ?>
+                    <?php
+require_once __DIR__ . '/../includes/co_tenants.php';
+$coTenants = get_co_tenants((int)$case['id']);
+$additionalCount = count(array_filter($coTenants, fn($c) => !$c['is_primary']));
+?>
 
+<div class="bg-white border rounded-3 p-4 mb-3"
+     style="border-left: 4px solid #D4A017 !important;">
+    <h6 class="text-secondary text-uppercase small mb-3">
+        Co-tenants
+        <span class="badge bg-secondary ms-1"><?= count($coTenants) ?> total</span>
+    </h6>
+
+    <?php if (!empty($coTenants)): ?>
+        <table class="table table-sm mb-3">
+            <thead style="background:#F4F4EE;">
+                <tr>
+                    <th>#</th>
+                    <th>Name</th>
+                    <th>IC</th>
+                    <th>Phone</th>
+                    <th>Role</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($coTenants as $i => $ct): ?>
+                    <tr>
+                        <td><?= $i + 1 ?></td>
+                        <td><strong><?= e($ct['full_name']) ?></strong></td>
+                        <td><code class="small"><?= e($ct['ic_number']) ?></code></td>
+                        <td class="small"><?= e($ct['phone'] ?: '—') ?></td>
+                        <td>
+                            <?php if ((int)$ct['is_primary'] === 1): ?>
+                                <span class="badge bg-primary">Primary (signs)</span>
+                            <?php else: ?>
+                                <span class="badge bg-secondary">Co-tenant</span>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    <?php endif; ?>
+
+    <form method="POST" action="/rentbridge/agent/send_cotenant_form.php" class="d-inline">
+        <?= csrf_field() ?>
+        <input type="hidden" name="booking_id" value="<?= (int)$case['id'] ?>">
+        <button type="submit" class="btn btn-warning btn-sm">
+            <i class="bi bi-send me-1"></i>
+            <?= $additionalCount > 0 ? 'Re-send' : 'Send' ?> co-tenant form to student
+        </button>
+    </form>
+
+    <small class="text-secondary d-block mt-2">
+        Sends a form in chat for the student to fill in their IC + add additional co-tenants.
+        Required before contract generation.
+    </small>
+</div>  
                 <!-- Action panel — only if pending_agent -->
                 <?php if ($case['status'] === 'pending_agent'): ?>
                 <div class="col-12">

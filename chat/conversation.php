@@ -173,15 +173,68 @@ ob_start();
                 Remember to keep your phone number and banking info safe.
             </div>
         <?php endif; ?>
-        <?php foreach ($messages as $msg):
+
+        <?php
+        require_once __DIR__ . '/../includes/co_tenants.php';
+        foreach ($messages as $msg):
             $isMine = (int)$msg['sender_id'] === $userId;
+            $msgType = $msg['message_type'] ?? 'text';
         ?>
-            <div class="chat-message <?= $isMine ? 'mine' : 'theirs' ?>" data-msg-id="<?= (int)$msg['id'] ?>">
-                <?= nl2br(e($msg['body'])) ?>
-                <div class="chat-meta">
-                    <?= e(date('H:i', strtotime($msg['sent_at']))) ?>
+
+            <?php if ($msgType === 'co_tenant_form'):
+                $meta = json_decode($msg['metadata'] ?? '{}', true);
+                $bookingIdMsg = (int)($meta['booking_id'] ?? 0);
+                $isReceiver = !$isMine;
+                $existingCoTenants = $bookingIdMsg > 0 ? get_co_tenants($bookingIdMsg) : [];
+                $hasSubmitted = count($existingCoTenants) > 1;
+            ?>
+                <div class="chat-message <?= $isMine ? 'mine' : 'theirs' ?>"
+                     style="background:#FFF4D6; border:1px solid #D4A017; color:#0F2C52; max-width:480px;"
+                     data-msg-id="<?= (int)$msg['id'] ?>">
+                    <div class="d-flex gap-2 align-items-start mb-2">
+                        <i class="bi bi-clipboard-data" style="font-size:1.5rem; color:#D4A017;"></i>
+                        <div>
+                            <strong>Co-tenant details requested</strong>
+                            <div class="small text-secondary">
+                                Property: <?= e($meta['property_title'] ?? 'this property') ?>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="small mb-3">
+                        The agent needs the names and IC numbers of everyone who
+                        will rent with you. This appears on the contract.
+                    </p>
+
+                    <?php if ($isReceiver && !$hasSubmitted): ?>
+                        <button type="button" class="btn btn-warning btn-sm"
+                                data-bs-toggle="modal"
+                                data-bs-target="#coTenantFormModal"
+                                data-booking-id="<?= $bookingIdMsg ?>">
+                            <i class="bi bi-pencil-square me-1"></i> Fill in co-tenant details
+                        </button>
+                    <?php elseif ($hasSubmitted): ?>
+                        <span class="badge bg-success">
+                            <i class="bi bi-check2-circle"></i>
+                            <?= count($existingCoTenants) - 1 ?> co-tenant<?= count($existingCoTenants) === 2 ? '' : 's' ?> submitted
+                        </span>
+                    <?php else: ?>
+                        <span class="badge bg-secondary">Awaiting student response</span>
+                    <?php endif; ?>
+
+                    <div class="chat-meta">
+                        <?= e(date('H:i', strtotime($msg['sent_at']))) ?>
+                    </div>
                 </div>
-            </div>
+            <?php else: ?>
+                <div class="chat-message <?= $isMine ? 'mine' : 'theirs' ?>"
+                     data-msg-id="<?= (int)$msg['id'] ?>">
+                    <?= nl2br(e($msg['body'])) ?>
+                    <div class="chat-meta">
+                        <?= e(date('H:i', strtotime($msg['sent_at']))) ?>
+                    </div>
+                </div>
+            <?php endif; ?>
+
         <?php endforeach; ?>
     </div>
 
@@ -220,6 +273,148 @@ ob_start();
     <?php endif; ?>
 
 </div>
+
+<!-- Co-tenant form modal -->
+<div class="modal fade" id="coTenantFormModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-people-fill text-emerald"></i> Co-tenant details
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="coTenantForm" method="POST"
+                  action="/rentbridge/chat/submit_cotenants.php">
+                <?= csrf_field() ?>
+                <input type="hidden" name="booking_id" id="coTenantBookingId">
+
+                <div class="modal-body">
+                    <div class="alert alert-light border small mb-3">
+                        <strong>How this works:</strong> Add the name and IC number of
+                        every person who will rent with you. They don't need a RentBridge
+                        account — but the names will appear on the legal contract.
+                    </div>
+
+                    <!-- Your own info (primary tenant) -->
+                    <h6 class="text-secondary text-uppercase small mt-2 mb-2">Your info (primary tenant)</h6>
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small">Full name</label>
+                            <input type="text" class="form-control form-control-sm"
+                                   id="primaryName" readonly disabled>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small">
+                                Your IC number <small class="text-danger">*</small>
+                            </label>
+                            <input type="text" class="form-control form-control-sm"
+                                   name="primary_ic" id="primaryIc"
+                                   placeholder="030823-02-0465" required>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Additional co-tenants -->
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="text-secondary text-uppercase small mb-0">Additional co-tenants</h6>
+                        <button type="button" class="btn btn-sm btn-outline-primary"
+                                id="addCoTenantBtn">
+                            <i class="bi bi-plus-lg me-1"></i> Add person
+                        </button>
+                    </div>
+                    <p class="small text-secondary">
+                        If you're renting alone, leave this section empty.
+                    </p>
+
+                    <div id="coTenantList">
+                        <!-- Rows injected by JS -->
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check2 me-1"></i> Submit to agent
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    const modal = document.getElementById('coTenantFormModal');
+    const bookingIdInput = document.getElementById('coTenantBookingId');
+    const primaryNameInput = document.getElementById('primaryName');
+    const primaryIcInput = document.getElementById('primaryIc');
+    const listContainer = document.getElementById('coTenantList');
+    const addBtn = document.getElementById('addCoTenantBtn');
+
+    let rowIndex = 0;
+
+    function buildRow(idx) {
+        const div = document.createElement('div');
+        div.className = 'row g-2 mb-2 align-items-end';
+        div.dataset.row = idx;
+        div.innerHTML = `
+            <div class="col-md-5">
+                <label class="form-label small">Full name</label>
+                <input type="text" class="form-control form-control-sm"
+                       name="cotenant[${idx}][full_name]"
+                       placeholder="e.g. Ahmad bin Hashim" required>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small">IC number</label>
+                <input type="text" class="form-control form-control-sm"
+                       name="cotenant[${idx}][ic_number]"
+                       placeholder="030823-02-0465" required>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">Phone</label>
+                <input type="text" class="form-control form-control-sm"
+                       name="cotenant[${idx}][phone]" placeholder="012-345 6789">
+            </div>
+            <div class="col-md-1 text-end">
+                <button type="button" class="btn btn-sm btn-outline-danger remove-row">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+        `;
+        div.querySelector('.remove-row').onclick = () => div.remove();
+        return div;
+    }
+
+    addBtn.addEventListener('click', () => {
+        listContainer.appendChild(buildRow(rowIndex++));
+    });
+
+    // When modal opens via button: capture booking_id + prefill primary name
+    modal.addEventListener('show.bs.modal', function(event) {
+        const trigger = event.relatedTarget;
+        const bookingId = trigger?.dataset.bookingId;
+        if (bookingId) bookingIdInput.value = bookingId;
+
+        // Prefill primary name via AJAX (the chat page already knows current user;
+        // server-side we'll fetch from session)
+        fetch('/rentbridge/chat/get_primary_info.php?booking_id=' + bookingId)
+            .then(r => r.json())
+            .then(data => {
+                primaryNameInput.value = data.full_name || '';
+                primaryIcInput.value = data.ic_number === 'PENDING' ? '' : (data.ic_number || '');
+            })
+            .catch(err => console.warn('Could not prefill', err));
+    });
+
+    // Reset on close
+    modal.addEventListener('hidden.bs.modal', function() {
+        listContainer.innerHTML = '';
+        rowIndex = 0;
+    });
+})();
+</script>
 
 <style>
 .chat-shell {
