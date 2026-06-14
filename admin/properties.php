@@ -56,7 +56,7 @@ $stmt = $pdo->prepare("
                AND b.status IN ('agent_verifying','agent_assigned','contract_pending','active')
              ORDER BY b.id DESC LIMIT 1
            ) AS current_inspector,
-           (SELECT a.full_name
+           (SELECT ag.full_name
               FROM users a
               JOIN agents ag ON ag.user_id = p.agent_verified_by
              WHERE a.id = p.agent_verified_by
