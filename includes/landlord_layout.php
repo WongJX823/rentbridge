@@ -115,21 +115,26 @@ $pendingRequests = (int)$stmt->fetchColumn();
                 <i class="bi bi-person-circle"></i>
                 <span class="sidebar-label">Profile</span>
             </a>
-            <a href="/rentbridge/about.php"
-               class="sidebar-link <?= $activeNav === 'about' ? 'active' : '' ?>">
-                <i class="bi bi-info-circle-fill"></i>
-                <span class="sidebar-label">About RentBridge</span>
-            </a>
-            <a href="/rentbridge/faq.php"
-            class="sidebar-link <?= $activeNav === 'faq' ? 'active' : '' ?>">
-                <i class="bi bi-question-circle"></i>
-                <span class="sidebar-label">FAQ</span>
-            </a>
-            <a href="/rentbridge/contact.php"
-            class="sidebar-link <?= $activeNav === 'contact' ? 'active' : '' ?>">
-                <i class="bi bi-envelope"></i>
-                <span class="sidebar-label">Contact</span>
-            </a>
+            <!-- Help & Info -->
+            <div class="sidebar-collapsible">     
+                <button class="sidebar-link sidebar-collapsible-toggle"
+                        data-collapse-target="helpMenu" type="button">
+                    <i class="bi bi-question-circle"></i>
+                    <span class="sidebar-label">Help &amp; Info</span>
+                    <i class="bi bi-chevron-down sidebar-chevron"></i>
+                </button>
+                <div class="sidebar-submenu" id="helpMenu">
+                    <a href="/rentbridge/about.php"   class="sidebar-link">About RentBridge</a>
+                    <a href="/rentbridge/faq.php"     class="sidebar-link">FAQ</a>
+                    <a href="/rentbridge/contact.php" class="sidebar-link">Feedback &amp; Contact</a>
+                    <a href="/rentbridge/legal.php"   class="sidebar-link">Privacy &amp; Terms</a>
+                    <div class="sidebar-submenu-social">
+                        <a href="#" title="Twitter"   aria-label="Twitter"><i class="bi bi-twitter-x"></i></a>
+                        <a href="#" title="Instagram" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
+                        <a href="#" title="Facebook"  aria-label="Facebook"><i class="bi bi-facebook"></i></a>
+                    </div>
+                </div>
+            </div>
         </nav>
         <div class="sidebar-footer">
             <a href="/rentbridge/landlord/settings.php"
@@ -210,6 +215,13 @@ $pendingRequests = (int)$stmt->fetchColumn();
         localStorage.setItem('rb-user-sidebar',
             body.classList.contains('sidebar-collapsed') ? 'collapsed' : 'expanded');
         updateTooltip();
+        
+        // Close any open Help & Info submenu when collapsing
+        if (body.classList.contains('sidebar-collapsed')) {
+            document.querySelectorAll('.sidebar-collapsible.open').forEach(el => {
+                el.classList.remove('open');
+            });
+        }
     });
 })();
 (function() {
@@ -221,6 +233,26 @@ $pendingRequests = (int)$stmt->fetchColumn();
         toggle.classList.toggle('active');
     });
 })();
+
+document.querySelectorAll('.sidebar-collapsible-toggle').forEach(btn => {
+    // Remove any duplicate listeners
+    btn.replaceWith(btn.cloneNode(true));
+});
+
+document.querySelectorAll('.sidebar-collapsible-toggle').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Don't open submenu when sidebar is collapsed
+        if (document.body.classList.contains('sidebar-collapsed')) {
+            return;
+        }
+        
+        const parent = this.closest('.sidebar-collapsible');
+        parent.classList.toggle('open');
+    });
+});
 </script>
 </body>
 </html>

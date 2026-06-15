@@ -175,7 +175,7 @@ ob_start();
                             <?php endif; ?>
                             <?php if (!empty($p['agent_verified_at'])): ?>
                                 <span class="badge bg-success"
-                                      style="position:absolute; top:10px; right:10px;">
+                                      style="position:absolute; top:10px; left:10px;">
                                     <i class="bi bi-patch-check-fill"></i> Verified
                                 </span>
                             <?php endif; ?>

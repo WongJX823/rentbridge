@@ -55,21 +55,26 @@ $pageTabs  = $pageTabs ?? null;
                 <i class="bi bi-search"></i>
                 <span class="public-nav-label">Browse</span>
             </a>
-            <a href="/rentbridge/about.php"
-               class="public-nav-link <?= $activeNav === 'about' ? 'active' : '' ?>">
-                <i class="bi bi-info-circle"></i>
-                <span class="public-nav-label">About</span>
-            </a>
-            <a href="/rentbridge/faq.php"
-            class="sidebar-link <?= $activeNav === 'faq' ? 'active' : '' ?>">
-                <i class="bi bi-question-circle"></i>
-                <span class="sidebar-label">FAQ</span>
-            </a>
-            <a href="/rentbridge/contact.php"
-            class="sidebar-link <?= $activeNav === 'contact' ? 'active' : '' ?>">
-                <i class="bi bi-envelope"></i>
-                <span class="sidebar-label">Contact</span>
-            </a>
+            <!-- Help & Info collapsible -->
+            <div class="public-nav-collapsible">
+                <button class="public-nav-link public-collapsible-toggle"
+                        data-collapse-target="helpMenu" type="button">
+                    <i class="bi bi-question-circle"></i>
+                    <span class="public-nav-label">Help &amp; Info</span>
+                    <i class="bi bi-chevron-down sidebar-chevron"></i>
+                </button>
+                <div class="public-nav-submenu" id="helpMenu">
+                    <a href="/rentbridge/about.php"   class="public-nav-link">About RentBridge</a>
+                    <a href="/rentbridge/faq.php"     class="public-nav-link">FAQ</a>
+                    <a href="/rentbridge/contact.php" class="public-nav-link">Feedback &amp; Contact</a>
+                    <a href="/rentbridge/legal.php" class="public-nav-link">Privacy & Terms</a>
+                    <div class="public-nav-submenu-social">
+                        <a href="#" title="Twitter"   aria-label="Twitter"><i class="bi bi-twitter-x"></i></a>
+                        <a href="#" title="Instagram" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
+                        <a href="#" title="Facebook"  aria-label="Facebook"><i class="bi bi-facebook"></i></a>
+                    </div>
+                </div>
+            </div>
 
             <div class="public-nav-divider"></div>
 
@@ -157,6 +162,13 @@ $pageTabs  = $pageTabs ?? null;
         shell.classList.toggle('sidebar-expanded');
         localStorage.setItem('publicSidebarExpanded',
             shell.classList.contains('sidebar-expanded'));
+        
+        // Close submenu when collapsing
+        if (!shell.classList.contains('sidebar-expanded')) {
+            document.querySelectorAll('.public-nav-collapsible.open').forEach(el => {
+                el.classList.remove('open');
+            });
+        }
     }
 
     function toggleMobile() {
@@ -174,6 +186,27 @@ $pageTabs  = $pageTabs ?? null;
         shell.classList.remove('sidebar-mobile-open');
     });
 })();
+
+document.querySelectorAll('.public-collapsible-toggle').forEach(btn => {
+    btn.replaceWith(btn.cloneNode(true));
+});
+
+document.querySelectorAll('.public-collapsible-toggle').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Don't open submenu when sidebar is collapsed
+        const shell = document.getElementById('appShell');
+        if (shell && !shell.classList.contains('sidebar-expanded')) {
+            return;
+        }
+        
+        const parent = this.closest('.public-nav-collapsible');
+        parent.classList.toggle('open');
+    });
+});
+
 </script>
 
 </body>

@@ -54,6 +54,99 @@ body {
     opacity: 1;
 }
 
+/* === Help & Info collapsible (public sidebar) === */
+.public-nav-collapsible {
+    border-top: 1px solid rgba(15,44,82,0.04);
+    margin-top: 8px;
+    padding-top: 8px;
+}
+.public-collapsible-toggle {
+    width: 100%;
+    background: transparent;
+    border: none;
+    text-align: left;
+    cursor: pointer;
+    color: #0F2C52;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    font-size: 0.95rem;
+}
+.public-collapsible-toggle:hover {
+    background: rgba(46,139,87,0.06);
+}
+.sidebar-chevron {
+    margin-left: auto;
+    font-size: 0.8rem;
+    transition: transform 0.2s;
+}
+.public-nav-collapsible.open .sidebar-chevron {
+    transform: rotate(180deg);
+}
+
+.public-nav-submenu {
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+    padding-left: 8px;
+    max-height: 0;
+}
+.public-nav-collapsible.open .public-nav-submenu {
+    max-height: 400px;
+}
+.public-nav-submenu .public-nav-link {
+    display: block;
+    padding: 6px 16px 6px 32px;
+    color: #6c757d;
+    text-decoration: none;
+    font-size: 0.85rem;
+    border-radius: 4px;
+    transition: all 0.15s;
+}
+.public-nav-submenu .public-nav-link:hover {
+    color: #2E8B57;
+    background: rgba(46,139,87,0.04);
+}
+
+.public-nav-submenu-social {
+    display: flex;
+    gap: 16px;
+    padding: 8px 16px 8px 32px;
+    margin-top: 4px;
+}
+.public-nav-submenu-social a {
+    color: #6c757d;
+    font-size: 0.95rem;
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.15s;
+    text-decoration: none;
+}
+.public-nav-submenu-social a:hover {
+    color: #2E8B57;
+    background: rgba(46,139,87,0.08);
+}
+.public-nav-divider {
+    padding: 6px 16px 4px 32px;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #999;
+    font-weight: 600;
+    margin-top: 4px;
+}
+/* Hide submenu text when sidebar collapsed */
+.user-sidebar.collapsed .sidebar-submenu {
+    display: none !important;
+}
+.user-sidebar.collapsed .sidebar-chevron {
+    display: none;
+}
+
 /* ============ LOGO + TOGGLE ============ */
 
 .public-sidebar-header {
