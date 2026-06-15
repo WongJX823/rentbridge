@@ -191,9 +191,9 @@ $activeNav = 'statistics';
 
 // Tabs at the top
 $pageTabs = [
-    ['label' => 'Summary',     'href' => '/rentbridge/admin/statistics/summary.php',    'active' => true],
+    ['label' => 'Summary',     'href' => '/rentbridge/admin/statistics/summary.php',    'active' => false],
     ['label' => 'Users',       'href' => '/rentbridge/admin/statistics/users.php',     'active' => false],
-    ['label' => 'Properties',  'href' => '/rentbridge/admin/statistics/properties.php','active' => false],
+    ['label' => 'Properties',  'href' => '/rentbridge/admin/statistics/properties.php','active' => true],
     ['label' => 'Tenancies',   'href' => '/rentbridge/admin/statistics/tenancies.php', 'active' => false],
     ['label' => 'Financial',   'href' => '/rentbridge/admin/statistics/financial.php', 'active' => false],
 ];

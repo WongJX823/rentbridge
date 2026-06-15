@@ -243,15 +243,205 @@ ob_start();
         </table>
     </div>
 
-    <div class="bg-white border rounded-3 p-4 mb-3" style="background:#FAF8F3 !important;">
-        <h6 class="text-secondary text-uppercase small mb-3">Account security</h6>
-        <p class="small mb-2">
-            Password change with email verification — coming soon.
-        </p>
-        <button class="btn btn-outline-secondary btn-sm" disabled>
-            <i class="bi bi-key me-1"></i> Change password
-        </button>
+    <div class="bg-white border rounded-3 p-4 mb-3">
+    <h6 class="text-secondary text-uppercase small mb-3">Account security</h6>
+    <p class="small text-secondary mb-3">
+        For security, password changes require email verification.
+        A 6-digit code will be sent to your registered email.
+    </p>
+    <button class="btn btn-outline-primary btn-sm"
+            data-bs-toggle="modal" data-bs-target="#passwordChangeModal">
+        <i class="bi bi-key me-1"></i> Change password
+    </button>
+</div>
+
+<!-- PASSWORD CHANGE MODAL -->
+<div class="modal fade" id="passwordChangeModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-shield-lock text-emerald me-2"></i>
+                    Change password
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Step 1: Request code -->
+                <div id="pwdStep1">
+                    <p class="small">
+                        Click below to send a 6-digit verification code to your email.
+                    </p>
+                    <button id="pwdSendCodeBtn" class="btn btn-primary w-100">
+                        <i class="bi bi-envelope-arrow-up me-1"></i> Send verification code
+                    </button>
+                    <div id="pwdSendStatus" class="small mt-2"></div>
+                </div>
+
+                <!-- Step 2: Enter code + new password -->
+                <div id="pwdStep2" class="d-none">
+                    <div class="alert alert-light border small mb-3" id="pwdCodeSentMsg">
+                        ✓ Code sent. Check your email.
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Verification code</label>
+                        <input type="text" id="pwdCodeInput" class="form-control text-center"
+                               style="letter-spacing:6px; font-size:1.3rem; font-family:monospace;"
+                               maxlength="6" placeholder="123456" inputmode="numeric">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">New password</label>
+                        <input type="password" id="pwdNewInput" class="form-control"
+                               minlength="8" placeholder="At least 8 chars + numbers">
+                        <small class="text-secondary">8+ characters, must include letters and numbers.</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Confirm new password</label>
+                        <input type="password" id="pwdConfirmInput" class="form-control"
+                               minlength="8">
+                    </div>
+
+                    <div id="pwdError" class="alert alert-danger small d-none"></div>
+
+                    <div class="d-flex gap-2">
+                        <button id="pwdSubmitBtn" class="btn btn-primary flex-grow-1">
+                            <i class="bi bi-check-circle me-1"></i> Change password
+                        </button>
+                        <button id="pwdResendBtn" class="btn btn-outline-secondary btn-sm" title="Resend code">
+                            <i class="bi bi-arrow-clockwise"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Step 3: Success -->
+                <div id="pwdStep3" class="d-none text-center py-3">
+                    <i class="bi bi-check-circle-fill text-success" style="font-size: 3rem;"></i>
+                    <h5 class="mt-3">Password changed successfully</h5>
+                    <p class="text-secondary small">
+                        Your password has been updated. Use the new password next time you log in.
+                    </p>
+                </div>
+            </div>
+        </div>
     </div>
+</div>
+
+<script>
+(function() {
+    const csrfToken = '<?= csrf_token() ?>';
+    const step1 = document.getElementById('pwdStep1');
+    const step2 = document.getElementById('pwdStep2');
+    const step3 = document.getElementById('pwdStep3');
+    const sendBtn = document.getElementById('pwdSendCodeBtn');
+    const sendStatus = document.getElementById('pwdSendStatus');
+    const codeSentMsg = document.getElementById('pwdCodeSentMsg');
+    const codeInput = document.getElementById('pwdCodeInput');
+    const newInput = document.getElementById('pwdNewInput');
+    const confirmInput = document.getElementById('pwdConfirmInput');
+    const submitBtn = document.getElementById('pwdSubmitBtn');
+    const resendBtn = document.getElementById('pwdResendBtn');
+    const errorBox = document.getElementById('pwdError');
+
+    async function sendCode() {
+        sendBtn.disabled = true;
+        resendBtn && (resendBtn.disabled = true);
+        sendStatus.textContent = 'Sending...';
+
+        try {
+            const resp = await fetch('/rentbridge/auth/password_send_code.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: new URLSearchParams({_csrf: csrfToken}),
+            });
+            const data = await resp.json();
+
+            if (data.ok) {
+                codeSentMsg.innerHTML = '✓ ' + data.message;
+                step1.classList.add('d-none');
+                step2.classList.remove('d-none');
+                codeInput.focus();
+            } else {
+                sendStatus.innerHTML = '<span class="text-danger">' + data.error + '</span>';
+            }
+        } catch (err) {
+            sendStatus.innerHTML = '<span class="text-danger">Network error: ' + err.message + '</span>';
+        } finally {
+            sendBtn.disabled = false;
+            resendBtn && (resendBtn.disabled = false);
+        }
+    }
+
+    async function submitChange() {
+        errorBox.classList.add('d-none');
+
+        const code = codeInput.value.trim();
+        const newPwd = newInput.value;
+        const confirmPwd = confirmInput.value;
+
+        if (!code || !newPwd || !confirmPwd) {
+            showError('Please fill in all fields.');
+            return;
+        }
+        if (newPwd !== confirmPwd) {
+            showError('Passwords do not match.');
+            return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="bi bi-hourglass me-1"></i> Verifying...';
+
+        try {
+            const resp = await fetch('/rentbridge/auth/password_change.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: new URLSearchParams({
+                    _csrf: csrfToken,
+                    code: code,
+                    new_password: newPwd,
+                    confirm_password: confirmPwd,
+                }),
+            });
+            const data = await resp.json();
+
+            if (data.ok) {
+                step2.classList.add('d-none');
+                step3.classList.remove('d-none');
+            } else {
+                showError(data.error);
+            }
+        } catch (err) {
+            showError('Network error: ' + err.message);
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="bi bi-check-circle me-1"></i> Change password';
+        }
+    }
+
+    function showError(msg) {
+        errorBox.textContent = msg;
+        errorBox.classList.remove('d-none');
+    }
+
+    sendBtn.addEventListener('click', sendCode);
+    submitBtn.addEventListener('click', submitChange);
+    resendBtn.addEventListener('click', sendCode);
+
+    // Reset modal on close
+    document.getElementById('passwordChangeModal').addEventListener('hidden.bs.modal', function() {
+        step1.classList.remove('d-none');
+        step2.classList.add('d-none');
+        step3.classList.add('d-none');
+        sendStatus.textContent = '';
+        codeInput.value = '';
+        newInput.value = '';
+        confirmInput.value = '';
+        errorBox.classList.add('d-none');
+    });
+})();
+</script>
 <?php endif; ?>
 
 <?php

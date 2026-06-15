@@ -1358,3 +1358,20 @@ CREATE TABLE IF NOT EXISTS saved_properties (
     INDEX idx_user  (user_id),
     INDEX idx_saved (saved_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS verification_codes (
+    id           INT NOT NULL AUTO_INCREMENT,
+    user_id      INT NOT NULL,
+    purpose      VARCHAR(40) NOT NULL COMMENT 'e.g. password_change, email_verify',
+    code         VARCHAR(10) NOT NULL,
+    expires_at   TIMESTAMP NOT NULL,
+    used_at      TIMESTAMP NULL DEFAULT NULL,
+    attempts     INT NOT NULL DEFAULT 0,
+    created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    ip_address   VARCHAR(45) DEFAULT NULL,
+
+    PRIMARY KEY (id),
+    INDEX idx_user_purpose (user_id, purpose),
+    INDEX idx_expires (expires_at),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
