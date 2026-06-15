@@ -1375,3 +1375,86 @@ CREATE TABLE IF NOT EXISTS verification_codes (
     INDEX idx_expires (expires_at),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ═══════════════════════════════════════════════════════════════
+-- BULK SEED: Realistic Melaka student rental properties
+-- Based on patterns from Mudah.my, iProperty.com.my listings
+-- ═══════════════════════════════════════════════════════════════
+
+-- First, find an existing landlord to attach these to
+-- (Or create a "stock landlord" if none exist)
+SET @landlord_id := (SELECT id FROM users WHERE primary_role = 'landlord' LIMIT 1);
+
+-- Verify before running rest:
+SELECT @landlord_id AS using_landlord;
+
+-- ============ AYER KEROH (close to UTeM Melaka) ============
+INSERT INTO properties (landlord_id, title, property_type, address, city, postcode, state, latitude, longitude, monthly_rent, deposit, description, facilities, furnishing, viewing_mode, status) VALUES
+(@landlord_id, 'Cozy room near UTeM main gate', 'room', 'Jalan TBP 5, Taman Bukit Pasir', 'Ayer Keroh', '75450', 'Melaka', 2.3145, 102.3210, 550, 1100, 'Walking distance to UTeM. Quiet neighborhood, fully renovated.', 'WiFi, aircond, attached bath, parking, washing machine', 'partial', 'either', 'available'),
+(@landlord_id, 'Spacious master room for UTeM students', 'room', 'Jalan TBP 2, Taman Bukit Pasir Indah', 'Ayer Keroh', '75450', 'Melaka', 2.3120, 102.3180, 650, 1300, 'Master room with private bathroom. Ideal for senior students.', 'WiFi, aircond, private bath, balcony, parking', 'full', 'either', 'available'),
+(@landlord_id, 'Budget single room in Ayer Keroh', 'room', 'Jalan TBP 9', 'Ayer Keroh', '75450', 'Melaka', 2.3160, 102.3220, 380, 760, 'Affordable option for budget-conscious students.', 'WiFi, fan, shared bathroom', 'partial', 'either', 'available'),
+(@landlord_id, '3-bedroom unit for housemates', 'whole_unit', 'No. 23, Jalan TBP 6', 'Ayer Keroh', '75450', 'Melaka', 2.3135, 102.3195, 1400, 2800, 'Suit 3-4 students. Recently renovated.', 'WiFi, aircond, washing machine, kitchen, parking', 'partial', 'either', 'available'),
+(@landlord_id, 'Studio unit near AEON Ayer Keroh', 'studio', 'Apartment Sutera, Jalan Sutera 1', 'Ayer Keroh', '75450', 'Melaka', 2.3170, 102.3225, 900, 1800, 'Modern studio with kitchenette. Near shopping mall.', 'WiFi, aircond, kitchen, fridge, parking, security', 'full', 'either', 'available');
+
+-- ============ BUKIT BERUANG (UTeM Industrial campus) ============
+INSERT INTO properties (landlord_id, title, property_type, address, city, postcode, state, latitude, longitude, monthly_rent, deposit, description, facilities, furnishing, viewing_mode, status) VALUES
+(@landlord_id, 'Single room in Taman Bukit Beruang', 'room', 'No. 45, Jalan Bukit Beruang 3', 'Bukit Beruang', '75450', 'Melaka', 2.3220, 102.3050, 480, 960, 'Quiet residential area. Suitable for studying.', 'WiFi, aircond, shared kitchen, parking', 'partial', 'either', 'available'),
+(@landlord_id, 'Newly furnished room near campus', 'room', 'Jalan BB 18', 'Bukit Beruang', '75450', 'Melaka', 2.3230, 102.3060, 600, 1200, 'Just renovated. New furniture. 5 mins to UTeM IT block.', 'WiFi, aircond, attached bath, washing machine', 'full', 'either', 'available'),
+(@landlord_id, 'Master room with attached bathroom', 'room', 'No. 12, Jalan Bukit Beruang Utama', 'Bukit Beruang', '75450', 'Melaka', 2.3215, 102.3045, 650, 1300, 'En-suite room. Good wifi for online classes.', 'WiFi, aircond, attached bath, balcony', 'partial', 'either', 'available'),
+(@landlord_id, 'Whole double-storey terrace', 'whole_unit', 'No. 88, Jalan BB 5', 'Bukit Beruang', '75450', 'Melaka', 2.3225, 102.3055, 1600, 3200, '4-bedroom terrace. Perfect for group of friends.', 'WiFi, aircond, washing machine, kitchen, parking, garden', 'partial', 'either', 'available');
+
+-- ============ HANG TUAH JAYA ============
+INSERT INTO properties (landlord_id, title, property_type, address, city, postcode, state, latitude, longitude, monthly_rent, deposit, description, facilities, furnishing, viewing_mode, status) VALUES
+(@landlord_id, 'Room in gated community', 'room', 'Taman Saujana Indah 2', 'Hang Tuah Jaya', '75450', 'Melaka', 2.2950, 102.3000, 580, 1160, 'Safe gated community. 24h security guard.', 'WiFi, aircond, security, parking, swimming pool, gym', 'full', 'either', 'available'),
+(@landlord_id, 'Budget twin-sharing room', 'room', 'Jalan Saujana 5', 'Hang Tuah Jaya', '75450', 'Melaka', 2.2960, 102.3010, 350, 700, 'Shared room with one other student. Budget option.', 'WiFi, shared aircond, parking', 'partial', 'either', 'available'),
+(@landlord_id, 'Apartment unit 2-bed', 'whole_unit', 'Pangsapuri Saujana, Block C', 'Hang Tuah Jaya', '75450', 'Melaka', 2.2955, 102.3005, 1300, 2600, '2-bedroom apartment. Pool and gym access.', 'WiFi, aircond, kitchen, fridge, swimming pool, gym, security', 'partial', 'either', 'available');
+
+-- ============ DURIAN TUNGGAL ============
+INSERT INTO properties (landlord_id, title, property_type, address, city, postcode, state, latitude, longitude, monthly_rent, deposit, description, facilities, furnishing, viewing_mode, status) VALUES
+(@landlord_id, 'Affordable room in Durian Tunggal', 'room', 'No. 117, Jalan Sejahtera 7', 'Durian Tunggal', '76100', 'Melaka', 2.2580, 102.2520, 400, 800, 'Quiet town, affordable rent. 15 mins drive to UTeM.', 'WiFi, fan, shared kitchen, parking', 'partial', 'either', 'available'),
+(@landlord_id, 'Whole single-storey terrace', 'whole_unit', 'Taman Bukit Tambun Perdana 2', 'Durian Tunggal', '76100', 'Melaka', 2.2585, 102.2525, 1100, 2200, '3-bedroom terrace. Suit 3-4 students sharing.', 'WiFi, aircond, washing machine, kitchen, parking, garden', 'partial', 'either', 'available');
+
+-- ============ MELAKA CITY (further from UTeM) ============
+INSERT INTO properties (landlord_id, title, property_type, address, city, postcode, state, latitude, longitude, monthly_rent, deposit, description, facilities, furnishing, viewing_mode, status) VALUES
+(@landlord_id, 'Modern studio in Melaka Raya', 'studio', 'Jalan Melaka Raya 13', 'Melaka', '75000', 'Melaka', 2.1900, 102.2480, 1100, 2200, 'City center studio. Near Jonker Street.', 'WiFi, aircond, kitchen, fridge, washing machine, security', 'full', 'either', 'available'),
+(@landlord_id, 'Room in heritage shoplot', 'room', 'Jalan Hang Jebat', 'Melaka', '75200', 'Melaka', 2.1950, 102.2470, 700, 1400, 'Above a cafe in heritage area. Unique experience.', 'WiFi, aircond, attached bath', 'full', 'either', 'available');
+
+-- ============ CHENG ============
+INSERT INTO properties (landlord_id, title, property_type, address, city, postcode, state, latitude, longitude, monthly_rent, deposit, description, facilities, furnishing, viewing_mode, status) VALUES
+(@landlord_id, 'Room near MITC', 'room', 'Taman Cheng Baru', 'Cheng', '75250', 'Melaka', 2.2200, 102.2300, 450, 900, 'Near MITC and shopping areas.', 'WiFi, aircond, parking, kitchen', 'partial', 'either', 'available'),
+(@landlord_id, 'Budget room in Cheng', 'room', 'Lorong Cheng 5', 'Cheng', '75250', 'Melaka', 2.2210, 102.2310, 380, 760, 'Affordable, basic amenities.', 'WiFi, fan, parking', 'none', 'either', 'available');
+
+-- ============ BATU BERENDAM ============
+INSERT INTO properties (landlord_id, title, property_type, address, city, postcode, state, latitude, longitude, monthly_rent, deposit, description, facilities, furnishing, viewing_mode, status) VALUES
+(@landlord_id, 'Room near airport area', 'room', 'Taman Bukit Beruang Indah', 'Batu Berendam', '75350', 'Melaka', 2.2580, 102.2700, 500, 1000, 'Near Melaka Airport and Batu Berendam Square.', 'WiFi, aircond, parking, washing machine', 'partial', 'either', 'available'),
+(@landlord_id, 'Townhouse for sharing', 'whole_unit', 'Jalan BB Utama 3', 'Batu Berendam', '75350', 'Melaka', 2.2590, 102.2710, 1500, 3000, '3-bed townhouse. Walk to Tesco Batu Berendam.', 'WiFi, aircond, kitchen, parking, garden, washing machine', 'partial', 'either', 'available');
+
+-- ═══════════════════════════════════════════════════════════════
+-- Done. Verify:
+SELECT city, COUNT(*) as count, MIN(monthly_rent) as min, ROUND(AVG(monthly_rent)) as avg, MAX(monthly_rent) as max
+  FROM properties
+ WHERE city IN ('Ayer Keroh','Bukit Beruang','Hang Tuah Jaya','Durian Tunggal','Melaka','Cheng','Batu Berendam')
+ GROUP BY city
+ ORDER BY city;
+-- ═══════════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS contact_messages (
+    id            INT NOT NULL AUTO_INCREMENT,
+    name          VARCHAR(150) NOT NULL,
+    email         VARCHAR(150) NOT NULL,
+    subject       VARCHAR(200) NOT NULL,
+    message       TEXT NOT NULL,
+    user_id       INT DEFAULT NULL COMMENT 'NULL if guest submitted',
+    ip_address    VARCHAR(45) DEFAULT NULL,
+    user_agent    VARCHAR(255) DEFAULT NULL,
+    status        ENUM('new','read','replied','archived') NOT NULL DEFAULT 'new',
+    created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    replied_at    TIMESTAMP NULL DEFAULT NULL,
+    replied_by    INT DEFAULT NULL,
+
+    PRIMARY KEY (id),
+    INDEX idx_status (status),
+    INDEX idx_created (created_at),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (replied_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -76,15 +76,15 @@ $pageContent   = $pageContent   ?? '';
                 <span class="sidebar-label">Dashboard</span>
             </a>
             <a href="/rentbridge/admin/students.php"
-   class="sidebar-link <?= $activeNav === 'students' ? 'active' : '' ?>">
-    <i class="bi bi-mortarboard-fill"></i>
-    <span class="sidebar-label">Students</span>
-</a>
-<a href="/rentbridge/admin/landlords.php"
-   class="sidebar-link <?= $activeNav === 'landlords' ? 'active' : '' ?>">
-    <i class="bi bi-house-heart-fill"></i>
-    <span class="sidebar-label">Landlords</span>
-</a>
+            class="sidebar-link <?= $activeNav === 'students' ? 'active' : '' ?>">
+                <i class="bi bi-mortarboard-fill"></i>
+                <span class="sidebar-label">Students</span>
+            </a>
+            <a href="/rentbridge/admin/landlords.php"
+            class="sidebar-link <?= $activeNav === 'landlords' ? 'active' : '' ?>">
+                <i class="bi bi-house-heart-fill"></i>
+                <span class="sidebar-label">Landlords</span>
+            </a>
             <a href="/rentbridge/admin/agents.php"
                class="sidebar-link <?= $activeNav === 'agents' ? 'active' : '' ?>">
                 <i class="bi bi-person-badge-fill"></i>
@@ -105,6 +105,11 @@ $pageContent   = $pageContent   ?? '';
                class="sidebar-link <?= $activeNav === 'reports' ? 'active' : '' ?>">
                 <i class="bi bi-bar-chart-fill"></i>
                 <span class="sidebar-label">Statistics</span>
+            </a>
+            <a href="/rentbridge/admin/messages.php"
+            class="sidebar-link <?= $activeNav === 'messages' ? 'active' : '' ?>">
+                <i class="bi bi-envelope-fill"></i>
+                <span class="sidebar-label">Messages</span>
             </a>
         </nav>
         <div class="sidebar-footer">

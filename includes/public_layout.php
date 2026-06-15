@@ -60,6 +60,16 @@ $pageTabs  = $pageTabs ?? null;
                 <i class="bi bi-info-circle"></i>
                 <span class="public-nav-label">About</span>
             </a>
+            <a href="/rentbridge/faq.php"
+            class="sidebar-link <?= $activeNav === 'faq' ? 'active' : '' ?>">
+                <i class="bi bi-question-circle"></i>
+                <span class="sidebar-label">FAQ</span>
+            </a>
+            <a href="/rentbridge/contact.php"
+            class="sidebar-link <?= $activeNav === 'contact' ? 'active' : '' ?>">
+                <i class="bi bi-envelope"></i>
+                <span class="sidebar-label">Contact</span>
+            </a>
 
             <div class="public-nav-divider"></div>
 

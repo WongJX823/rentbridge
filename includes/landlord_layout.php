@@ -120,6 +120,16 @@ $pendingRequests = (int)$stmt->fetchColumn();
                 <i class="bi bi-info-circle-fill"></i>
                 <span class="sidebar-label">About RentBridge</span>
             </a>
+            <a href="/rentbridge/faq.php"
+            class="sidebar-link <?= $activeNav === 'faq' ? 'active' : '' ?>">
+                <i class="bi bi-question-circle"></i>
+                <span class="sidebar-label">FAQ</span>
+            </a>
+            <a href="/rentbridge/contact.php"
+            class="sidebar-link <?= $activeNav === 'contact' ? 'active' : '' ?>">
+                <i class="bi bi-envelope"></i>
+                <span class="sidebar-label">Contact</span>
+            </a>
         </nav>
         <div class="sidebar-footer">
             <a href="/rentbridge/landlord/settings.php"

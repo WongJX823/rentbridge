@@ -110,6 +110,16 @@ $urgentCases = (int)$stmt->fetchColumn();
                     <span class="sidebar-badge"><?= $totalUnread > 9 ? '9+' : $totalUnread ?></span>
                 <?php endif; ?>
             </a>
+            <a href="/rentbridge/faq.php"
+            class="sidebar-link <?= $activeNav === 'faq' ? 'active' : '' ?>">
+                <i class="bi bi-question-circle"></i>
+                <span class="sidebar-label">FAQ</span>
+            </a>
+            <a href="/rentbridge/contact.php"
+            class="sidebar-link <?= $activeNav === 'contact' ? 'active' : '' ?>">
+                <i class="bi bi-envelope"></i>
+                <span class="sidebar-label">Contact</span>
+            </a>
         </nav>
         <div class="sidebar-footer">
             <a href="/rentbridge/agent/profile.php"
