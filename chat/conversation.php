@@ -99,18 +99,11 @@ ob_start();
                 </div>
                 <div class="flex-grow-1">
                     <div class="d-flex align-items-center gap-2">
-                        <div style="width:24px; height:24px; border-radius:50%;
-                                    background: <?php
-                                        echo match($other['primary_role']) {
-                                            'student'=>'#E4F2EA','landlord'=>'#FFE8C7',
-                                            'agent'=>'#FFF4D6','admin'=>'#F8D7DA',
-                                            default=>'#E2E2E2',
-                                        };
-                                    ?>;
-                                    display:inline-flex; align-items:center; justify-content:center;
-                                    font-size:0.7rem; font-weight:600; color:#0F2C52;">
-                            <?= strtoupper(substr($other['name'], 0, 1)) ?>
-                        </div>
+                        <?php
+                        require_once __DIR__ . '/../includes/avatar.php';
+                        $_otherAvatar = get_avatar_path((int)$otherUserId, $other['primary_role']);
+                        ?>
+                        <?php render_avatar($_otherAvatar, $other['name'], 44); ?>
                         <strong class="small"><?= e($other['name']) ?></strong>
                         <span class="badge bg-light text-dark small fw-normal">
                             <?= e(ucfirst($other['primary_role'])) ?>

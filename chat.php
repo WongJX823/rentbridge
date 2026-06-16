@@ -38,19 +38,11 @@ ob_start();
                 <div class="p-3 d-flex justify-content-between align-items-start">
                     <div class="d-flex gap-3 flex-grow-1 me-3">
                         <!-- Avatar -->
-                        <div style="width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
-                                    background: <?php
-                                        echo match($other['primary_role']) {
-                                            'student'=>'#E4F2EA','landlord'=>'#E6ECF4',
-                                            'agent'=>'#FFF4D6','admin'=>'#F8D7DA',
-                                            default=>'#E2E2E2',
-                                        };
-                                    ?>;
-                                    display:flex; align-items:center; justify-content:center;
-                                    font-weight:600; color:#0F2C52;">
-                            <?= strtoupper(substr($other['name'], 0, 1)) ?>
-                        </div>
-
+                        <?php
+                        require_once __DIR__ . '/includes/avatar.php';
+                        $_otherAvatar = get_avatar_path((int)$other['id'], $other['primary_role']);
+                        ?>
+                        <?php render_avatar($_otherAvatar, $other['name'], 44); ?>
                         <div class="flex-grow-1">
                             <div class="d-flex align-items-center gap-2 mb-1">
                                 <strong><?= e($other['name']) ?></strong>

@@ -123,6 +123,35 @@ ob_start();
     <form method="POST">
         <?= csrf_field() ?>
 
+        <?php require_once __DIR__ . '/../includes/avatar.php'; ?>
+
+    <!-- AVATAR -->
+    <div class="bg-white border rounded-3 p-4 mb-3">
+        <h6 class="text-secondary text-uppercase small mb-3">Profile photo</h6>
+        <div class="d-flex align-items-center gap-4">
+            <?php render_avatar(
+                $student['avatar_path'] ?? $landlord['avatar_path'] ?? $agent['avatar_path'] ?? null,
+                $student['full_name'] ?? $landlord['full_name'] ?? $agent['full_name'] ?? 'User',
+                96
+            ); ?>
+            <div class="flex-grow-1">
+                <form method="POST" action="/rentbridge/auth/avatar_upload.php"
+                    enctype="multipart/form-data" class="d-flex gap-2 align-items-center">
+                    <?= csrf_field() ?>
+                    <input type="file" name="avatar" class="form-control form-control-sm"
+                        accept="image/jpeg,image/png,image/webp" required
+                        style="max-width: 320px;">
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="bi bi-upload me-1"></i> Upload
+                    </button>
+                </form>
+                <small class="text-secondary d-block mt-2">
+                    JPG, PNG, or WebP · max 5MB · square images look best
+                </small>
+            </div>
+        </div>
+    </div>
+
         <div class="bg-white border rounded-3 p-4 mb-3">
             <h6 class="text-secondary text-uppercase small mb-3">Basic info</h6>
             <div class="row g-3">

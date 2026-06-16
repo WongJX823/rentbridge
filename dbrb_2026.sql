@@ -1458,3 +1458,7 @@ CREATE TABLE IF NOT EXISTS contact_messages (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
     FOREIGN KEY (replied_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+ALTER TABLE students  ADD COLUMN avatar_path VARCHAR(255) DEFAULT NULL AFTER preferred_name;
+ALTER TABLE landlords ADD COLUMN avatar_path VARCHAR(255) DEFAULT NULL AFTER preferred_name;
+ALTER TABLE agents    ADD COLUMN avatar_path VARCHAR(255) DEFAULT NULL AFTER full_name;

@@ -1,21 +1,24 @@
 <?php
+require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/saved.php';
 require_once __DIR__ . '/includes/save_button.php';
-?>
 
-<?php
 $id = (int)($_GET['id'] ?? 0);
 if ($id <= 0) {
     http_response_code(404);
     die('Property not found.');
 }
 
-// Fetch property + landlord info
+// === Fetch property + landlord ===
 $stmt = db()->prepare("
     SELECT p.*,
-           l.full_name AS landlord_name,
-           l.phone     AS landlord_phone,
-           l.verified  AS landlord_verified
+           l.user_id        AS landlord_user_id,
+           l.full_name      AS landlord_name,
+           l.preferred_name AS landlord_preferred_name,
+           l.phone          AS landlord_phone,
+           l.allow_whatsapp AS landlord_whatsapp,
+           l.verified       AS landlord_verified,
+           l.avatar_path    AS landlord_avatar
       FROM properties p
       JOIN landlords l ON l.user_id = p.landlord_id
      WHERE p.id = ?
@@ -30,12 +33,13 @@ if (!$prop) {
     die('Property not found or no longer available.');
 }
 
+// === Saved status ===
 $isSaved = false;
 if (is_logged_in()) {
     $isSaved = is_property_saved(current_user_id(), (int)$prop['id']);
 }
 
-// Fetch all photos
+// === Photos ===
 $stmt = db()->prepare("
     SELECT image_path FROM property_images
      WHERE property_id = ?
@@ -43,71 +47,17 @@ $stmt = db()->prepare("
 ");
 $stmt->execute([$id]);
 $photos = $stmt->fetchAll();
-?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= e($prop['title']) ?> · RentBridge</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-    <link href="assets/css/style.css" rel="stylesheet">
-</head>
-<body>
 
-<?php include 'includes/header.php'; ?>
-
-<div class="container py-4">
-
-    <!-- Back link -->
-    <p class="mb-3">
-        <a href="listings.php" class="text-secondary text-decoration-none">
-            <i class="bi bi-arrow-left"></i> Back to listings
-        </a>
-    </p>
-
-
-
-    <!-- Photo gallery -->
-<?php if (!empty($photos)): ?>
-    <div class="row g-2 mb-4">
-        <div class="col-lg-8">
-            <img src="/rentbridge/<?= e($photos[0]['image_path']) ?>"
-                 class="w-100 rounded-3"
-                 style="aspect-ratio: 4/3; object-fit: cover;"
-                 alt="<?= e($prop['title']) ?>">
-        </div>
-        <?php if (count($photos) > 1): ?>
-        <div class="col-lg-4">
-            <div class="row g-2">
-                <?php foreach (array_slice($photos, 1, 3) as $img): ?>
-                    <div class="col-12 col-md-6 col-lg-12">
-                        <img src="/rentbridge/<?= e($img['image_path']) ?>"
-                             class="w-100 rounded-3"
-                             style="aspect-ratio: 4/3; object-fit: cover;"
-                             alt="">
-                    </div>
-                <?php endforeach; ?>
-            </div>
-        </div>
-        <?php endif; ?>
-    </div>
-<?php endif; ?>
-    <?php
-// === Check if user arrived via a co-tenancy post ===
+// === Co-tenancy post arrival? ===
 $fromPostId = (int)($_GET['from_post'] ?? 0);
 $fromPost = null;
 if ($fromPostId > 0) {
     $stmt = db()->prepare("
         SELECT ctp.*,
-               s.full_name AS poster_name,
+               s.full_name      AS poster_name,
                s.preferred_name AS poster_nickname,
-               s.matric_no AS poster_matric,
-               s.housing_bio AS poster_bio
+               s.matric_no      AS poster_matric,
+               s.housing_bio    AS poster_bio
           FROM co_tenancy_posts ctp
           JOIN students s ON s.user_id = ctp.poster_id
          WHERE ctp.id = ? AND ctp.property_id = ? AND ctp.status = 'open'
@@ -116,7 +66,7 @@ if ($fromPostId > 0) {
     $fromPost = $stmt->fetch();
 }
 
-// === Also fetch ALL active posts for this property (anyone, not just the one we came from) ===
+// === All active posts on this property ===
 $stmt = db()->prepare("
     SELECT ctp.id, ctp.message, ctp.housemates_needed, ctp.created_at,
            s.full_name      AS poster_name,
@@ -129,7 +79,29 @@ $stmt = db()->prepare("
 ");
 $stmt->execute([(int)$prop['id']]);
 $allPosts = $stmt->fetchAll();
+
+// === WhatsApp link helper ===
+$waPhone = '';
+$waUrl = '';
+if ((int)$prop['landlord_whatsapp'] === 1 && !empty($prop['landlord_phone'])) {
+    // Normalize phone for wa.me (strip non-digits, prepend 60 for MY if needed)
+    $waPhone = preg_replace('/[^0-9]/', '', $prop['landlord_phone']);
+    if (str_starts_with($waPhone, '0')) {
+        $waPhone = '60' . substr($waPhone, 1);
+    }
+    $waMsg = rawurlencode("Hi, I'm interested in your property listed on RentBridge: " . $prop['title']);
+    $waUrl = "https://wa.me/{$waPhone}?text={$waMsg}";
+}
+
+$pageTitle = $prop['title'];
+$activeNav = 'browse';
+
+ob_start();
 ?>
+
+<a href="/rentbridge/listings.php" class="small text-secondary text-decoration-none mb-3 d-inline-block">
+    <i class="bi bi-arrow-left"></i> Back to listings
+</a>
 
 <?php if ($fromPost): ?>
 <!-- BANNER: arrived from a specific co-tenancy post -->
@@ -149,8 +121,7 @@ $allPosts = $stmt->fetchAll();
         is looking for <strong><?= (int)$fromPost['housemates_needed'] ?> more housemate<?= $fromPost['housemates_needed']==1?'':'s' ?></strong>
         for this property.
         <?php if (!empty($fromPost['message'])): ?>
-            <div class="small mt-2"
-                 style="background:white; border-radius:6px; padding:8px 12px;">
+            <div class="small mt-2" style="background:white; border-radius:6px; padding:8px 12px;">
                 "<?= e($fromPost['message']) ?>"
             </div>
         <?php endif; ?>
@@ -161,13 +132,12 @@ $allPosts = $stmt->fetchAll();
     </a>
 </div>
 <?php elseif (!empty($allPosts) && is_logged_in() && current_role() === 'student'): ?>
-    
-<!-- BANNER: there are co-tenancy posts even though we didn't arrive from one -->
+<!-- BANNER: this property has open co-tenancy posts -->
 <div class="alert alert-light border d-flex gap-3 align-items-start mb-4">
     <i class="bi bi-people-fill text-emerald fs-3"></i>
     <div class="flex-grow-1">
         <strong><?= count($allPosts) ?>
-        student<?= count($allPosts)===1?'':'s' ?> looking for housemates on this property.</strong>
+        student<?= count($allPosts)===1?'':'s' ?> looking for housemates here.</strong>
         <div class="small text-secondary">
             <?php foreach (array_slice($allPosts, 0, 3) as $i => $p): ?>
                 <?= e($p['poster_nickname'] ?: $p['poster_name']) ?> needs <?= (int)$p['housemates_needed'] ?><?= $i < min(count($allPosts), 3) - 1 ? ', ' : '' ?>
@@ -184,117 +154,239 @@ $allPosts = $stmt->fetchAll();
 </div>
 <?php endif; ?>
 
-    <div class="row">
-        <div class="col-lg-8">
-            <!-- Title + location -->
+<!-- 2-COLUMN LAYOUT: main + sticky rail -->
+<div class="property-shell">
+
+    <!-- CENTER: photos + details -->
+    <div class="property-main">
+
+        <!-- IMAGE SCROLLER -->
+        <?php if (!empty($photos)): ?>
+            <div class="property-images mb-4">
+                <div class="property-main-photo">
+                    <img id="propMainImg"
+                         src="/rentbridge/<?= e($photos[0]['image_path']) ?>"
+                         alt="<?= e($prop['title']) ?>">
+                </div>
+                <?php if (count($photos) > 1): ?>
+                    <div class="property-thumb-row">
+                        <?php foreach ($photos as $idx => $img): ?>
+                            <button type="button"
+                                    class="property-thumb <?= $idx === 0 ? 'active' : '' ?>"
+                                    data-src="/rentbridge/<?= e($img['image_path']) ?>"
+                                    aria-label="View photo <?= $idx + 1 ?>">
+                                <img src="/rentbridge/<?= e($img['image_path']) ?>" alt="">
+                            </button>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+        <?php else: ?>
+            <div class="property-no-photo mb-4">
+                <i class="bi bi-image text-secondary"></i>
+                <p class="text-secondary mt-2 mb-0">No photos available</p>
+            </div>
+        <?php endif; ?>
+
+        <!-- TITLE + meta -->
+        <div class="property-header">
             <span class="badge bg-light text-secondary border mb-2">
                 <?= e(ucfirst(str_replace('_', ' ', $prop['property_type']))) ?>
             </span>
-    <!-- Wherever the title is displayed -->
-<div class="d-flex justify-content-between align-items-start">
-    <h1><?= e($prop['title']) ?></h1>
-    <?php render_save_button((int)$prop['id'], $isSaved, 'lg', 'inline'); ?>
-</div>
-            <p class="text-secondary">
+            <h1 class="property-title"><?= e($prop['title']) ?></h1>
+            <p class="property-location text-secondary mb-3">
                 <i class="bi bi-geo-alt"></i>
                 <?= e($prop['address']) ?>,
                 <?= e($prop['city']) ?> <?= e($prop['postcode']) ?>,
                 <?= e($prop['state']) ?>
             </p>
-
-            <hr class="my-4">
-
-            <!-- Property details -->
-            <div class="row g-3 mb-4">
-                <div class="col-sm-4">
-                    <small class="text-secondary fw-semibold text-uppercase">Monthly rent</small>
-                    <div class="fs-4 fw-semibold text-emerald">
-                        RM <?= number_format((float)$prop['monthly_rent']) ?>
-                    </div>
-                </div>
-                <div class="col-sm-4">
-                    <small class="text-secondary fw-semibold text-uppercase">Deposit</small>
-                    <div class="fs-4 fw-semibold">
-                        RM <?= number_format((float)$prop['deposit']) ?>
-                    </div>
-                </div>
-                <div class="col-sm-4">
-                    <small class="text-secondary fw-semibold text-uppercase">Furnishing</small>
-                    <div class="fs-4 fw-semibold">
-                        <?= e(ucfirst($prop['furnishing'])) ?>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Description -->
-            <?php if (!empty($prop['description'])): ?>
-                <h5 class="mt-4">About this place</h5>
-                <p style="white-space: pre-line;"><?= e($prop['description']) ?></p>
-            <?php endif; ?>
-
-            <!-- Facilities -->
-            <?php if (!empty($prop['facilities'])): ?>
-                <h5 class="mt-4">Facilities</h5>
-                <p>
-                    <?php foreach (explode(',', $prop['facilities']) as $f):
-                        $f = trim($f);
-                        if ($f === '') continue;
-                    ?>
-                        <span class="badge bg-light text-dark border me-1 mb-1 px-3 py-2">
-                            <?= e($f) ?>
-                        </span>
-                    <?php endforeach; ?>
-                </p>
-            <?php endif; ?>
         </div>
 
-        <!-- Sidebar: landlord + actions -->
-        <div class="col-lg-4">
-            <div class="bg-white border rounded-3 p-4 sticky-top" style="top: 20px;">
-                <h6 class="text-secondary text-uppercase small mb-3">Listed by</h6>
+        <hr>
 
-                <div class="d-flex align-items-center gap-3 mb-3">
-                    <div class="rounded-circle bg-light d-flex align-items-center justify-content-center"
-                         style="width:48px; height:48px; font-size:1.2rem;">
-                        <i class="bi bi-person-fill text-secondary"></i>
-                    </div>
-                    <div>
-                        <div class="fw-semibold">
-                            <?= e($prop['landlord_name']) ?>
-                            <?php if ((int)$prop['landlord_verified'] === 1): ?>
-                                <i class="bi bi-patch-check-fill text-success" title="Verified landlord"></i>
-                            <?php endif; ?>
-                        </div>
-                        <small class="text-secondary">Landlord</small>
-                    </div>
+        <!-- KEY FACTS row -->
+        <div class="row g-3 mb-4">
+            <div class="col-sm-4">
+                <small class="text-secondary fw-semibold text-uppercase">Monthly rent</small>
+                <div class="fs-4 fw-semibold text-emerald">
+                    RM <?= number_format((float)$prop['monthly_rent']) ?>
                 </div>
+            </div>
+            <div class="col-sm-4">
+                <small class="text-secondary fw-semibold text-uppercase">Deposit</small>
+                <div class="fs-4 fw-semibold">
+                    RM <?= number_format((float)$prop['deposit']) ?>
+                </div>
+            </div>
+            <div class="col-sm-4">
+                <small class="text-secondary fw-semibold text-uppercase">Furnishing</small>
+                <div class="fs-4 fw-semibold">
+                    <?= e(ucfirst($prop['furnishing'])) ?>
+                </div>
+            </div>
+        </div>
 
-                <hr>
+        <!-- DESCRIPTION -->
+        <?php if (!empty($prop['description'])): ?>
+            <h5 class="mt-4">About this place</h5>
+            <p style="white-space: pre-line;"><?= e($prop['description']) ?></p>
+        <?php endif; ?>
 
-                <?php if (is_logged_in() && current_role() === 'student'): ?>
-                    <a href="/rentbridge/bookings/new.php?property_id=<?= (int)$prop['id'] ?>" class="btn btn-success w-100 mb-2">
-                        <i class="bi bi-calendar-check me-1"></i> Request to book
+        <!-- FACILITIES -->
+        <?php if (!empty($prop['facilities'])): ?>
+            <h5 class="mt-4">Facilities</h5>
+            <div class="d-flex flex-wrap gap-2">
+                <?php foreach (explode(',', $prop['facilities']) as $f):
+                    $f = trim($f);
+                    if ($f === '') continue;
+                ?>
+                    <span class="badge bg-light text-dark border px-3 py-2 fw-normal">
+                        <?= e($f) ?>
+                    </span>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
+    </div>
+
+    <!-- RIGHT RAIL (sticky on desktop, hidden on mobile) -->
+    <aside class="property-rail d-none d-lg-flex flex-column">
+
+        <!-- Landlord card -->
+        <div class="rail-landlord">
+            <div class="d-flex align-items-center gap-3 mb-2">
+                <?php
+                require_once __DIR__ . '/includes/avatar.php';
+                render_avatar(
+                    $prop['landlord_avatar'] ?? null,
+                    $prop['landlord_preferred_name'] ?: $prop['landlord_name'],
+                    48
+                );
+                ?>
+                <div class="flex-grow-1 min-w-0">
+                    <div class="fw-semibold text-truncate">
+                        <?= e($prop['landlord_preferred_name'] ?: $prop['landlord_name']) ?>
+                        <?php if ((int)$prop['landlord_verified'] === 1): ?>
+                            <i class="bi bi-patch-check-fill text-success ms-1"
+                               title="Verified landlord"></i>
+                        <?php endif; ?>
+                    </div>
+                    <small class="text-secondary">Landlord</small>
+                </div>
+            </div>
+            <div class="rail-price">
+                <span class="rail-rent">RM <?= number_format((float)$prop['monthly_rent']) ?></span>
+                <span class="rail-rent-unit">/month</span>
+            </div>
+        </div>
+
+        <hr>
+
+        <!-- Action buttons -->
+        <div class="rail-actions">
+            <?php if (is_logged_in()): ?>
+                <!-- PRIMARY: Chat -->
+                <a href="/rentbridge/chat/start.php?type=property_inquiry&with=<?= (int)$prop['landlord_user_id'] ?>&property_id=<?= (int)$prop['id'] ?>"
+                   class="btn btn-success rail-btn-primary">
+                    <i class="bi bi-chat-dots-fill me-1"></i> Chat with landlord
+                </a>
+
+                <!-- SECONDARY: WhatsApp -->
+                <?php if (!empty($waUrl)): ?>
+                    <a href="<?= e($waUrl) ?>" target="_blank"
+                       class="btn btn-outline-success rail-btn-secondary">
+                        <i class="bi bi-whatsapp me-1"></i> WhatsApp
                     </a>
-                    <a href="#" class="btn btn-ghost w-100">
-                        <i class="bi bi-chat-left-text me-1"></i> Message landlord
+                <?php endif; ?>
+
+                <!-- SECONDARY: Save -->
+                <button type="button"
+                        class="btn btn-outline-dark rail-btn-secondary save-property-btn"
+                        data-property-id="<?= (int)$prop['id'] ?>"
+                        data-saved="<?= $isSaved ? '1' : '0' ?>"
+                        data-logged-in="1">
+                    <i class="bi <?= $isSaved ? 'bi-heart-fill text-danger' : 'bi-heart' ?> me-1"></i>
+                    <span class="save-label"><?= $isSaved ? 'Saved' : 'Save' ?></span>
+                </button>
+
+                <!-- STUDENT-ONLY: Post co-tenancy -->
+                <?php if (current_role() === 'student'): ?>
+                    <a href="/rentbridge/student/find_housemates.php?property_id=<?= (int)$prop['id'] ?>"
+                       class="btn btn-outline-primary rail-btn-secondary">
+                        <i class="bi bi-people-fill me-1"></i> Post for housemates
                     </a>
-                <?php elseif (!is_logged_in()): ?>
-                    <button type="button" class="btn btn-success w-100 mb-2"
+                <?php endif; ?>
+
+            <?php else: ?>
+                <!-- GUEST -->
+                <button type="button" class="btn btn-success rail-btn-primary"
+                        data-bs-toggle="modal" data-bs-target="#loginPromptModal">
+                    <i class="bi bi-chat-dots-fill me-1"></i> Chat with landlord
+                </button>
+                <?php if (!empty($waUrl)): ?>
+                    <button type="button" class="btn btn-outline-success rail-btn-secondary"
                             data-bs-toggle="modal" data-bs-target="#loginPromptModal">
-                        <i class="bi bi-calendar-check me-1"></i> Request to book
-                    </button>
-                    <button type="button" class="btn btn-outline-dark w-100"
-                            data-bs-toggle="modal" data-bs-target="#loginPromptModal">
-                        <i class="bi bi-chat-left-text me-1"></i> Message landlord
+                        <i class="bi bi-whatsapp me-1"></i> WhatsApp
                     </button>
                 <?php endif; ?>
-            </div>
+                <button type="button" class="btn btn-outline-dark rail-btn-secondary"
+                        data-bs-toggle="modal" data-bs-target="#loginPromptModal">
+                    <i class="bi bi-heart me-1"></i> Save
+                </button>
+            <?php endif; ?>
         </div>
-    </div>
+
+        <p class="text-secondary small text-center mb-0 mt-3">
+            <i class="bi bi-shield-check"></i>
+            Every tenancy is verified by a UTeM agent
+        </p>
+    </aside>
+
+</div>
+
+<!-- MOBILE ACTION BAR (fixed bottom, hidden on desktop) -->
+<div class="property-mobile-bar d-lg-none">
+    <?php if (is_logged_in()): ?>
+        <a href="/rentbridge/chat/start.php?type=property_inquiry&with=<?= (int)$prop['landlord_user_id'] ?>&property_id=<?= (int)$prop['id'] ?>"
+           class="mobile-bar-btn primary">
+            <i class="bi bi-chat-dots-fill"></i>
+            <span>Chat</span>
+        </a>
+        <?php if (!empty($waUrl)): ?>
+            <a href="<?= e($waUrl) ?>" target="_blank" class="mobile-bar-btn">
+                <i class="bi bi-whatsapp"></i>
+                <span>WhatsApp</span>
+            </a>
+        <?php endif; ?>
+        <button type="button" class="mobile-bar-btn save-property-btn"
+                data-property-id="<?= (int)$prop['id'] ?>"
+                data-saved="<?= $isSaved ? '1' : '0' ?>"
+                data-logged-in="1">
+            <i class="bi <?= $isSaved ? 'bi-heart-fill text-danger' : 'bi-heart' ?>"></i>
+            <span><?= $isSaved ? 'Saved' : 'Save' ?></span>
+        </button>
+        <?php if (current_role() === 'student'): ?>
+            <a href="/rentbridge/student/find_housemates.php?property_id=<?= (int)$prop['id'] ?>"
+               class="mobile-bar-btn">
+                <i class="bi bi-people-fill"></i>
+                <span>Post</span>
+            </a>
+        <?php endif; ?>
+    <?php else: ?>
+        <button type="button" class="mobile-bar-btn primary"
+                data-bs-toggle="modal" data-bs-target="#loginPromptModal">
+            <i class="bi bi-chat-dots-fill"></i>
+            <span>Chat</span>
+        </button>
+        <button type="button" class="mobile-bar-btn"
+                data-bs-toggle="modal" data-bs-target="#loginPromptModal">
+            <i class="bi bi-heart"></i>
+            <span>Save</span>
+        </button>
+    <?php endif; ?>
 </div>
 
 <?php if (!is_logged_in()): ?>
-<!-- Login prompt modal — placed at root level to avoid z-index issues -->
+<!-- Login prompt modal -->
 <div class="modal fade" id="loginPromptModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-sm">
         <div class="modal-content">
@@ -309,10 +401,10 @@ $allPosts = $stmt->fetchAll();
                 </p>
                 <div class="d-grid gap-2">
                     <a href="/rentbridge/auth/login.php" class="btn btn-primary">
-                        <i class="bi bi-person-plus me-1"></i> Log in now
+                        <i class="bi bi-box-arrow-in-right me-1"></i> Log in now
                     </a>
                     <a href="/rentbridge/auth/register.php" class="btn btn-outline-dark">
-                        I dont have an account
+                        I don't have an account
                     </a>
                 </div>
             </div>
@@ -320,7 +412,224 @@ $allPosts = $stmt->fetchAll();
     </div>
 </div>
 <?php endif; ?>
+
+<style>
+/* ===== Property page layout ===== */
+.property-shell {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 32px;
+    align-items: start;
+}
+@media (max-width: 991.98px) {
+    .property-shell { grid-template-columns: 1fr; }
+}
+
+/* Left main */
+.property-main { min-width: 0; }
+
+.property-title {
+    font-family: 'Fraunces', serif;
+    font-size: 1.75rem;
+    margin: 0 0 4px;
+    color: #0F2C52;
+}
+.property-location { font-size: 0.95rem; }
+
+/* IMAGE SCROLLER */
+.property-images {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid rgba(15,44,82,0.08);
+}
+.property-main-photo {
+    aspect-ratio: 16/10;
+    background: linear-gradient(135deg,#E6ECF4,#E4F2EA);
+}
+.property-main-photo img {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+    transition: opacity 0.2s;
+}
+.property-thumb-row {
+    display: flex; gap: 6px; padding: 8px;
+    overflow-x: auto;
+    scrollbar-width: thin;
+    background: white;
+    border-top: 1px solid rgba(15,44,82,0.04);
+}
+.property-thumb {
+    flex-shrink: 0;
+    width: 80px; height: 60px;
+    border: 2px solid transparent;
+    border-radius: 6px;
+    overflow: hidden;
+    padding: 0;
+    background: none;
+    cursor: pointer;
+    transition: border-color 0.15s, transform 0.15s;
+}
+.property-thumb img {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+}
+.property-thumb:hover { transform: translateY(-1px); }
+.property-thumb.active { border-color: #2E8B57; }
+
+.property-no-photo {
+    aspect-ratio: 16/9;
+    background: linear-gradient(135deg,#E6ECF4,#E4F2EA);
+    border-radius: 12px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    color: rgba(15,44,82,0.3);
+    font-size: 3rem;
+}
+
+/* RIGHT RAIL */
+.property-rail {
+    position: sticky;
+    top: calc(var(--user-topbar-h, 56px) + 16px);
+    background: white;
+    border: 1px solid rgba(15,44,82,0.08);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(15,44,82,0.04);
+    max-height: calc(100vh - var(--user-topbar-h, 56px) - 32px);
+    overflow-y: auto;
+}
+
+.rail-price { margin-top: 6px; }
+.rail-rent {
+    font-family: 'Fraunces', serif;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #2E8B57;
+}
+.rail-rent-unit {
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.rail-actions {
+    display: flex; flex-direction: column; gap: 8px;
+}
+.rail-btn-primary, .rail-btn-secondary {
+    width: 100%;
+    padding: 10px 14px;
+    font-weight: 600;
+    border-radius: 8px;
+}
+.rail-btn-primary { font-size: 1rem; }
+.rail-btn-secondary { font-size: 0.9rem; font-weight: 500; }
+
+.min-w-0 { min-width: 0; }
+
+/* MOBILE ACTION BAR */
+.property-mobile-bar {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: white;
+    border-top: 1px solid rgba(15,44,82,0.1);
+    padding: 10px 12px;
+    display: flex;
+    justify-content: space-around;
+    gap: 8px;
+    z-index: 1020;
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.06);
+}
+.mobile-bar-btn {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: #0F2C52;
+    text-decoration: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 6px 0;
+    font-size: 0.7rem;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: background 0.15s;
+}
+.mobile-bar-btn i { font-size: 1.25rem; }
+.mobile-bar-btn.primary i { color: #2E8B57; }
+.mobile-bar-btn:hover { background: rgba(46,139,87,0.06); color: #2E8B57; }
+
+/* leave room for fixed mobile bar */
+@media (max-width: 991.98px) {
+    body { padding-bottom: 72px; }
+}
+</style>
+
+<script>
+// Image thumbnail switching
+(function() {
+    const mainImg = document.getElementById('propMainImg');
+    if (!mainImg) return;
+    document.querySelectorAll('.property-thumb').forEach(thumb => {
+        thumb.addEventListener('click', function() {
+            const src = this.dataset.src;
+            mainImg.style.opacity = '0.4';
+            const newImg = new Image();
+            newImg.onload = () => {
+                mainImg.src = src;
+                mainImg.style.opacity = '1';
+            };
+            newImg.src = src;
+            document.querySelectorAll('.property-thumb').forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+        });
+    });
+})();
+
+// Sync save buttons across rail + mobile bar (clicking one updates both)
+(function() {
+    document.body.addEventListener('click', function(e) {
+        const btn = e.target.closest('.save-property-btn');
+        if (!btn) return;
+        // Defer to render_save_button_script() — it already handles the AJAX.
+        // Just sync the other instance's visual state on success.
+        setTimeout(() => {
+            const newState = btn.dataset.saved;
+            const propId = btn.dataset.propertyId;
+            document.querySelectorAll('.save-property-btn[data-property-id="'+propId+'"]').forEach(other => {
+                if (other === btn) return;
+                other.dataset.saved = newState;
+                const icon = other.querySelector('i');
+                const label = other.querySelector('.save-label, span');
+                if (newState === '1') {
+                    icon?.classList.add('bi-heart-fill', 'text-danger');
+                    icon?.classList.remove('bi-heart');
+                    if (label) label.textContent = 'Saved';
+                } else {
+                    icon?.classList.remove('bi-heart-fill', 'text-danger');
+                    icon?.classList.add('bi-heart');
+                    if (label) label.textContent = 'Save';
+                }
+            });
+        }, 100);
+    });
+})();
+</script>
+
 <?php render_save_button_script(); ?>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+
+<?php
+$pageContent = ob_get_clean();
+
+if (is_logged_in()) {
+    $role = current_role();
+    $layoutFile = match($role) {
+        'student'  => 'student_layout.php',
+        'landlord' => 'landlord_layout.php',
+        'agent'    => 'agent_layout.php',
+        'admin'    => 'admin_layout.php',
+        default    => 'public_layout.php',
+    };
+    require __DIR__ . '/includes/' . $layoutFile;
+} else {
+    require __DIR__ . '/includes/public_layout.php';
+}

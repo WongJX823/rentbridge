@@ -68,10 +68,14 @@ $totalUnread = $unreadChat + $unreadNotif;
     </button>
     <a href="/rentbridge/student/dashboard.php" class="topbar-brand">        <span class="topbar-name">RentBridge</span>
     </a>
-    <div class="topbar-right">
-        <span class="topbar-greeting d-none d-md-inline">
-            Hello, <?= e($myName) ?>
-        </span>
+    <?php
+    require_once __DIR__ . '/avatar.php';
+    $_avatarPath = get_avatar_path(current_user_id(), current_role());
+    $_displayName = $userName ?? 'User';
+    ?>
+    <div class="user-topbar d-flex align-items-center gap-2">
+        <?php render_avatar($_avatarPath, $_displayName, 32); ?>
+        <span class="d-none d-md-inline">Hello, <?= e($_displayName) ?></span>
     </div>
 </header>
 
