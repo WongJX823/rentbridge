@@ -76,7 +76,6 @@ $pageTabs  = $pageTabs ?? null;
                 </div>
             </div>
 
-            <div class="public-nav-divider"></div>
 
             <?php if (is_logged_in()): ?>
                 <?php

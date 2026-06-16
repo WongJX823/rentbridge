@@ -275,6 +275,28 @@ body:not(.sidebar-collapsed) .topbar-toggle:hover {
 .sidebar-submenu .sidebar-link i {
     display: none;  /* hide icon column for submenu items */
 }
+
+/* === Force submenu closed when sidebar is collapsed === */
+body.sidebar-collapsed .sidebar-submenu,
+body.sidebar-collapsed .sidebar-collapsible .sidebar-submenu,
+body.sidebar-collapsed .sidebar-collapsible.open .sidebar-submenu {
+    display: none !important;
+    max-height: 0 !important;
+    overflow: hidden !important;
+    visibility: hidden !important;
+}
+
+body.sidebar-collapsed .sidebar-collapsible {
+    pointer-events: auto;
+}
+
+body.sidebar-collapsed .sidebar-collapsible.open {
+    /* Strip the .open visual state when collapsed */
+}
+body.sidebar-collapsed .sidebar-chevron {
+    display: none !important;
+}
+
 /* ------------------- MAIN AREA ------------------- */
 .user-main {
     flex-grow: 1;

@@ -220,12 +220,10 @@ $totalUnread = $unreadChat + $unreadNotif;
             body.classList.contains('sidebar-collapsed') ? 'collapsed' : 'expanded');
         updateTooltip();
         
-        // Close any open Help & Info submenu when collapsing
-        if (body.classList.contains('sidebar-collapsed')) {
-            document.querySelectorAll('.sidebar-collapsible.open').forEach(el => {
-                el.classList.remove('open');
-            });
-        }
+        // Force-close any open submenu when collapsing
+        document.querySelectorAll('.sidebar-collapsible.open').forEach(el => {
+            el.classList.remove('open');
+        });
     });
 })();
 
@@ -250,9 +248,11 @@ document.querySelectorAll('.sidebar-collapsible-toggle').forEach(btn => {
         e.stopPropagation();
         
         // Don't open submenu when sidebar is collapsed
-        if (document.body.classList.contains('sidebar-collapsed')) {
+        const shell = document.getElementById('appShell');
+        if (shell && !shell.classList.contains('sidebar-expanded')) {
             return;
         }
+        
         
         const parent = this.closest('.sidebar-collapsible');
         parent.classList.toggle('open');
