@@ -48,14 +48,23 @@ $stmt = $pdo->prepare("
     SELECT p.*,
            u.email AS agent_email,
            a.full_name AS agent_name,
-           a.phone AS agent_phone
+           a.phone AS agent_phone,
+           (SELECT COUNT(*) FROM bookings b
+             WHERE b.property_id = p.id
+               AND b.status = 'pending_landlord') AS pending_requests,
+           (SELECT pi.image_path FROM property_images pi
+             WHERE pi.property_id = p.id
+             ORDER BY pi.is_primary DESC, pi.id ASC
+             LIMIT 1) AS image_path
       FROM properties p
       LEFT JOIN users u ON u.id = p.assigned_agent_id
       LEFT JOIN agents a ON a.user_id = p.assigned_agent_id
      WHERE p.landlord_id = ?
      ORDER BY p.created_at DESC
 ");
-$stmt->execute([$landlordId]);
+$stmt->execute([$userId]);
+$properties = $stmt->fetchAll();$stmt->execute([$userId]);
+$properties = $stmt->fetchAll();$stmt->execute([$userId]);
 $properties = $stmt->fetchAll();
 
 

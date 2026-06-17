@@ -347,6 +347,36 @@ $documents = get_property_documents($propertyId);
     <?php endif; ?>
 </div>
 
+<?php if (!empty($property['agent_name'])): ?>
+    <div class="agent-info-block mt-2 p-2"
+         style="background:#F4F4EE; border-radius:8px; font-size:0.85rem;">
+        <strong>Assigned agent:</strong><br>
+        <i class="bi bi-person-badge"></i> <?= e($property['agent_name']) ?>
+        <?php if (!empty($property['agent_phone'])): ?>
+            · <i class="bi bi-telephone"></i> <?= e($property['agent_phone']) ?>
+        <?php endif; ?>
+        <?php
+        $agentStatusBadge = match($property['agent_status']) {
+            'pending'  => '<span class="badge bg-warning text-dark">Pending review</span>',
+            'accepted' => '<span class="badge bg-success">Approved</span>',
+            'rejected' => '<span class="badge bg-danger">Rejected</span>',
+            'timeout'  => '<span class="badge bg-secondary">Timed out</span>',
+            default    => '',
+        };
+        ?>
+        <?= $agentStatusBadge ?>
+    </div>
+<?php elseif ($property['status'] === 'pending_approval'): ?>
+    <div class="text-secondary small mt-2">
+        <i class="bi bi-hourglass-split"></i> Awaiting agent assignment
+    </div>
+<?php elseif ($property['status'] === 'needs_admin'): ?>
+    <div class="text-danger small mt-2">
+        <i class="bi bi-exclamation-triangle"></i>
+        No agents available — admin reviewing manually
+    </div>
+<?php endif; ?>
+
 <!-- TENANCIES -->
 <?php if (!empty($tenancies)): ?>
 <div class="bg-white border rounded-3 p-4 mb-4">

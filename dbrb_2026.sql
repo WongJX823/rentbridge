@@ -1609,3 +1609,25 @@ SELECT id, 'uploads/properties/placeholder.jpg', 1
  WHERE id NOT IN (SELECT DISTINCT property_id FROM property_images);
 
  UPDATE TABLE property_documents SET document_type = 'others' WHERE document_type IS NULL;
+
+ALTER TABLE conversations
+  MODIFY context_type ENUM(
+    'property_inquiry','booking','friend','agent_case','other','contract_prep'
+  ) NOT NULL DEFAULT 'other';
+
+
+ALTER TABLE bookings
+  ADD COLUMN signed_contract_path VARCHAR(255) DEFAULT NULL AFTER status,
+  ADD COLUMN signed_uploaded_at TIMESTAMP NULL DEFAULT NULL AFTER signed_contract_path,
+  ADD COLUMN signed_uploaded_by INT NULL DEFAULT NULL AFTER signed_uploaded_at;
+
+
+
+
+
+
+
+
+
+
+ UPDATE `users` SET password_hash = '$2y$10$UxOTjCguXl9fcWWaNvvjtuxZfqHP2vM7Hba4BYob0n455/Hsv1s3y'

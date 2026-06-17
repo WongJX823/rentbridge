@@ -63,12 +63,47 @@ $urgentCases = (int)$stmt->fetchColumn();
         <span style="font-family:'Manrope',sans-serif; font-size:0.85rem; font-weight:500;
                      letter-spacing:0.5px; text-transform:uppercase; opacity:0.7;">Agent</span>
     </a>
-    <div class="topbar-right">
-        <span class="topbar-greeting d-none d-md-inline">
-            <?= e($myName) ?> · <?= e($me['department']) ?>
-        </span>
+<div class="topbar-right">
+    <div class="topbar-user-menu dropdown">
+        <button class="topbar-user-btn dropdown-toggle"
+                type="button"
+                data-bs-toggle="dropdown"
+                aria-expanded="false">
+            <?php
+            require_once __DIR__ . '/avatar.php';
+            $_avatarPath = get_avatar_path($userId, 'landlord');
+            render_avatar($_avatarPath, $myName, 32);
+            ?>
+            <span class="topbar-user-name d-none d-md-inline">
+                <?= e($myName) ?>
+            </span>
+            <i class="bi bi-chevron-down small ms-1 d-none d-md-inline"></i>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+            <li class="px-3 py-2">
+                <div class="fw-semibold"><?= e($myName) ?></div>
+                <small class="text-secondary">Landlord</small>
+            </li>
+            <li><hr class="dropdown-divider"></li>
+            <li>
+                <a class="dropdown-item" href="/rentbridge/landlord/profile.php">
+                    <i class="bi bi-person-circle me-2"></i> Profile
+                </a>
+            </li>
+            <li>
+                <a class="dropdown-item" href="/rentbridge/landlord/properties.php">
+                    <i class="bi bi-buildings me-2"></i> My properties
+                </a>
+            </li>
+            <li><hr class="dropdown-divider"></li>
+            <li>
+                <a class="dropdown-item text-danger" href="/rentbridge/auth/logout.php">
+                    <i class="bi bi-box-arrow-right me-2"></i> Sign out
+                </a>
+            </li>
+        </ul>
     </div>
-</header>
+</div></header>
 
 <div class="user-shell">
 

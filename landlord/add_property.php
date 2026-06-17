@@ -97,6 +97,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors['furnishing'] = 'Invalid furnishing option.';
     }
 
+    // Validate at least 1 photo
+    $hasExistingPhotos = false;
+    if ($isEdit) {
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM property_images WHERE property_id = ?");
+        $stmt->execute([$editId]);
+        $hasExistingPhotos = (int)$stmt->fetchColumn() > 0;
+    }
+    $hasNewPhotos = !empty($_FILES['photos']['name'][0]);
+
+    if (!$hasExistingPhotos && !$hasNewPhotos) {
+        $errors['photos'] = 'At least 1 photo is required.';
+    }
+
     if (empty($errors)) {
         try {
             $pdo->beginTransaction();
@@ -203,45 +216,79 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
 
-            // Handle document upload (single file at a time)
-            if (!empty($_FILES['document_file']['name']) && $_FILES['document_file']['error'] === UPLOAD_ERR_OK) {
-                $docType = $_POST['document_type'] ?? 'other';
-                $docNotes = trim($_POST['document_notes'] ?? '');
+            // Handle document uploads (multi-file)
+            $docErrors = [];
+            $docSavedCount = 0;
 
-                $result = save_property_document(
-                    $propertyId,
-                    $userId,
-                    $docType,
-                    $_FILES['document_file'],
-                    $docNotes !== '' ? $docNotes : null
-                );
+            if (!empty($_FILES['document_files']['name']) && is_array($_FILES['document_files']['name'])) {
+                foreach ($_FILES['document_files']['name'] as $i => $name) {
+                    // Skip empty slots
+                    if ($_FILES['document_files']['error'][$i] === UPLOAD_ERR_NO_FILE) continue;
+                    if ($_FILES['document_files']['error'][$i] !== UPLOAD_ERR_OK) {
+                        $docErrors[] = "File #" . ($i + 1) . ": upload error code " . $_FILES['document_files']['error'][$i];
+                        continue;
+                    }
 
-                if (!$result['ok']) {
-                    // Don't fail the whole transaction — just warn
-                    set_flash('warning', 'Property saved, but document upload failed: ' . $result['error']);
+                    // Reconstruct $_FILES-style array for the helper
+                    $fileForHelper = [
+                        'name'     => $_FILES['document_files']['name'][$i],
+                        'type'     => $_FILES['document_files']['type'][$i],
+                        'tmp_name' => $_FILES['document_files']['tmp_name'][$i],
+                        'error'    => $_FILES['document_files']['error'][$i],
+                        'size'     => $_FILES['document_files']['size'][$i],
+                    ];
+
+                    $docType  = $_POST['document_types'][$i] ?? 'other';
+                    $docNotes = trim($_POST['document_notes'][$i] ?? '');
+
+                    $result = save_property_document(
+                        $propertyId,
+                        $userId,
+                        $docType,
+                        $fileForHelper,
+                        $docNotes !== '' ? $docNotes : null
+                    );
+
+                    if ($result['ok']) {
+                        $docSavedCount++;
+                    } else {
+                        $docErrors[] = "File '" . htmlspecialchars($name) . "': " . $result['error'];
+                    }
                 }
+            }
+
+            if (!empty($docErrors)) {
+                set_flash('warning', $docSavedCount . ' document(s) saved. Issues: ' . implode('; ', $docErrors));
             }
             
             $pdo->commit();
-            set_flash('success', $isEdit ? 'Property updated.' : 'Property submitted for review.');
-            header('Location: /rentbridge/landlord/property.php?id=' . $propertyId);
+
+            // Auto-assign agent for NEW properties (not edits)
+            if (!$isEdit) {
+                require_once __DIR__ . '/../includes/agent_assignment.php';
+                $assignResult = assign_agent_to_property((int)$propertyId);
+                if ($assignResult['ok']) {
+                    set_flash('success',
+                        'Property submitted! An agent has been assigned to verify your listing.');
+                } else {
+                    set_flash('warning',
+                        'Property submitted, but no agent could be assigned right now: ' . $assignResult['error']);
+                }
+            } else {
+                set_flash('success', 'Property updated successfully.');
+            }
+
+            if (!empty($docErrors)) {
+                set_flash('warning', $docSavedCount . ' document(s) saved. Issues: ' . implode('; ', $docErrors));
+            }
+
+            header('Location: /rentbridge/landlord/properties.php');
             exit;
         } catch (Throwable $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
             $errors['general'] = 'Failed: ' . $e->getMessage();
         }
 
-        require_once __DIR__ . '/../includes/agent_assignment.php';
-        $assignResult = assign_agent_to_property((int)$propertyId);
-
-        if ($assignResult['ok']) {
-            set_flash('success', 'Property submitted! An agent has been assigned to verify your listing.');
-        } else {
-            set_flash('warning', 'Property submitted, but no agents are currently available. Admin will assist.');
-        }
-
-        header('Location: /rentbridge/landlord/properties.php');
-        exit;
     }
 }
 
@@ -468,9 +515,65 @@ ob_start();
         </div>
     </div>
 
+    <?php
+    // In edit mode, fetch existing photos
+    $existingPhotos = [];
+    if (!empty($editId)) {
+        $stmt = $pdo->prepare("
+            SELECT id, image_path, is_primary
+            FROM property_images
+            WHERE property_id = ?
+            ORDER BY is_primary DESC, id ASC
+        ");
+        $stmt->execute([$editId]);
+        $existingPhotos = $stmt->fetchAll();
+    }
+    ?>
+
+    <?php if (!empty($existingPhotos)): ?>
+        <div class="mb-3">
+            <label class="form-label fw-semibold">Existing photos</label>
+            <p class="small text-secondary mb-2">
+                Click <i class="bi bi-x-circle text-danger"></i> to remove a photo.
+            </p>
+            <div class="row g-2" id="existingPhotosGrid">
+                <?php foreach ($existingPhotos as $photo): ?>
+                    <div class="col-6 col-md-4 col-lg-3" id="photoRow_<?= (int)$photo['id'] ?>">
+                        <div class="position-relative existing-photo-card">
+                            <img src="/rentbridge/<?= e($photo['image_path']) ?>"
+                                class="w-100 rounded"
+                                style="aspect-ratio:1; object-fit:cover; border:1px solid rgba(15,44,82,0.1);">
+                            
+                            <?php if ((int)$photo['is_primary'] === 1): ?>
+                                <span class="badge bg-success position-absolute"
+                                    style="top:6px; left:6px;">
+                                    <i class="bi bi-star-fill"></i> Primary
+                                </span>
+                            <?php endif; ?>
+
+                            <button type="button"
+                                    class="btn btn-sm btn-danger delete-photo-btn position-absolute"
+                                    style="top:6px; right:6px; width:28px; height:28px; padding:0;
+                                        border-radius:50%; display:flex; align-items:center;
+                                        justify-content:center;"
+                                    data-image-id="<?= (int)$photo['id'] ?>"
+                                    title="Delete this photo">
+                                <i class="bi bi-x"></i>
+                            </button>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+            <hr class="my-4">
+        </div>
+    <?php endif; ?>
+
     <!-- PHOTOS -->
     <div class="bg-white border rounded-3 p-4 mb-3">
         <h6 class="text-secondary text-uppercase small mb-3">Photos</h6>
+        <p class="small text-secondary mb-2">
+            Property must have at least one image.
+        </p>
 
         <?php if ($isEdit && !empty($images)): ?>
             <p class="text-secondary small mb-2">
@@ -677,6 +780,44 @@ ob_start();
             }
         });
     })();
+
+    // Delete existing property photo
+    document.querySelectorAll('.delete-photo-btn').forEach(btn => {
+        btn.addEventListener('click', async function() {
+            if (!confirm('Delete this photo? This cannot be undone.')) return;
+
+            const imageId = this.dataset.imageId;
+            const row = document.getElementById('photoRow_' + imageId);
+
+            this.disabled = true;
+            this.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+            try {
+                const formData = new FormData();
+                formData.append('_csrf', '<?= csrf_token() ?>');
+                formData.append('image_id', imageId);
+
+                const resp = await fetch('/rentbridge/landlord/delete_property_image.php', {
+                    method: 'POST',
+                    body: formData,
+                });
+                const data = await resp.json();
+
+                if (data.ok) {
+                    row?.remove();
+                } else {
+                    alert('Failed: ' + (data.error || 'Unknown error'));
+                    this.disabled = false;
+                    this.innerHTML = '<i class="bi bi-x"></i>';
+                }
+            } catch (err) {
+                alert('Network error: ' + err.message);
+                this.disabled = false;
+                this.innerHTML = '<i class="bi bi-x"></i>';
+            }
+        });
+    });
+
     </script>
 
 <!-- OWNERSHIP DOCUMENTS -->
@@ -685,6 +826,10 @@ ob_start();
         Ownership Documents
         <span class="badge bg-secondary ms-1" style="font-size: 0.7rem; text-transform: none;">private</span>
     </h6>
+     <p class="small text-secondary mb-3">
+        Upload up to 3 documents (geran, IC copy, utility bill, etc).
+        PDF, JPG, or PNG · max 5MB each.
+    </p>
 
     <div class="alert alert-light border small mb-3" style="background:#FAF8F3;">
         <i class="bi bi-shield-lock text-secondary"></i>
@@ -692,28 +837,33 @@ ob_start();
         Students never see your documents. Used to verify you're the legitimate owner.
     </div>
 
-    <div class="row g-3">
-        <div class="col-md-4">
-            <label class="form-label fw-semibold">Document type</label>
-            <select name="document_type" class="form-select">
-                <option value="ownership_proof">Ownership proof (geran, SPA)</option>
-                <option value="ic_copy">IC copy</option>
-                <option value="utility_bill">Utility bill (proof of address)</option>
-                <option value="other">Other supporting document</option>
-            </select>
+     <?php for ($i = 0; $i < 3; $i++): ?>
+        <div class="row g-2 mb-3 align-items-end pb-3 border-bottom">
+            <div class="col-md-4">
+                <label class="form-label small fw-semibold">Document type</label>
+                <select name="document_types[]" class="form-select form-select-sm">
+                    <option value="">— Select type —</option>
+                    <option value="ownership_proof">Ownership Proof</option>
+                    <option value="utility_bill">Utility bill</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+            <div class="col-md-5">
+                <label class="form-label small fw-semibold">File</label>
+                <input type="file" name="document_files[]"
+                       class="form-control form-control-sm"
+                       accept=".pdf,.jpg,.jpeg,.png">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold">Notes (optional)</label>
+                <input type="text" name="document_notes[]"
+                       class="form-control form-control-sm"
+                       placeholder="e.g. Page 1 of 3">
+            </div>
         </div>
-        <div class="col-md-5">
-            <label class="form-label fw-semibold">File</label>
-            <input type="file" name="document_file" class="form-control"
-                   accept=".pdf,.jpg,.jpeg,.png">
-            <small class="text-secondary">PDF, JPG, PNG · max 5MB</small>
-        </div>
-        <div class="col-12">
-            <label class="form-label fw-semibold">Notes <small class="text-secondary fw-normal">(optional)</small></label>
-            <input type="text" name="document_notes" class="form-control"
-                   placeholder="e.g. Geran issued 2018, lot 234">
-        </div>
+    <?php endfor; ?>
     </div>
+
 
     <?php
     // Show existing documents if editing
@@ -733,6 +883,7 @@ ob_start();
                         <th>File</th>
                         <th>Notes</th>
                         <th>Uploaded</th>
+                        <th></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -742,6 +893,13 @@ ob_start();
                             <td><small><a href="/rentbridge/<?= e($doc['file_path']) ?>" target="_blank">View</a></small></td>
                             <td><small><?= e($doc['notes'] ?: '—') ?></small></td>
                             <td><small><?= e(date('d M Y', strtotime($doc['uploaded_at']))) ?></small></td>
+                            <td><small>
+                                    <button type="button"
+                                        class="btn btn-sm btn-outline-danger delete-doc-btn"
+                                        data-doc-id="<?= (int)$doc['id'] ?>">
+                                    <i class="bi bi-trash"></i> Delete
+                                </button>
+                            </td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>
@@ -948,6 +1106,41 @@ async function fetchBenchmark() {
         facilities: !!facilitiesInput,
         maps: !!mapsUrlInput,
     });})();
+
+    document.querySelectorAll('.delete-doc-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const form = document.createElement('form');
+        form.method = 'POST';
+
+        form.innerHTML = `
+            <input type="hidden" name="_csrf"
+                   value="<?= csrf_token() ?>">
+            <input type="hidden" name="action"
+                   value="delete_doc">
+            <input type="hidden" name="doc_id"
+                   value="${this.dataset.docId}">
+        `;
+
+        document.body.appendChild(form);
+        form.submit();
+    });
+});
+
+document.querySelector('form').addEventListener('submit', function(e) {
+    // Count existing photos that aren't being deleted + newly selected files
+    const existingPhotos = document.querySelectorAll('#existingPhotosGrid > div').length;
+    const fileInput = document.querySelector('input[name="photos[]"]');
+    const newPhotos = fileInput ? fileInput.files.length : 0;
+    
+    const total = existingPhotos + newPhotos;
+    
+    if (total < 1) {
+        e.preventDefault();
+        alert('Please upload at least 1 photo of the property.');
+        fileInput?.scrollIntoView({behavior: 'smooth', block: 'center'});
+        fileInput?.focus();
+    }
+});
 </script>
 
 <?php

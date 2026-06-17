@@ -92,6 +92,7 @@ function save_inspection_photo(array $file): string {
  * Save an uploaded property document.
  * Returns ['ok' => bool, 'error' => string|null, 'doc_id' => int|null]
  */
+
 function save_property_document(
     int $propertyId,
     int $uploaderId,

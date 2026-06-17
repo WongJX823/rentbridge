@@ -66,18 +66,48 @@ $totalUnread = $unreadChat + $unreadNotif;
             aria-label="Toggle sidebar">
         <i class="bi bi-list"></i>
     </button>
-    <a href="/rentbridge/student/dashboard.php" class="topbar-brand">        <span class="topbar-name">RentBridge</span>
-    </a>
-    <?php
-    require_once __DIR__ . '/avatar.php';
-    $_avatarPath = get_avatar_path(current_user_id(), current_role());
-    $_displayName = $userName ?? 'User';
-    ?>
-    <div class="user-topbar d-flex align-items-center gap-2">
-        <?php render_avatar($_avatarPath, $_displayName, 32); ?>
-        <span class="d-none d-md-inline">Hello, <?= e($_displayName) ?></span>
+    <a href="/rentbridge/student/dashboard.php" class="topbar-brand">        <span class="topbar-name">RentBridge</span></a>
+<div class="topbar-right">
+    <div class="topbar-user-menu dropdown">
+        <button class="topbar-user-btn dropdown-toggle"
+                type="button"
+                data-bs-toggle="dropdown"
+                aria-expanded="false">
+            <?php
+            require_once __DIR__ . '/avatar.php';
+            $_avatarPath = get_avatar_path($userId, 'student');
+            render_avatar($_avatarPath, $myName, 32);
+            ?>
+            <span class="topbar-user-name d-none d-md-inline">
+                <?= e($myName) ?>
+            </span>
+            <i class="bi bi-chevron-down small ms-1 d-none d-md-inline"></i>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+            <li class="px-3 py-2">
+                <div class="fw-semibold"><?= e($myName) ?></div>
+                <small class="text-secondary">Student</small>
+            </li>
+            <li><hr class="dropdown-divider"></li>
+            <li>
+                <a class="dropdown-item" href="/rentbridge/student/profile.php">
+                    <i class="bi bi-person-circle me-2"></i> Profile
+                </a>
+            </li>
+            <li>
+                <a class="dropdown-item" href="/rentbridge/saved.php">
+                    <i class="bi bi-bookmark-heart me-2"></i> Saved properties
+                </a>
+            </li>
+            <li><hr class="dropdown-divider"></li>
+            <li>
+                <a class="dropdown-item text-danger" href="/rentbridge/auth/logout.php">
+                    <i class="bi bi-box-arrow-right me-2"></i> Sign out
+                </a>
+            </li>
+        </ul>
     </div>
-</header>
+</div></header>
 
 <div class="user-shell">
 

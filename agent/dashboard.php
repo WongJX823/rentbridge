@@ -3,6 +3,9 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/agent_assignment.php';
 require_role('agent');
 
+$pdo = db();
+$userId = current_user_id();
+
 // Lazy timeout check on dashboard load
 check_and_reassign_timeouts();
 
@@ -17,12 +20,23 @@ $stmt = $pdo->prepare("
        AND p.agent_status = 'pending'
      ORDER BY p.agent_assigned_at ASC
 ");
-$stmt->execute([$agentId]);
+$stmt->execute([$userId]);
 $pendingReviews = $stmt->fetchAll();
 
-
-$pdo = db();
-$userId = current_user_id();
+// Bookings awaiting signed contract upload
+$stmt = $pdo->prepare("
+    SELECT b.id, b.property_id, b.created_at, b.start_date,
+           p.title, p.city,
+           s.full_name AS student_name
+      FROM bookings b
+      JOIN properties p ON p.id = b.property_id
+      JOIN students s ON s.user_id = b.student_id
+     WHERE b.agent_id = ?
+       AND b.status = 'contract_pending'
+     ORDER BY b.created_at DESC
+");
+$stmt->execute([$userId]);
+$pendingUploads = $stmt->fetchAll();
 
 // Counts for dashboard cards
 $counts = [];
@@ -227,6 +241,49 @@ ob_start();
                     <td>
                         <a href="/rentbridge/agent/property_review.php?id=<?= (int)$r['id'] ?>"
                            class="btn btn-sm btn-primary">Review</a>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+        </tbody>
+    </table>
+</div>
+<?php endif; ?>
+
+<?php if (!empty($pendingUploads)): ?>
+<div class="bg-white border rounded-3 p-4 mb-4" style="border-left:4px solid #2E8B57 !important;">
+    <h5 class="mb-3">
+        <i class="bi bi-file-earmark-arrow-up text-success"></i>
+        Pending signed contract uploads
+        <span class="badge bg-success"><?= count($pendingUploads) ?></span>
+    </h5>
+    <p class="small text-secondary mb-3">
+        Contracts generated, awaiting offline signatures + your upload of the signed PDF.
+    </p>
+    <table class="table table-sm">
+        <thead>
+            <tr>
+                <th>Property</th>
+                <th>Tenant</th>
+                <th>Generated</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php foreach ($pendingUploads as $u): ?>
+                <tr>
+                    <td>
+                        <strong><?= e($u['title']) ?></strong>
+                        <div class="small text-secondary"><?= e($u['city']) ?></div>
+                    </td>
+                    <td><?= e($u['student_name']) ?></td>
+                    <td class="small text-secondary">
+                        <?= e(date('d M', strtotime($u['created_at']))) ?>
+                    </td>
+                    <td>
+                        <a href="/rentbridge/agent/upload_signed_contract.php?booking_id=<?= (int)$u['id'] ?>"
+                           class="btn btn-sm btn-success">
+                            <i class="bi bi-upload me-1"></i> Upload signed PDF
+                        </a>
                     </td>
                 </tr>
             <?php endforeach; ?>

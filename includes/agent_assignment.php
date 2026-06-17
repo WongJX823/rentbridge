@@ -19,7 +19,7 @@ function pick_next_agent_for_property(int $propertyId, ?int $currentAgentId = nu
         SELECT u.id
           FROM users u
           JOIN agents a ON a.user_id = u.id
-         WHERE u.role = 'agent'
+         WHERE u.primary_role = 'agent'
          ORDER BY u.id ASC
     ");
     $allAgents = $stmt->fetchAll(PDO::FETCH_COLUMN);

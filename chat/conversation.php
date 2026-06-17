@@ -88,7 +88,7 @@ ob_start();
     <!-- HEADER (with property card if applicable) -->
     <div class="chat-header">
         <?php if ($property): ?>
-            <a href="/rentbridge/properties/<?= (int)$property['id'] ?>"
+            <a href="/rentbridge/property.php?id=<?= (int)$property['id'] ?>"
                class="d-flex gap-3 align-items-start text-decoration-none text-dark">
                 <div style="width:60px; height:60px; border-radius:8px; overflow:hidden; flex-shrink:0;
                             background: linear-gradient(135deg,#E6ECF4,#E4F2EA);">
@@ -157,7 +157,65 @@ ob_start();
         </div>
     <?php endif; ?>
 
-    <!-- MESSAGES AREA -->
+<?php
+$landlordId = current_user_id();
+
+// Find the conversation array — try common names
+$convData = $conversation ?? $convo ?? $conv ?? $thread ?? [];
+
+// Try multiple possible key names for property
+$propId  = $convData['property_id']  ?? null;
+$otherId = $other['id']              ?? null;  // Your key is 'id'
+$otherRole = $other['primary_role']  ?? '';
+
+$showContractPrepBtn = false;
+if (
+    current_role() === 'landlord' &&
+    !empty($propId) &&
+    !empty($otherId) &&
+    $otherRole === 'student'
+) {
+    $stmt = $pdo->prepare("
+        SELECT COUNT(*)
+          FROM messages m
+          JOIN conversations c ON c.id = m.conversation_id
+         WHERE c.property_id = ?
+           AND c.context_type = 'contract_prep'
+           AND m.message_type = 'contract_prep_request'
+           AND m.sender_id = ?
+    ");
+    $stmt->execute([(int)$propId, $landlordId]);
+    $alreadyRequested = (int)$stmt->fetchColumn() > 0;
+    $showContractPrepBtn = !$alreadyRequested;
+}
+?>
+    <?php if ($showContractPrepBtn): ?>
+        <div class="contract-prep-bar p-3 mb-2"
+            style="background:#FFF4D6; border:1px solid #D4A017; border-radius:10px;">
+            <div class="d-flex gap-3 align-items-start">
+                <i class="bi bi-exclamation-triangle-fill text-warning fs-4"></i>
+                <div class="flex-grow-1">
+                    <strong>Ready to proceed with this rental?</strong>
+                    <p class="small text-secondary mb-2">
+                        Only click below when you and the student have <strong>agreed</strong>
+                        to move forward. This will notify the assigned agent to prepare
+                        the tenancy contract. This step is final — once initiated, the
+                        agent will start collecting tenant details for the legal paperwork.
+                    </p>
+                    <button type="button" id="contractPrepBtn"
+                            class="btn btn-warning text-dark fw-semibold"
+                            data-conv-id="<?= (int)($convData['id'] ?? 0) ?>"
+                            data-property-id="<?= (int)$propId ?>"
+                            data-student-id="<?= (int)$otherId ?>">
+                        <i class="bi bi-file-earmark-text me-1"></i>
+                        Request contract preparation
+                    </button>                
+                    </div>
+            </div>
+        </div>
+    <?php endif; ?>
+
+<!-- MESSAGES AREA -->
     <div class="chat-body" id="chatBody">
         <?php if (empty($messages)): ?>
             <div class="text-center text-secondary small py-4 my-auto">
@@ -170,12 +228,55 @@ ob_start();
         <?php
         require_once __DIR__ . '/../includes/co_tenants.php';
         foreach ($messages as $msg):
-            $isMine = (int)$msg['sender_id'] === $userId;
+            $isMine  = (int)$msg['sender_id'] === $userId;
             $msgType = $msg['message_type'] ?? 'text';
+            $meta    = !empty($msg['metadata']) ? json_decode($msg['metadata'], true) : null;
         ?>
 
-            <?php if ($msgType === 'co_tenant_form'):
-                $meta = json_decode($msg['metadata'] ?? '{}', true);
+            <?php if ($msgType === 'system_notice'): ?>
+                <!-- System notice: centered italic badge -->
+                <div class="text-center my-3">
+                    <span class="badge bg-light text-secondary border px-3 py-2"
+                          style="font-style: italic; font-weight: normal;">
+                        <i class="bi bi-info-circle me-1"></i>
+                        <?= e($msg['body']) ?>
+                    </span>
+                </div>
+
+            <?php elseif ($msgType === 'contract_prep_request'): ?>
+                <!-- Contract preparation request card -->
+                <div class="my-3 d-flex justify-content-center">
+                    <div class="card border-warning" style="max-width: 500px; background: #FFF4D6;">
+                        <div class="card-body">
+                            <div class="d-flex gap-2 align-items-start mb-2">
+                                <i class="bi bi-file-earmark-text fs-4 text-warning"></i>
+                                <div>
+                                    <h6 class="mb-0">Contract preparation requested</h6>
+                                    <small class="text-secondary">
+                                        For property: <strong><?= e($meta['property_title'] ?? '—') ?></strong>
+                                    </small>
+                                </div>
+                            </div>
+                            <p class="small text-secondary mb-3">
+                                The landlord has confirmed agreement with the tenant.
+                                Please send the tenant info form to begin contract preparation.
+                            </p>
+                            <?php if (current_role() === 'agent'): ?>
+                                <button type="button" class="btn btn-warning btn-sm send-tenant-form-btn"
+                                        data-message-id="<?= (int)$msg['id'] ?>"
+                                        data-conv-id="<?= (int)$convo['id'] ?>"
+                                        data-property-id="<?= (int)($meta['property_id'] ?? 0) ?>"
+                                        data-student-id="<?= (int)($meta['student_id'] ?? 0) ?>">
+                                    <i class="bi bi-send me-1"></i> Send tenant info form
+                                </button>
+                            <?php else: ?>
+                                <span class="badge bg-secondary">Awaiting agent response</span>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+
+            <?php elseif ($msgType === 'co_tenant_form'):
                 $bookingIdMsg = (int)($meta['booking_id'] ?? 0);
                 $isReceiver = !$isMine;
                 $existingCoTenants = $bookingIdMsg > 0 ? get_co_tenants($bookingIdMsg) : [];
@@ -218,7 +319,135 @@ ob_start();
                         <?= e(date('H:i', strtotime($msg['sent_at']))) ?>
                     </div>
                 </div>
+
+                <?php elseif ($msgType === 'tenant_info_form'): 
+                    $isReceiver = !$isMine && current_role() === 'landlord';
+                    $hasResponded = false;
+                    // Check if landlord already submitted this form
+                    $stmt = $pdo->prepare("
+                        SELECT COUNT(*) FROM messages
+                        WHERE conversation_id = ?
+                        AND message_type = 'tenant_info_response'
+                        AND JSON_EXTRACT(metadata, '$.source_form_id') = ?
+                    ");
+                    $stmt->execute([$msg['conversation_id'], $msg['id']]);
+                    $hasResponded = (int)$stmt->fetchColumn() > 0;
+                ?>
+                    <div class="my-3 d-flex justify-content-center">
+                        <div class="card border-warning" style="max-width: 520px; background: #FFF4D6;">
+                            <div class="card-body">
+                                <div class="d-flex gap-2 align-items-start mb-2">
+                                    <i class="bi bi-clipboard-data fs-4 text-warning"></i>
+                                    <div>
+                                        <h6 class="mb-0">Tenant info form</h6>
+                                        <small class="text-secondary">
+                                            Property: <strong><?= e($meta['property_title'] ?? '—') ?></strong>
+                                        </small>
+                                    </div>
+                                </div>
+                                <p class="small text-secondary mb-3">
+                                    Please fill in the tenant (and any co-tenants') details.
+                                    This information appears on the legal contract.
+                                </p>
+
+                                <?php if ($hasResponded): ?>
+                                    <span class="badge bg-success">
+                                        <i class="bi bi-check2-circle"></i> Form submitted
+                                    </span>
+                                <?php elseif ($isReceiver): ?>
+                                    <button type="button" class="btn btn-warning btn-sm fill-tenant-form-btn"
+                                            data-bs-toggle="modal" data-bs-target="#tenantInfoModal"
+                                            data-form-id="<?= (int)$msg['id'] ?>"
+                                            data-property-id="<?= (int)($meta['property_id'] ?? 0) ?>"
+                                            data-student-id="<?= (int)($meta['student_id'] ?? 0) ?>"
+                                            data-prefill='<?= e(json_encode($meta['prefill'] ?? [])) ?>'
+                                            data-conv-id="<?= (int)$msg['conversation_id'] ?>">
+                                        <i class="bi bi-pencil-square me-1"></i> Fill in tenant details
+                                    </button>
+                                <?php else: ?>
+                                    <span class="badge bg-secondary">Awaiting landlord</span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                    <?php elseif ($msgType === 'tenant_info_response'): ?>
+                    <div class="my-3 d-flex justify-content-center">
+                        <div class="card border-success" style="max-width: 500px; background: #E4F2EA;">
+                            <div class="card-body">
+                                <div class="d-flex gap-2 align-items-start mb-2">
+                                    <i class="bi bi-check-circle-fill fs-4 text-success"></i>
+                                    <div>
+                                        <h6 class="mb-0">Tenant info submitted</h6>
+                                        <small class="text-secondary">
+                                            <?= e($msg['body']) ?>
+                                        </small>
+                                    </div>
+                                </div>
+                                <?php if (current_role() === 'agent' && !empty($meta['booking_id'])): ?>
+                                    <a href="/rentbridge/agent/generate_contract.php?booking_id=<?= (int)$meta['booking_id'] ?>"
+                                    class="btn btn-success btn-sm">
+                                        <i class="bi bi-file-earmark-pdf me-1"></i> Generate contract
+                                    </a>
+                                <?php else: ?>
+                                    <span class="badge bg-success">Ready for contract</span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                    <?php elseif ($msgType === 'tenant_info_response'): 
+                // Check booking status
+                $bookingStatus = null;
+                if (!empty($meta['booking_id'])) {
+                    $stmt = $pdo->prepare("SELECT status FROM bookings WHERE id = ?");
+                    $stmt->execute([(int)$meta['booking_id']]);
+                    $bookingStatus = $stmt->fetchColumn();
+                }
+            ?>
+                <div class="my-3 d-flex justify-content-center">
+                    <div class="card border-success" style="max-width: 500px; background: #E4F2EA;">
+                        <div class="card-body">
+                            <div class="d-flex gap-2 align-items-start mb-2">
+                                <i class="bi bi-check-circle-fill fs-4 text-success"></i>
+                                <div>
+                                    <h6 class="mb-0">Tenant info submitted</h6>
+                                    <small class="text-secondary"><?= e($msg['body']) ?></small>
+                                </div>
+                            </div>
+                            
+                            <?php if (current_role() === 'agent' && !empty($meta['booking_id'])): ?>
+                                <?php if ($bookingStatus === 'contract_pending'): ?>
+                                    <div class="d-flex gap-2 flex-wrap">
+                                        <a href="/rentbridge/agent/generate_contract.php?booking_id=<?= (int)$meta['booking_id'] ?>"
+                                        class="btn btn-outline-success btn-sm">
+                                            <i class="bi bi-file-earmark-pdf me-1"></i> Regenerate PDF
+                                        </a>
+                                        <a href="/rentbridge/agent/upload_signed_contract.php?booking_id=<?= (int)$meta['booking_id'] ?>"
+                                        class="btn btn-success btn-sm">
+                                            <i class="bi bi-upload me-1"></i> Upload signed contract
+                                        </a>
+                                    </div>
+                                <?php elseif ($bookingStatus === 'active'): ?>
+                                    <span class="badge bg-success">
+                                        <i class="bi bi-check2-all"></i> Tenancy active
+                                    </span>
+                                <?php else: ?>
+                                    <a href="/rentbridge/agent/generate_contract.php?booking_id=<?= (int)$meta['booking_id'] ?>"
+                                    class="btn btn-success btn-sm">
+                                        <i class="bi bi-file-earmark-pdf me-1"></i> Generate contract
+                                    </a>
+                                <?php endif; ?>
+                            <?php elseif ($bookingStatus === 'active'): ?>
+                                <span class="badge bg-success">
+                                    <i class="bi bi-check2-all"></i> Tenancy active
+                                </span>
+                            <?php else: ?>
+                                <span class="badge bg-success">Ready for contract</span>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
             <?php else: ?>
+                <!-- Regular text bubble (default) -->
                 <div class="chat-message <?= $isMine ? 'mine' : 'theirs' ?>"
                      data-msg-id="<?= (int)$msg['id'] ?>">
                     <?= nl2br(e($msg['body'])) ?>
@@ -278,7 +507,7 @@ ob_start();
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form id="coTenantForm" method="POST"
-                  action="/rentbridge/chat/submit_cotenants.php">
+                  action="/rentbridge/chat/submit_tenant_form.php.php">
                 <?= csrf_field() ?>
                 <input type="hidden" name="booking_id" id="coTenantBookingId">
 
@@ -337,78 +566,108 @@ ob_start();
     </div>
 </div>
 
-<script>
-(function() {
-    const modal = document.getElementById('coTenantFormModal');
-    const bookingIdInput = document.getElementById('coTenantBookingId');
-    const primaryNameInput = document.getElementById('primaryName');
-    const primaryIcInput = document.getElementById('primaryIc');
-    const listContainer = document.getElementById('coTenantList');
-    const addBtn = document.getElementById('addCoTenantBtn');
+<!-- TENANT INFO FORM MODAL -->
+<div class="modal fade" id="tenantInfoModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <form id="tenantInfoForm" class="modal-content">
+            <input type="hidden" name="_csrf" value="<?= csrf_token() ?>">
+            <input type="hidden" name="form_id" id="tf_form_id">
+            <input type="hidden" name="conversation_id" id="tf_conv_id">
+            <input type="hidden" name="property_id" id="tf_property_id">
+            <input type="hidden" name="student_id" id="tf_student_id">
+            
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-clipboard-data me-1 text-warning"></i>
+                    Tenant info for contract
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            
+            <div class="modal-body">
+                <p class="small text-secondary">
+                    Confirm the primary tenant's details and add any co-tenants. 
+                    All listed tenants will appear on the legal contract.
+                </p>
 
-    let rowIndex = 0;
+                <!-- PRIMARY TENANT -->
+                <h6 class="text-uppercase small text-secondary mt-3 mb-2">Primary tenant (student)</h6>
+                <div class="row g-2 mb-3 p-3 border rounded" style="background:#FAF8F3;">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Full name <small class="text-danger">*</small></label>
+                        <input type="text" name="tenant_name" id="tf_tenant_name"
+                               class="form-control form-control-sm" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">NRIC <small class="text-danger">*</small></label>
+                        <input type="text" name="tenant_ic" id="tf_tenant_ic"
+                               class="form-control form-control-sm"
+                               placeholder="020815-04-1234" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Phone</label>
+                        <input type="text" name="tenant_phone" id="tf_tenant_phone"
+                               class="form-control form-control-sm">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Email</label>
+                        <input type="email" name="tenant_email" id="tf_tenant_email"
+                               class="form-control form-control-sm" readonly>
+                    </div>
+                </div>
 
-    function buildRow(idx) {
-        const div = document.createElement('div');
-        div.className = 'row g-2 mb-2 align-items-end';
-        div.dataset.row = idx;
-        div.innerHTML = `
-            <div class="col-md-5">
-                <label class="form-label small">Full name</label>
-                <input type="text" class="form-control form-control-sm"
-                       name="cotenant[${idx}][full_name]"
-                       placeholder="e.g. Ahmad bin Hashim" required>
+                <!-- CO-TENANTS -->
+                <h6 class="text-uppercase small text-secondary mb-2">Co-tenants (optional)</h6>
+                <p class="small text-secondary mb-2">
+                    Add others who will rent with the primary tenant.
+                </p>
+                <div id="tfCoTenantsList"></div>
+                <button type="button" id="tfAddCoTenantBtn" class="btn btn-sm btn-outline-secondary mb-3">
+                    <i class="bi bi-plus-circle me-1"></i> Add co-tenant
+                </button>
+
+                <!-- TENANCY TERMS -->
+                <h6 class="text-uppercase small text-secondary mt-3 mb-2">Tenancy terms</h6>
+                <div class="row g-2">
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold">Monthly rent (RM) <small class="text-danger">*</small></label>
+                        <input type="number" name="monthly_rent" id="tf_monthly_rent"
+                               class="form-control form-control-sm" min="0" step="50" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold">Deposit (RM)</label>
+                        <input type="number" name="deposit" id="tf_deposit"
+                               class="form-control form-control-sm" min="0" step="50">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold">Term (months) <small class="text-danger">*</small></label>
+                        <input type="number" name="term_months" id="tf_term_months"
+                               class="form-control form-control-sm" min="1" max="60" value="12" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Start date <small class="text-danger">*</small></label>
+                        <input type="date" name="start_date" id="tf_start_date"
+                               class="form-control form-control-sm" required>
+                    </div>
+                    <div class="col-12 mt-2">
+                        <label class="form-label small fw-semibold">Special terms / notes (optional)</label>
+                        <textarea name="notes" rows="2" class="form-control form-control-sm"
+                                  placeholder="Any special conditions agreed by both parties"></textarea>
+                    </div>
+                </div>
+
+                <div id="tenantFormError" class="alert alert-danger small d-none mt-3"></div>
             </div>
-            <div class="col-md-4">
-                <label class="form-label small">IC number</label>
-                <input type="text" class="form-control form-control-sm"
-                       name="cotenant[${idx}][ic_number]"
-                       placeholder="030303-03-0303" required>
-            </div>
-            <div class="col-md-2">
-                <label class="form-label small">Phone</label>
-                <input type="text" class="form-control form-control-sm"
-                       name="cotenant[${idx}][phone]" placeholder="012-345 6789">
-            </div>
-            <div class="col-md-1 text-end">
-                <button type="button" class="btn btn-sm btn-outline-danger remove-row">
-                    <i class="bi bi-trash"></i>
+            
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-warning text-dark fw-semibold">
+                    <i class="bi bi-check-circle me-1"></i> Submit form
                 </button>
             </div>
-        `;
-        div.querySelector('.remove-row').onclick = () => div.remove();
-        return div;
-    }
-
-    addBtn.addEventListener('click', () => {
-        listContainer.appendChild(buildRow(rowIndex++));
-    });
-
-    // When modal opens via button: capture booking_id + prefill primary name
-    modal.addEventListener('show.bs.modal', function(event) {
-        const trigger = event.relatedTarget;
-        const bookingId = trigger?.dataset.bookingId;
-        if (bookingId) bookingIdInput.value = bookingId;
-
-        // Prefill primary name via AJAX (the chat page already knows current user;
-        // server-side we'll fetch from session)
-        fetch('/rentbridge/chat/get_primary_info.php?booking_id=' + bookingId)
-            .then(r => r.json())
-            .then(data => {
-                primaryNameInput.value = data.full_name || '';
-                primaryIcInput.value = data.ic_number === 'PENDING' ? '' : (data.ic_number || '');
-            })
-            .catch(err => console.warn('Could not prefill', err));
-    });
-
-    // Reset on close
-    modal.addEventListener('hidden.bs.modal', function() {
-        listContainer.innerHTML = '';
-        rowIndex = 0;
-    });
-})();
-</script>
-
+        </form>
+    </div>
+</div>
 <style>
 .chat-shell {
     background: white;
@@ -496,108 +755,175 @@ ob_start();
 </style>
 
 <script>
+// ============================================================
+// TENANT INFO FORM — landlord fills tenant + co-tenants
+// SINGLE source of truth. Do NOT duplicate elsewhere.
+// ============================================================
+
 (function() {
-    const csrfToken = '<?= csrf_token() ?>';
-    const conversationId = <?= (int)$conversationId ?>;
-    const currentUserId = <?= (int)$userId ?>;
-    let lastMessageId = <?= (int)$lastMessageId ?>;
+    const modal = document.getElementById('tenantInfoModal');
+    if (!modal) return;  // not on this page
 
-    const chatBody = document.getElementById('chatBody');
-    const form = document.getElementById('chatForm');
-    if (!form) return;
+    let coTenantCount = 0;
 
-    const textarea = document.getElementById('chatTextarea');
-    const sendBtn = document.getElementById('chatSendBtn');
+    // === Add co-tenant row ===
+    function addCoTenantRow() {
+        coTenantCount++;
+        const list = document.getElementById('tfCoTenantsList');
+        if (!list) return;
 
-    function scrollToBottom() { chatBody.scrollTop = chatBody.scrollHeight; }
-    scrollToBottom();
-
-    function appendMessage(msg) {
-        const isMine = parseInt(msg.sender_id) === currentUserId;
-        const div = document.createElement('div');
-        div.className = 'chat-message ' + (isMine ? 'mine' : 'theirs');
-        div.dataset.msgId = msg.id;
-        div.textContent = msg.body;
-
-        const meta = document.createElement('div');
-        meta.className = 'chat-meta';
-        meta.textContent = new Date(msg.sent_at).toLocaleTimeString('en-MY', {
-            hour:'2-digit', minute:'2-digit', hour12:false
-        });
-        div.appendChild(meta);
-
-        chatBody.appendChild(div);
-        scrollToBottom();
-        if (parseInt(msg.id) > lastMessageId) lastMessageId = parseInt(msg.id);
+        const row = document.createElement('div');
+        row.className = 'row g-2 mb-2 align-items-end p-2 border rounded';
+        row.style.background = '#FAF8F3';
+        row.innerHTML = `
+            <div class="col-md-5">
+                <label class="form-label small fw-semibold">Co-tenant ${coTenantCount} name</label>
+                <input type="text" name="cotenant_name[]" class="form-control form-control-sm" required>
+            </div>
+            <div class="col-md-5">
+                <label class="form-label small fw-semibold">NRIC</label>
+                <input type="text" name="cotenant_ic[]" class="form-control form-control-sm"
+                       placeholder="020815-04-1234" required>
+            </div>
+            <div class="col-md-2 text-end">
+                <button type="button" class="btn btn-sm btn-outline-danger remove-cotenant">
+                    <i class="bi bi-x"></i>
+                </button>
+            </div>
+        `;
+        list.appendChild(row);
+        row.querySelector('.remove-cotenant').addEventListener('click', () => row.remove());
     }
 
-    form.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const body = textarea.value.trim();
-        if (!body) return;
+    // Bind ONCE
+    const addBtn = document.getElementById('tfAddCoTenantBtn');
+    if (addBtn) {
+        addBtn.addEventListener('click', addCoTenantRow);
+    }
 
-        sendBtn.disabled = true;
-        try {
-            const response = await fetch('/rentbridge/chat/send.php', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                body: new URLSearchParams({
-                    _csrf: csrfToken,        // ← matches name="csrf_token" in csrf_field()
-                    conversation_id: conversationId,
-                    body: body
-                })
-            });
-            const data = await response.json();
-            if (data.ok && data.message) {
-                appendMessage(data.message);
-                textarea.value = '';
-                textarea.style.height = 'auto';
-            } else {
-                alert('Failed: ' + (data.error || 'Unknown'));
-            }
-        } catch (err) {
-            alert('Network error: ' + err.message);
-        } finally {
-            sendBtn.disabled = false;
-            textarea.focus();
-        }
-    });
+    // === Open modal: populate fields ===
+    document.querySelectorAll('.fill-tenant-form-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const prefill = JSON.parse(this.dataset.prefill || '{}');
 
-    // Quick reply chips
-    document.querySelectorAll('.quick-reply-chip').forEach(chip => {
-        chip.addEventListener('click', function() {
-            textarea.value = this.dataset.reply;
-            textarea.focus();
+            document.getElementById('tf_form_id').value     = this.dataset.formId;
+            document.getElementById('tf_conv_id').value     = this.dataset.convId;
+            document.getElementById('tf_property_id').value = this.dataset.propertyId;
+            document.getElementById('tf_student_id').value  = this.dataset.studentId;
+
+            document.getElementById('tf_tenant_name').value  = prefill.tenant_name || '';
+            document.getElementById('tf_tenant_phone').value = prefill.tenant_phone || '';
+            document.getElementById('tf_tenant_email').value = prefill.tenant_email || '';
+            document.getElementById('tf_monthly_rent').value = prefill.monthly_rent || '';
+            document.getElementById('tf_deposit').value      = prefill.deposit || '';
+
+            document.getElementById('tf_start_date').value = new Date().toISOString().split('T')[0];
+
+            // Reset co-tenants list when reopening
+            document.getElementById('tfCoTenantsList').innerHTML = '';
+            coTenantCount = 0;
         });
     });
 
-    // Poll for new messages every 5 seconds
-    async function poll() {
-        try {
-            const response = await fetch('/rentbridge/chat/poll.php?conversation_id='
-                + conversationId + '&since=' + lastMessageId);
-            const data = await response.json();
-            if (data.ok && Array.isArray(data.messages)) {
-                data.messages.forEach(appendMessage);
-            }
-        } catch (e) {}
-    }
-    setInterval(poll, 5000);
-
-    // Auto-resize textarea
-    textarea.addEventListener('input', function() {
-        textarea.style.height = 'auto';
-        textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
-    });
-
-    // Enter to send, Shift+Enter newline
-    textarea.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter' && !e.shiftKey) {
+    // === Submit ===
+    const form = document.getElementById('tenantInfoForm');
+    if (form) {
+        form.addEventListener('submit', async function(e) {
             e.preventDefault();
-            form.dispatchEvent(new Event('submit'));
-        }
-    });
+            const errorBox = document.getElementById('tenantFormError');
+            errorBox.classList.add('d-none');
+
+            const submitBtn = this.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Submitting...';
+
+            try {
+                const formData = new FormData(this);
+                const resp = await fetch('/rentbridge/chat/submit_tenant_form.php', {
+                    method: 'POST',
+                    body: formData,
+                });
+                const text = await resp.text();
+                console.log('[submit-tenant-form] response:', resp.status, text);
+
+                let data;
+                try { data = JSON.parse(text); }
+                catch (e) {
+                    errorBox.textContent = 'Server returned non-JSON: ' + text.substring(0, 300);
+                    errorBox.classList.remove('d-none');
+                    return;
+                }
+
+                if (data.ok) {
+                    alert(data.message);
+                    bootstrap.Modal.getInstance(modal).hide();
+                    location.reload();
+                } else {
+                    errorBox.textContent = data.error;
+                    errorBox.classList.remove('d-none');
+                }
+            } catch (err) {
+                errorBox.textContent = 'Network error: ' + err.message;
+                errorBox.classList.remove('d-none');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="bi bi-check-circle me-1"></i> Submit form';
+            }
+        });
+    }
 })();
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.send-tenant-form-btn').forEach(btn => {
+        if (btn.dataset.bound === '1') return;
+        btn.dataset.bound = '1';
+        
+        btn.addEventListener('click', async function() {
+            if (!confirm('Send tenant info form to landlord?')) return;
+            
+            this.disabled = true;
+            const originalHTML = this.innerHTML;
+            this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Sending...';
+
+            try {
+                const formData = new FormData();
+                formData.append('_csrf', '<?= csrf_token() ?>');
+                formData.append('conversation_id', this.dataset.convId);
+                formData.append('property_id', this.dataset.propertyId);
+                formData.append('student_id', this.dataset.studentId);
+
+                const resp = await fetch('/rentbridge/chat/send_tenant_form.php', {
+                    method: 'POST',
+                    body: formData,
+                });
+                const text = await resp.text();
+                console.log('[send-form] response:', resp.status, text);
+                
+                let data;
+                try { data = JSON.parse(text); }
+                catch (e) {
+                    alert('Server returned non-JSON: ' + text.substring(0, 300));
+                    this.disabled = false;
+                    this.innerHTML = originalHTML;
+                    return;
+                }
+
+                if (data.ok) {
+                    alert(data.message);
+                    location.reload();
+                } else {
+                    alert('Failed: ' + data.error);
+                    this.disabled = false;
+                    this.innerHTML = originalHTML;
+                }
+            } catch (err) {
+                alert('Network error: ' + err.message);
+                this.disabled = false;
+                this.innerHTML = originalHTML;
+            }
+        });
+    });
+});
 </script>
 
 <?php

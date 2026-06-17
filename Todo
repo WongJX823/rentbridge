@@ -1,0 +1,16 @@
+Agent-Assignment
+
+Agent need to be assign after property edited if not assign before. 
+Assign to another agent instead of assign to same agent until full task. 
+Claude 'MODEL B — Two-button approach (cleaner)', but direct send to landlord instead of admin approve
+
+
+Landlord-Property-Register
+Delete property registration if same address.
+Show agent assigned in summary even in pending. 
+
+Landlord-Browse-Chat
+Remove student inquiry and approve landlord chat.
+
+Agent-Contract Sign
+e-signature as contract sign alternative.
