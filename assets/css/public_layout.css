@@ -55,11 +55,6 @@ body {
 }
 
 /* === Help & Info collapsible (public sidebar) === */
-.public-nav-collapsible {
-    border-top: 1px solid rgba(15,44,82,0.04);
-    margin-top: 8px;
-    padding-top: 8px;
-}
 .public-collapsible-toggle {
     width: 100%;
     background: transparent;

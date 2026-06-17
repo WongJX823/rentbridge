@@ -1,6 +1,25 @@
 <?php
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/agent_assignment.php';
 require_role('agent');
+
+// Lazy timeout check on dashboard load
+check_and_reassign_timeouts();
+
+// Fetch this agent's pending property reviews
+$stmt = $pdo->prepare("
+    SELECT p.id, p.title, p.city, p.monthly_rent, p.agent_assigned_at,
+           l.full_name AS landlord_name,
+           TIMESTAMPDIFF(HOUR, p.agent_assigned_at, NOW()) AS hours_pending
+      FROM properties p
+      JOIN landlords l ON l.user_id = p.landlord_id
+     WHERE p.assigned_agent_id = ?
+       AND p.agent_status = 'pending'
+     ORDER BY p.agent_assigned_at ASC
+");
+$stmt->execute([$agentId]);
+$pendingReviews = $stmt->fetchAll();
+
 
 $pdo = db();
 $userId = current_user_id();
@@ -170,6 +189,51 @@ ob_start();
     </div>
 
 </div>
+
+<?php if (!empty($pendingReviews)): ?>
+<div class="bg-white border rounded-3 p-4 mb-4" style="border-left:4px solid #C9923F !important;">
+    <h5 class="mb-3">
+        <i class="bi bi-clipboard-check text-warning"></i>
+        Properties pending your review
+        <span class="badge bg-warning text-dark"><?= count($pendingReviews) ?></span>
+    </h5>
+    <p class="small text-secondary mb-3">
+        You've been auto-assigned to verify these new properties.
+        Decisions expected within 24 hours.
+    </p>
+    <table class="table table-sm">
+        <thead>
+            <tr>
+                <th>Property</th>
+                <th>Landlord</th>
+                <th>Assigned</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php foreach ($pendingReviews as $r): ?>
+                <tr>
+                    <td>
+                        <strong><?= e($r['title']) ?></strong>
+                        <div class="small text-secondary"><?= e($r['city']) ?> · RM <?= number_format((float)$r['monthly_rent']) ?></div>
+                    </td>
+                    <td><?= e($r['landlord_name']) ?></td>
+                    <td class="small">
+                        <?= (int)$r['hours_pending'] ?>h ago
+                        <?php if ($r['hours_pending'] > 18): ?>
+                            <span class="badge bg-danger ms-1">Urgent</span>
+                        <?php endif; ?>
+                    </td>
+                    <td>
+                        <a href="/rentbridge/agent/property_review.php?id=<?= (int)$r['id'] ?>"
+                           class="btn btn-sm btn-primary">Review</a>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+        </tbody>
+    </table>
+</div>
+<?php endif; ?>
 
 <!-- URGENT CASES -->
 <?php if (!empty($urgentCases)): ?>

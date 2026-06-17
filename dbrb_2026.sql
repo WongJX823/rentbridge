@@ -1462,3 +1462,40 @@ CREATE TABLE IF NOT EXISTS contact_messages (
 ALTER TABLE students  ADD COLUMN avatar_path VARCHAR(255) DEFAULT NULL AFTER preferred_name;
 ALTER TABLE landlords ADD COLUMN avatar_path VARCHAR(255) DEFAULT NULL AFTER preferred_name;
 ALTER TABLE agents    ADD COLUMN avatar_path VARCHAR(255) DEFAULT NULL AFTER full_name;
+
+-- ═══════════════════════════════════════════════════════════════
+-- Property agent auto-assignment system
+-- ═══════════════════════════════════════════════════════════════
+
+-- Add tracking columns to properties
+ALTER TABLE properties
+    ADD COLUMN assigned_agent_id INT NULL AFTER status,
+    ADD COLUMN agent_assigned_at TIMESTAMP NULL AFTER assigned_agent_id,
+    ADD COLUMN agent_status ENUM('pending','accepted','rejected','timeout') NULL AFTER agent_assigned_at,
+    ADD COLUMN assignment_round INT NOT NULL DEFAULT 0 AFTER agent_status,
+    ADD INDEX idx_assigned_agent (assigned_agent_id),
+    ADD INDEX idx_agent_status (agent_status),
+    ADD FOREIGN KEY (assigned_agent_id) REFERENCES users(id) ON DELETE SET NULL;
+
+-- Assignment history table (audit trail)
+CREATE TABLE IF NOT EXISTS property_agent_assignments (
+    id INT NOT NULL AUTO_INCREMENT,
+    property_id INT NOT NULL,
+    agent_id INT NOT NULL,
+    round_number INT NOT NULL,
+    assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    responded_at TIMESTAMP NULL,
+    outcome ENUM('pending','accepted','rejected','timeout','reassigned') NOT NULL DEFAULT 'pending',
+    rejection_reason VARCHAR(500) NULL,
+    PRIMARY KEY (id),
+    INDEX idx_property (property_id),
+    INDEX idx_agent (agent_id),
+    INDEX idx_outcome (outcome),
+    FOREIGN KEY (property_id) REFERENCES properties(id) ON DELETE CASCADE,
+    FOREIGN KEY (agent_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Add a new status to the properties.status enum (if it's an ENUM)
+-- SKIP if your status column is already VARCHAR.
+-- Otherwise run:
+-- ALTER TABLE properties MODIFY status ENUM('pending_approval','available','booked','rented','rejected','withdrawn','paused','needs_admin') DEFAULT 'pending_approval';

@@ -45,24 +45,19 @@ if ($searchQuery !== '') {
 }
 
 $stmt = $pdo->prepare("
-    SELECT p.id, p.title, p.property_type, p.city, p.monthly_rent, p.status,
-           p.agent_verified_at, p.created_at,
-           (SELECT image_path FROM property_images
-             WHERE property_id = p.id ORDER BY is_primary DESC, id LIMIT 1) AS image_path,
-           (SELECT COUNT(*) FROM bookings
-             WHERE property_id = p.id AND status = 'pending_landlord') AS pending_requests
+    SELECT p.*,
+           u.email AS agent_email,
+           a.full_name AS agent_name,
+           a.phone AS agent_phone
       FROM properties p
-     WHERE $where
-     ORDER BY
-       CASE
-         WHEN p.status = 'pending_approval' THEN 0
-         WHEN p.status = 'available' THEN 1
-         ELSE 2
-       END,
-       p.created_at DESC
+      LEFT JOIN users u ON u.id = p.assigned_agent_id
+      LEFT JOIN agents a ON a.user_id = p.assigned_agent_id
+     WHERE p.landlord_id = ?
+     ORDER BY p.created_at DESC
 ");
-$stmt->execute($params);
+$stmt->execute([$landlordId]);
 $properties = $stmt->fetchAll();
+
 
 $pageTitle = 'Property Register';
 $activeNav = 'properties';

@@ -230,6 +230,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($pdo->inTransaction()) $pdo->rollBack();
             $errors['general'] = 'Failed: ' . $e->getMessage();
         }
+
+        require_once __DIR__ . '/../includes/agent_assignment.php';
+        $assignResult = assign_agent_to_property((int)$propertyId);
+
+        if ($assignResult['ok']) {
+            set_flash('success', 'Property submitted! An agent has been assigned to verify your listing.');
+        } else {
+            set_flash('warning', 'Property submitted, but no agents are currently available. Admin will assist.');
+        }
+
+        header('Location: /rentbridge/landlord/properties.php');
+        exit;
     }
 }
 
