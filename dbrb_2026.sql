@@ -1499,3 +1499,113 @@ CREATE TABLE IF NOT EXISTS property_agent_assignments (
 -- SKIP if your status column is already VARCHAR.
 -- Otherwise run:
 -- ALTER TABLE properties MODIFY status ENUM('pending_approval','available','booked','rented','rejected','withdrawn','paused','needs_admin') DEFAULT 'pending_approval';
+
+-- ═══════════════════════════════════════════════════════════════
+-- DESTRUCTIVE: clears all property data + downstream
+-- Make sure you have a DB backup before running
+-- ═══════════════════════════════════════════════════════════════
+
+START TRANSACTION;
+
+-- Clear downstream first to avoid foreign-key blocks
+DELETE FROM saved_properties;
+DELETE FROM property_images;
+DELETE FROM property_documents;
+DELETE FROM co_tenancy_posts;
+DELETE FROM property_agent_assignments;
+
+-- Bookings / contracts reference properties — clear if you want
+-- (skip these if you want to keep test contracts)
+DELETE FROM bookings;
+
+-- Finally the properties themselves
+DELETE FROM properties;
+
+-- Reset auto-increment
+ALTER TABLE properties AUTO_INCREMENT = 1;
+ALTER TABLE property_images AUTO_INCREMENT = 1;
+ALTER TABLE property_documents AUTO_INCREMENT = 1;
+
+COMMIT;
+
+-- ═══════════════════════════════════════════════════════════════
+-- New seed: 24 properties across Melaka
+-- Medians: unfurnished 750, partial 1200, fully 1500
+-- ═══════════════════════════════════════════════════════════════
+
+SET @landlord_id := (SELECT id FROM users WHERE primary_role = 'landlord' LIMIT 1);
+
+-- Verify a landlord exists
+SELECT @landlord_id AS using_landlord;
+
+-- ============ UNFURNISHED (target median 750, range 600-900) ============
+INSERT INTO properties (landlord_id, title, property_type, address, city, postcode, state, latitude, longitude, monthly_rent, deposit, description, facilities, furnishing, viewing_mode, status) VALUES
+(@landlord_id, 'Unfurnished room near UTeM', 'room', 'Jalan TBP 3', 'Ayer Keroh', '75450', 'Melaka', 2.3140, 102.3200, 600, 1200, 'Bring your own furniture. Quiet area.', 'WiFi, parking', 'none', 'either', 'available'),
+(@landlord_id, 'Empty room in Bukit Beruang', 'room', 'Jalan BB 12', 'Bukit Beruang', '75450', 'Melaka', 2.3220, 102.3050, 650, 1300, 'Unfurnished, suitable for long-term tenant.', 'WiFi, parking, shared kitchen', 'none', 'either', 'available'),
+(@landlord_id, 'Basic room Durian Tunggal', 'room', 'Jalan Sejahtera 9', 'Durian Tunggal', '76100', 'Melaka', 2.2580, 102.2520, 680, 1360, 'Affordable unfurnished option.', 'WiFi, fan, parking', 'none', 'either', 'available'),
+(@landlord_id, 'Unfurnished single room Cheng', 'room', 'Taman Cheng Baru', 'Cheng', '75250', 'Melaka', 2.2200, 102.2300, 720, 1440, 'Bring your own bed/table. Quiet kampung area.', 'WiFi, parking', 'none', 'either', 'available'),
+(@landlord_id, 'Empty whole-unit terrace', 'whole_unit', 'Taman Saujana 4', 'Hang Tuah Jaya', '75450', 'Melaka', 2.2950, 102.3000, 750, 1500, 'Empty 3-bedroom terrace. Bring your own furniture.', 'WiFi, parking, kitchen, garden', 'none', 'either', 'available'),
+(@landlord_id, 'Basic studio Ayer Keroh', 'studio', 'Jalan Sutera 5', 'Ayer Keroh', '75450', 'Melaka', 2.3170, 102.3225, 780, 1560, 'Unfurnished studio. Suitable for single occupant.', 'WiFi, kitchen, parking', 'none', 'either', 'available'),
+(@landlord_id, 'Unfurnished room Batu Berendam', 'room', 'Taman BB Indah 7', 'Batu Berendam', '75350', 'Melaka', 2.2580, 102.2700, 800, 1600, 'Empty room near airport area.', 'WiFi, parking, washing machine', 'none', 'either', 'available'),
+(@landlord_id, 'Empty heritage shoplot room', 'room', 'Jalan Hang Jebat', 'Melaka', '75200', 'Melaka', 2.1950, 102.2470, 900, 1800, 'Unfurnished room in heritage area.', 'WiFi, attached bath', 'none', 'either', 'available');
+
+-- ============ PARTIAL (target median 1200, range 1000-1400) ============
+INSERT INTO properties (landlord_id, title, property_type, address, city, postcode, state, latitude, longitude, monthly_rent, deposit, description, facilities, furnishing, viewing_mode, status) VALUES
+(@landlord_id, 'Partial-furnished room near UTeM', 'room', 'Jalan TBP 7', 'Ayer Keroh', '75450', 'Melaka', 2.3145, 102.3210, 1000, 2000, 'Bed + wardrobe provided. Walking distance to campus.', 'WiFi, aircond, attached bath, parking', 'partial', 'either', 'available'),
+(@landlord_id, 'Mid-range studio Hang Tuah Jaya', 'studio', 'Pangsapuri Saujana, Block A', 'Hang Tuah Jaya', '75450', 'Melaka', 2.2955, 102.3005, 1080, 2160, 'Studio with basic furniture. Pool access.', 'WiFi, aircond, kitchen, fridge, swimming pool', 'partial', 'either', 'available'),
+(@landlord_id, 'Partial whole-unit Bukit Beruang', 'whole_unit', 'No. 17, Jalan BB 5', 'Bukit Beruang', '75450', 'Melaka', 2.3225, 102.3055, 1150, 2300, '3-bedroom terrace, partially furnished.', 'WiFi, aircond, washing machine, kitchen, parking', 'partial', 'either', 'available'),
+(@landlord_id, 'Comfortable room Cheng', 'room', 'Lorong Cheng 8', 'Cheng', '75250', 'Melaka', 2.2210, 102.2310, 1180, 2360, 'Bed + study desk + wardrobe.', 'WiFi, aircond, parking, washing machine', 'partial', 'either', 'available'),
+(@landlord_id, '2-bed apartment Hang Tuah Jaya', 'whole_unit', 'Pangsapuri Saujana, Block C', 'Hang Tuah Jaya', '75450', 'Melaka', 2.2955, 102.3005, 1200, 2400, '2-bedroom apartment. Pool and gym.', 'WiFi, aircond, kitchen, fridge, swimming pool, gym', 'partial', 'either', 'available'),
+(@landlord_id, 'Partial townhouse Batu Berendam', 'whole_unit', 'Jalan BB Utama 3', 'Batu Berendam', '75350', 'Melaka', 2.2590, 102.2710, 1250, 2500, '3-bed townhouse with basic furniture.', 'WiFi, aircond, kitchen, parking, garden, washing machine', 'partial', 'either', 'available'),
+(@landlord_id, 'Mid-range studio Melaka Raya', 'studio', 'Jalan Melaka Raya 8', 'Melaka', '75000', 'Melaka', 2.1900, 102.2480, 1300, 2600, 'City center studio with basic furniture.', 'WiFi, aircond, kitchen, fridge, security', 'partial', 'either', 'available'),
+(@landlord_id, 'Partial 3-bed unit Ayer Keroh', 'whole_unit', 'No. 28, Jalan TBP 6', 'Ayer Keroh', '75450', 'Melaka', 2.3135, 102.3195, 1350, 2700, 'Suit 3-4 students. Bed + wardrobe in each room.', 'WiFi, aircond, washing machine, kitchen, parking', 'partial', 'either', 'available'),
+(@landlord_id, 'Spacious partial whole-unit Durian Tunggal', 'whole_unit', 'Taman Bukit Tambun Perdana 2', 'Durian Tunggal', '76100', 'Melaka', 2.2585, 102.2525, 1400, 2800, '3-bedroom terrace, partially furnished.', 'WiFi, aircond, washing machine, kitchen, parking, garden', 'partial', 'either', 'available');
+
+-- ============ FULLY FURNISHED (target median 1500, range 1200-1800) ============
+INSERT INTO properties (landlord_id, title, property_type, address, city, postcode, state, latitude, longitude, monthly_rent, deposit, description, facilities, furnishing, viewing_mode, status) VALUES
+(@landlord_id, 'Fully furnished master room near UTeM', 'room', 'Jalan TBP 2, Taman Bukit Pasir Indah', 'Ayer Keroh', '75450', 'Melaka', 2.3120, 102.3180, 1200, 2400, 'Master room with private bath. Move in with just your luggage.', 'WiFi, aircond, private bath, balcony, parking, washing machine', 'full', 'either', 'available'),
+(@landlord_id, 'Fully furnished studio AEON area', 'studio', 'Apartment Sutera, Jalan Sutera 1', 'Ayer Keroh', '75450', 'Melaka', 2.3170, 102.3225, 1300, 2600, 'Move-in ready studio. Near AEON mall.', 'WiFi, aircond, kitchen, fridge, parking, security, washing machine', 'full', 'either', 'available'),
+(@landlord_id, 'Fully furnished room Bukit Beruang', 'room', 'Jalan BB 18', 'Bukit Beruang', '75450', 'Melaka', 2.3230, 102.3060, 1400, 2800, 'Newly renovated. All furniture provided. 5 mins to UTeM IT block.', 'WiFi, aircond, attached bath, washing machine, study desk', 'full', 'either', 'available'),
+(@landlord_id, 'Fully furnished apartment Saujana', 'whole_unit', 'Pangsapuri Saujana, Block B', 'Hang Tuah Jaya', '75450', 'Melaka', 2.2960, 102.3010, 1500, 3000, '2-bedroom fully furnished apartment.', 'WiFi, aircond, kitchen, fridge, swimming pool, gym, security, washing machine', 'full', 'either', 'available'),
+(@landlord_id, 'Premium fully furnished townhouse', 'whole_unit', 'No. 88, Jalan BB 5', 'Bukit Beruang', '75450', 'Melaka', 2.3225, 102.3055, 1600, 3200, '4-bedroom fully furnished townhouse. Perfect for groups.', 'WiFi, aircond, washing machine, kitchen, parking, garden, full furniture', 'full', 'either', 'available'),
+(@landlord_id, 'Fully furnished studio Melaka Raya', 'studio', 'Jalan Melaka Raya 13', 'Melaka', '75000', 'Melaka', 2.1900, 102.2480, 1700, 3400, 'City center studio. Modern interior.', 'WiFi, aircond, kitchen, fridge, washing machine, security, smart TV', 'full', 'either', 'available'),
+(@landlord_id, 'Luxury fully furnished apartment Hang Tuah Jaya', 'whole_unit', 'Pangsapuri Saujana Indah, Block A', 'Hang Tuah Jaya', '75450', 'Melaka', 2.2950, 102.3000, 1800, 3600, '3-bedroom luxury apartment. All inclusive.', 'WiFi, aircond, kitchen, fridge, swimming pool, gym, security, washing machine, dryer', 'full', 'either', 'available');
+
+-- ═══════════════════════════════════════════════════════════════
+-- Verify the medians
+-- ═══════════════════════════════════════════════════════════════
+SELECT furnishing,
+       COUNT(*) AS count,
+       MIN(monthly_rent) AS min,
+       MAX(monthly_rent) AS max,
+       ROUND(AVG(monthly_rent)) AS avg,
+       (
+           SELECT ROUND(AVG(monthly_rent))
+           FROM (
+               SELECT furnishing,
+                      monthly_rent,
+                      ROW_NUMBER() OVER (
+                          PARTITION BY furnishing
+                          ORDER BY monthly_rent
+                      ) AS rn,
+                      COUNT(*) OVER (
+                          PARTITION BY furnishing
+                      ) AS cnt
+               FROM properties
+           ) sub
+           WHERE sub.furnishing = p.furnishing
+             AND rn IN (
+                 FLOOR((cnt + 1) / 2),
+                 CEIL((cnt + 1) / 2)
+             )
+       ) AS median
+FROM properties p
+GROUP BY furnishing;
+
+-- Insert one primary photo per property (placeholder)
+INSERT INTO property_images (property_id, image_path, is_primary)
+SELECT id, 'uploads/properties/placeholder.jpg', 1
+  FROM properties
+ WHERE id NOT IN (SELECT DISTINCT property_id FROM property_images);
+
+ UPDATE TABLE property_documents SET document_type = 'others' WHERE document_type IS NULL;
