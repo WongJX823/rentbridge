@@ -285,10 +285,48 @@ ob_start();
         <div class="rail-actions">
             <?php if (is_logged_in()): ?>
                 <!-- PRIMARY: Chat -->
-                <a href="/rentbridge/chat/start.php?type=property_inquiry&with=<?= (int)$prop['landlord_user_id'] ?>&property_id=<?= (int)$prop['id'] ?>"
-                   class="btn btn-success rail-btn-primary">
-                    <i class="bi bi-chat-dots-fill me-1"></i> Chat with landlord
-                </a>
+                <?php
+                    // Route chat target based on property's viewing mode
+                    $chatTargetUserId = null;
+                    $chatTargetLabel  = '';
+                    $chatTargetIcon   = 'bi-chat-dots';
+                    $chatDisabled     = false;
+                    $chatBlockReason  = '';
+
+                    $viewingMode = $prop['viewing_mode'] ?? 'either';
+
+                    if ($viewingMode === 'agent_led') {
+                        // Must go to assigned agent
+                        if (!empty($prop['assigned_agent_id']) && ($prop['agent_status'] ?? '') === 'accepted') {
+                            $chatTargetUserId = (int)$prop['assigned_agent_id'];
+                            $chatTargetLabel  = 'Chat with agent';
+                            $chatTargetIcon   = 'bi-person-badge';
+                        } else {
+                            $chatDisabled = true;
+                            $chatBlockReason = 'Agent not yet verified for this property. Try again later.';
+                        }
+                    } elseif ($viewingMode === 'either') {
+                        // Slice 4 deferral — for now, route to landlord (will be revisited)
+                        $chatTargetUserId = (int)$prop['landlord_user_id'];
+                        $chatTargetLabel  = 'Chat with landlord';
+                    } else {
+                        // landlord_led (default)
+                        $chatTargetUserId = (int)$prop['landlord_user_id'];
+                        $chatTargetLabel  = 'Chat with landlord';
+                    }
+                    ?>
+
+                    <?php if ($chatDisabled): ?>
+                        <button type="button" class="btn btn-secondary w-100" disabled>
+                            <i class="bi bi-clock-history me-1"></i> Chat unavailable
+                        </button>
+                        <small class="text-secondary d-block mt-1"><?= e($chatBlockReason) ?></small>
+                    <?php else: ?>
+                        <a href="/rentbridge/chat/start.php?type=property_inquiry&with=<?= $chatTargetUserId ?>&property_id=<?= (int)$prop['id'] ?>"
+                        class="btn btn-primary w-100">
+                            <i class="bi <?= $chatTargetIcon ?> me-1"></i> <?= e($chatTargetLabel) ?>
+                        </a>
+                    <?php endif; ?>
 
                 <!-- SECONDARY: WhatsApp -->
                 <?php if (!empty($waUrl)): ?>

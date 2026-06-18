@@ -58,10 +58,20 @@ if ($searchQuery !== '') {
 
 $stmt = $pdo->prepare("
     SELECT b.id, b.status, b.start_date, b.end_date, b.monthly_rent, b.created_at,
+           b.signed_contract_path, b.signed_uploaded_at,
            p.id AS property_id, p.title AS property_title, p.city,
            s.full_name AS student_name,
            l.full_name AS landlord_name,
-           a.full_name AS agent_name
+           a.full_name AS agent_name,
+           (SELECT GROUP_CONCAT(ct.full_name SEPARATOR ', ')
+              FROM co_tenants ct
+             WHERE ct.booking_id = b.id 
+               AND ct.status != 'removed'
+             ORDER BY ct.sign_order ASC) AS all_tenant_names,
+           (SELECT COUNT(*)
+              FROM co_tenants ct
+             WHERE ct.booking_id = b.id 
+               AND ct.status != 'removed') AS tenant_count
       FROM bookings b
       JOIN properties p ON p.id = b.property_id
       JOIN students s ON s.user_id = b.student_id
@@ -113,21 +123,26 @@ ob_start();
 <?php
 $filterContent = ob_get_clean();
 
-function booking_status_label_admin(string $status): array {
+function booking_status_label_admin(string $status, ?string $signedPath = null): array {
+    // If contract is signed, override 'active' display
+    if ($signedPath !== null && $status === 'active') {
+        return ['✓ Signed & Active', 'success'];
+    }
+    
     return match ($status) {
-        'pending_landlord'      => ['Pending landlord',   'warning'],
-        'pending_agent'         => ['Pending agent',      'warning'],
-        'agent_verifying'       => ['🔍 Inspecting',      'info'],
-        'agent_verified'        => ['✓ Verified',         'success'],
-        'verification_failed'   => ['Verification failed','danger'],
-        'contract_pending'      => ['📝 Contract signing','primary'],
-        'active'                => ['Active',             'success'],
-        'completed'             => ['Completed',          'secondary'],
-        'cancelled_by_student'  => ['Cancelled (student)','secondary'],
-        'cancelled_by_landlord' => ['Cancelled (landlord)','secondary'],
-        'cancelled_by_admin'    => ['Cancelled (admin)',  'danger'],
-        'rejected_by_landlord'  => ['Rejected',           'danger'],
-        default                 => [$status,              'secondary'],
+        'pending_landlord'      => ['Pending landlord',     'warning'],
+        'pending_agent'         => ['Pending agent',        'warning'],
+        'agent_verifying'       => ['🔍 Inspecting',        'info'],
+        'agent_verified'        => ['✓ Verified',           'success'],
+        'verification_failed'   => ['Verification failed',  'danger'],
+        'contract_pending'      => ['📝 Awaiting signature','primary'],
+        'active'                => ['Active',               'success'],
+        'completed'             => ['Completed',            'secondary'],
+        'cancelled_by_student'  => ['Cancelled (student)',  'secondary'],
+        'cancelled_by_landlord' => ['Cancelled (landlord)', 'secondary'],
+        'cancelled_by_admin'    => ['Cancelled (admin)',    'danger'],
+        'rejected_by_landlord'  => ['Rejected',             'danger'],
+        default                 => [$status,                'secondary'],
     };
 }
 
@@ -147,9 +162,9 @@ ob_start();
         <table class="table mb-0 align-middle">
             <thead style="background:#F4F4EE;">
                 <tr>
-                            <th class="ps-3">ID</th>
-        <th>Property</th>
-                    <th>Student</th>
+                    <th class="ps-3">ID</th>
+                    <th>Property</th>
+                    <th>Tenants</th>
                     <th>Landlord</th>
                     <th>Agent</th>
                     <th>Status</th>
@@ -158,16 +173,16 @@ ob_start();
             </thead>
             <tbody>
                 <?php foreach ($bookings as $b):
-                    [$label, $color] = booking_status_label_admin($b['status']);
+                    [$label, $color] = booking_status_label_admin($b['status'], $b['signed_contract_path'] ?? null);
                 ?>
                     <tr>
-    <td class="ps-3">
-        <code class="text-secondary">#<?= (int)$b['id'] ?></code>
-        <div class="small text-secondary">
-            <?= e(date('d M Y', strtotime($b['created_at']))) ?>
-        </div>
-    </td>
-    <td>
+                        <td class="ps-3">
+                            <code class="text-secondary">#<?= (int)$b['id'] ?></code>
+                            <div class="small text-secondary">
+                                <?= e(date('d M Y', strtotime($b['created_at']))) ?>
+                            </div>
+                        </td>
+                        <td>
                             <a href="/rentbridge/admin/property.php?id=<?= (int)$b['property_id'] ?>"
                                class="text-decoration-none text-dark">
                                 <strong class="small"><?= e($b['property_title']) ?></strong>
@@ -176,7 +191,28 @@ ob_start();
                                 <i class="bi bi-geo-alt"></i> <?= e($b['city']) ?>
                             </div>
                         </td>
-                        <td class="small"><?= e($b['student_name']) ?></td>
+                        <td class="small">
+                            <?php if (!empty($b['all_tenant_names']) && $b['tenant_count'] > 0): ?>
+                                <?php
+                                // If 2+ tenants, show primary + count
+                                if ($b['tenant_count'] > 1):
+                                    // Get the first name only for primary display
+                                    $names = explode(', ', $b['all_tenant_names']);
+                                    $primary = $names[0];
+                                    $othersCount = (int)$b['tenant_count'] - 1;
+                                ?>
+                                    <strong><?= e($primary) ?></strong>
+                                    <div class="text-secondary" style="font-size:0.75rem;">
+                                        +<?= $othersCount ?> co-tenant<?= $othersCount > 1 ? 's' : '' ?>
+                                    </div>
+                                <?php else: ?>
+                                    <?= e($b['all_tenant_names']) ?>
+                                <?php endif; ?>
+                            <?php else: ?>
+                                <?= e($b['student_name']) ?>
+                                <span class="text-secondary" style="font-size:0.7rem;">(no contract yet)</span>
+                            <?php endif; ?>
+                        </td> 
                         <td class="small"><?= e($b['landlord_name']) ?></td>
                         <td class="small">
                             <?= !empty($b['agent_name']) ? e($b['agent_name'])

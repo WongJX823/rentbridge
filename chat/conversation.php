@@ -214,6 +214,76 @@ if (
             </div>
         </div>
     <?php endif; ?>
+<?php
+// Agent-led: agent can send tenant info form directly to student
+$showAgentSendFormBtn = false;
+if (
+    current_role() === 'agent' &&
+    !empty($propId) &&
+    !empty($otherId) &&
+    $otherRole === 'student'
+) {
+    // Verify this is an agent-led property AND I am the assigned agent
+    $stmt = $pdo->prepare("
+        SELECT viewing_mode, assigned_agent_id, agent_status 
+          FROM properties 
+         WHERE id = ?
+    ");
+    $stmt->execute([$propId]);
+    $propRow = $stmt->fetch();
+    
+    if (
+        $propRow &&
+        in_array($propRow['viewing_mode'], ['agent_led', 'either'], true) &&
+        (int)$propRow['assigned_agent_id'] === current_user_id() &&
+        $propRow['agent_status'] === 'accepted'
+    ) {
+        // Check: no unanswered form already pending for this student
+        $stmt = $pdo->prepare("
+            SELECT m.id
+              FROM messages m
+             WHERE m.conversation_id = ? 
+               AND m.message_type = 'tenant_info_form'
+               AND JSON_EXTRACT(m.metadata, '$.student_id') = ?
+               AND NOT EXISTS (
+                   SELECT 1 FROM messages r
+                    WHERE r.conversation_id = m.conversation_id
+                      AND r.message_type = 'tenant_info_response'
+                      AND JSON_EXTRACT(r.metadata, '$.source_form_id') = m.id
+               )
+             LIMIT 1
+        ");
+        $stmt->execute([(int)$convData['id'], $otherId]);
+        $pendingForm = $stmt->fetchColumn();
+        $showAgentSendFormBtn = !$pendingForm;
+    }
+}
+?>
+
+<?php if ($showAgentSendFormBtn): ?>
+    <div class="agent-send-form-bar p-3 mb-2"
+         style="background:#E4F2EA; border:1px solid #2E8B57; border-radius:10px;">
+        <div class="d-flex gap-3 align-items-start">
+            <i class="bi bi-clipboard-data fs-4 text-success"></i>
+            <div class="flex-grow-1">
+                <strong>Ready to start tenant paperwork?</strong>
+                <p class="small text-secondary mb-2">
+                    When you've agreed with the student to proceed, send them the
+                    tenant info form. The student will fill their details and
+                    co-tenants, then you generate the contract PDF.
+                </p>
+                <button type="button" id="agentSendFormBtn"
+                        class="btn btn-success fw-semibold"
+                        data-conv-id="<?= (int)$convData['id'] ?>"
+                        data-property-id="<?= (int)$propId ?>"
+                        data-student-id="<?= (int)$otherId ?>">
+                    <i class="bi bi-send me-1"></i>
+                    Send tenant info form to student
+                </button>
+            </div>
+        </div>
+    </div>
+<?php endif; ?>
 
 <!-- MESSAGES AREA -->
     <div class="chat-body" id="chatBody">
@@ -321,7 +391,8 @@ if (
                 </div>
 
                 <?php elseif ($msgType === 'tenant_info_form'): 
-                    $isReceiver = !$isMine && current_role() === 'landlord';
+                    $recipientRole = $meta['recipient_role'] ?? 'landlord';
+                    $isReceiver = !$isMine && current_role() === $recipientRole;
                     $hasResponded = false;
                     // Check if landlord already submitted this form
                     $stmt = $pdo->prepare("
@@ -370,83 +441,59 @@ if (
                             </div>
                         </div>
                     </div>
-                    <?php elseif ($msgType === 'tenant_info_response'): ?>
-                    <div class="my-3 d-flex justify-content-center">
-                        <div class="card border-success" style="max-width: 500px; background: #E4F2EA;">
-                            <div class="card-body">
-                                <div class="d-flex gap-2 align-items-start mb-2">
-                                    <i class="bi bi-check-circle-fill fs-4 text-success"></i>
-                                    <div>
-                                        <h6 class="mb-0">Tenant info submitted</h6>
-                                        <small class="text-secondary">
-                                            <?= e($msg['body']) ?>
-                                        </small>
-                                    </div>
-                                </div>
-                                <?php if (current_role() === 'agent' && !empty($meta['booking_id'])): ?>
-                                    <a href="/rentbridge/agent/generate_contract.php?booking_id=<?= (int)$meta['booking_id'] ?>"
-                                    class="btn btn-success btn-sm">
-                                        <i class="bi bi-file-earmark-pdf me-1"></i> Generate contract
-                                    </a>
-                                <?php else: ?>
-                                    <span class="badge bg-success">Ready for contract</span>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-                    </div>
                     <?php elseif ($msgType === 'tenant_info_response'): 
-                // Check booking status
-                $bookingStatus = null;
-                if (!empty($meta['booking_id'])) {
-                    $stmt = $pdo->prepare("SELECT status FROM bookings WHERE id = ?");
-                    $stmt->execute([(int)$meta['booking_id']]);
-                    $bookingStatus = $stmt->fetchColumn();
-                }
-            ?>
-                <div class="my-3 d-flex justify-content-center">
-                    <div class="card border-success" style="max-width: 500px; background: #E4F2EA;">
-                        <div class="card-body">
-                            <div class="d-flex gap-2 align-items-start mb-2">
-                                <i class="bi bi-check-circle-fill fs-4 text-success"></i>
-                                <div>
-                                    <h6 class="mb-0">Tenant info submitted</h6>
-                                    <small class="text-secondary"><?= e($msg['body']) ?></small>
+                        // Fetch current booking status to decide which buttons to show
+                        $bookingStatus = null;
+                        if (!empty($meta['booking_id'])) {
+                            $stmt = $pdo->prepare("SELECT status FROM bookings WHERE id = ?");
+                            $stmt->execute([(int)$meta['booking_id']]);
+                            $bookingStatus = $stmt->fetchColumn();
+                        }
+                    ?>
+                        <div class="my-3 d-flex justify-content-center">
+                            <div class="card border-success" style="max-width: 500px; background: #E4F2EA;">
+                                <div class="card-body">
+                                    <div class="d-flex gap-2 align-items-start mb-2">
+                                        <i class="bi bi-check-circle-fill fs-4 text-success"></i>
+                                        <div>
+                                            <h6 class="mb-0">Tenant info submitted</h6>
+                                            <small class="text-secondary"><?= e($msg['body']) ?></small>
+                                        </div>
+                                    </div>
+                                    
+                                    <?php if (current_role() === 'agent' && !empty($meta['booking_id'])): ?>
+                                        <?php if ($bookingStatus === 'active'): ?>
+                                            <span class="badge bg-success">
+                                                <i class="bi bi-check2-all"></i> Tenancy active
+                                            </span>
+                                        <?php elseif ($bookingStatus === 'contract_pending'): ?>
+                                            <div class="d-flex gap-2 flex-wrap">
+                                                <a href="/rentbridge/agent/upload_signed_contract.php?booking_id=<?= (int)$meta['booking_id'] ?>"
+                                                class="btn btn-success btn-sm">
+                                                    <i class="bi bi-upload me-1"></i> Upload signed contract
+                                                </a>
+                                                <a href="/rentbridge/agent/generate_contract.php?booking_id=<?= (int)$meta['booking_id'] ?>"
+                                                class="btn btn-outline-success btn-sm">
+                                                    <i class="bi bi-arrow-clockwise me-1"></i> Regenerate
+                                                </a>
+                                            </div>
+                                        <?php else: ?>
+                                            <a href="/rentbridge/agent/generate_contract.php?booking_id=<?= (int)$meta['booking_id'] ?>"
+                                            class="btn btn-success btn-sm">
+                                                <i class="bi bi-file-earmark-pdf me-1"></i> Generate contract
+                                            </a>
+                                        <?php endif; ?>
+                                    <?php elseif ($bookingStatus === 'active'): ?>
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-check2-all"></i> Tenancy active
+                                        </span>
+                                    <?php else: ?>
+                                        <span class="badge bg-success">Ready for contract</span>
+                                    <?php endif; ?>
                                 </div>
                             </div>
-                            
-                            <?php if (current_role() === 'agent' && !empty($meta['booking_id'])): ?>
-                                <?php if ($bookingStatus === 'contract_pending'): ?>
-                                    <div class="d-flex gap-2 flex-wrap">
-                                        <a href="/rentbridge/agent/generate_contract.php?booking_id=<?= (int)$meta['booking_id'] ?>"
-                                        class="btn btn-outline-success btn-sm">
-                                            <i class="bi bi-file-earmark-pdf me-1"></i> Regenerate PDF
-                                        </a>
-                                        <a href="/rentbridge/agent/upload_signed_contract.php?booking_id=<?= (int)$meta['booking_id'] ?>"
-                                        class="btn btn-success btn-sm">
-                                            <i class="bi bi-upload me-1"></i> Upload signed contract
-                                        </a>
-                                    </div>
-                                <?php elseif ($bookingStatus === 'active'): ?>
-                                    <span class="badge bg-success">
-                                        <i class="bi bi-check2-all"></i> Tenancy active
-                                    </span>
-                                <?php else: ?>
-                                    <a href="/rentbridge/agent/generate_contract.php?booking_id=<?= (int)$meta['booking_id'] ?>"
-                                    class="btn btn-success btn-sm">
-                                        <i class="bi bi-file-earmark-pdf me-1"></i> Generate contract
-                                    </a>
-                                <?php endif; ?>
-                            <?php elseif ($bookingStatus === 'active'): ?>
-                                <span class="badge bg-success">
-                                    <i class="bi bi-check2-all"></i> Tenancy active
-                                </span>
-                            <?php else: ?>
-                                <span class="badge bg-success">Ready for contract</span>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                </div>
-            <?php else: ?>
+                        </div>            
+                        <?php else: ?>
                 <!-- Regular text bubble (default) -->
                 <div class="chat-message <?= $isMine ? 'mine' : 'theirs' ?>"
                      data-msg-id="<?= (int)$msg['id'] ?>">
@@ -922,6 +969,51 @@ document.addEventListener('DOMContentLoaded', function() {
                 this.innerHTML = originalHTML;
             }
         });
+    });
+});
+document.addEventListener('DOMContentLoaded', function() {
+    const btn = document.getElementById('agentSendFormBtn');
+    if (!btn) return;
+
+    btn.addEventListener('click', async function() {
+        if (!confirm('Send tenant info form to the student? The student will fill in their own details and any co-tenants. Only proceed if you have agreed to move forward.')) return;
+
+        this.disabled = true;
+        this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Sending...';
+
+        try {
+            const formData = new FormData();
+            formData.append('_csrf', '<?= csrf_token() ?>');
+            formData.append('conversation_id', this.dataset.convId);
+            formData.append('property_id', this.dataset.propertyId);
+            formData.append('student_id', this.dataset.studentId);
+            formData.append('recipient_role', 'student');  // ← key parameter
+
+            const resp = await fetch('/rentbridge/chat/send_tenant_form.php', {
+                method: 'POST',
+                body: formData,
+            });
+            const text = await resp.text();
+            let data;
+            try { data = JSON.parse(text); }
+            catch (e) {
+                alert('Server returned non-JSON: ' + text.substring(0, 300));
+                return;
+            }
+
+            if (data.ok) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert('Failed: ' + data.error);
+                this.disabled = false;
+                this.innerHTML = '<i class="bi bi-send me-1"></i> Send tenant info form to student';
+            }
+        } catch (err) {
+            alert('Network error: ' + err.message);
+            this.disabled = false;
+            this.innerHTML = '<i class="bi bi-send me-1"></i> Send tenant info form to student';
+        }
     });
 });
 </script>

@@ -1,6 +1,11 @@
 <?php
 require_once __DIR__ . '/../includes/auth.php';
-require_role('landlord');
+require_login();  // any logged-in user; we verify role-specific access below
+$userRole = current_role();
+if (!in_array($userRole, ['landlord', 'student'], true)) {
+    echo json_encode(['ok' => false, 'error' => 'Only landlords or students can submit this form']);
+    exit;
+}
 
 header('Content-Type: application/json');
 
@@ -42,16 +47,31 @@ if (strlen($icClean) !== 12) {
     exit;
 }
 
-// Verify landlord owns the property
-$stmt = $pdo->prepare("
-    SELECT p.id, p.landlord_id, p.assigned_agent_id, p.title
-      FROM properties p
-     WHERE p.id = ? AND p.landlord_id = ?
-");
-$stmt->execute([$propertyId, $landlordId]);
+// Verify the user is allowed to submit
+if ($userRole === 'landlord') {
+    // Landlord-led: this user must own the property
+    $stmt = $pdo->prepare("
+        SELECT p.id, p.landlord_id, p.assigned_agent_id, p.title
+          FROM properties p
+         WHERE p.id = ? AND p.landlord_id = ?
+    ");
+    $stmt->execute([$propertyId, current_user_id()]);
+} else {
+    // Agent-led: this user must be the student in the form
+    if ((int)current_user_id() !== $studentId) {
+        echo json_encode(['ok' => false, 'error' => 'You can only submit for yourself']);
+        exit;
+    }
+    $stmt = $pdo->prepare("
+        SELECT p.id, p.landlord_id, p.assigned_agent_id, p.title
+          FROM properties p
+         WHERE p.id = ?
+    ");
+    $stmt->execute([$propertyId]);
+}
 $prop = $stmt->fetch();
 if (!$prop) {
-    echo json_encode(['ok' => false, 'error' => 'Property not found or not yours']);
+    echo json_encode(['ok' => false, 'error' => 'Property not found']);
     exit;
 }
 
@@ -140,6 +160,9 @@ try {
     $bookingId = (int)$pdo->lastInsertId();
 
     // Insert primary tenant (the student)
+    // In the co_tenants INSERT:
+    $submitterId = current_user_id();
+
     $stmt = $pdo->prepare("
         INSERT INTO co_tenants 
             (booking_id, student_id, is_primary, full_name, ic_number, phone, email, sign_order, added_by, status)
@@ -149,7 +172,7 @@ try {
         $bookingId, $studentId,
         $tenantName, $tenantIC,
         $tenantPhone ?: null, $tenantEmail ?: null,
-        $landlordId,
+        $submitterId,  // ← submitter, could be landlord or student
     ]);
 
     // Insert co-tenants
@@ -213,4 +236,54 @@ try {
 } catch (Throwable $e) {
     if ($pdo->inTransaction()) $pdo->rollBack();
     echo json_encode(['ok' => false, 'error' => $e->getMessage()]);
+}
+
+// Notify the landlord that their property is being rented
+if (function_exists('notify')) {
+    notify(
+        (int)$prop['landlord_id'],
+        'tenancy_in_progress',
+        'Your property is being rented',
+        sprintf('A student is submitting paperwork to rent "%s". The agent is handling the contract.', $prop['title']),
+        "/rentbridge/landlord/properties.php"
+    );
+}
+
+// Optionally: post a message in landlord-agent chat
+$agentId = (int)$prop['assigned_agent_id'];
+$landlordId = (int)$prop['landlord_id'];
+if ($agentId > 0 && $landlordId > 0) {
+    // Find or create landlord-agent conversation
+    $low = min($landlordId, $agentId);
+    $high = max($landlordId, $agentId);
+    
+    $stmt = $pdo->prepare("
+        SELECT id FROM conversations
+         WHERE property_id = ? AND user_a = ? AND user_b = ?
+           AND context_type IN ('contract_prep', 'agent_case', 'other')
+         LIMIT 1
+    ");
+    $stmt->execute([$propertyId, $low, $high]);
+    $laConvId = (int)$stmt->fetchColumn();
+    
+    if (!$laConvId) {
+        $stmt = $pdo->prepare("
+            INSERT INTO conversations 
+                (user_a, user_b, property_id, context_type, created_at)
+            VALUES (?, ?, ?, 'agent_case', NOW())
+        ");
+        $stmt->execute([$low, $high, $propertyId]);
+        $laConvId = (int)$pdo->lastInsertId();
+    }
+    
+    $bodyText = sprintf(
+        'Student %s is renting "%s" — booking #%d created. Contract paperwork in progress.',
+        $tenantName, $prop['title'], $bookingId
+    );
+    $stmt = $pdo->prepare("
+        INSERT INTO messages 
+            (conversation_id, sender_id, body, message_type, sent_at)
+        VALUES (?, ?, ?, 'system_notice', NOW())
+    ");
+    $stmt->execute([$laConvId, current_user_id(), $bodyText]);
 }

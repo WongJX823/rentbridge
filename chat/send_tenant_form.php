@@ -16,6 +16,11 @@ $convId     = (int)($_POST['conversation_id'] ?? 0);
 $propertyId = (int)($_POST['property_id'] ?? 0);
 $studentId  = (int)($_POST['student_id'] ?? 0);
 
+$recipientRole = $_POST['recipient_role'] ?? 'landlord';  // default to landlord for backwards-compat
+if (!in_array($recipientRole, ['landlord', 'student'], true)) {
+    $recipientRole = 'landlord';
+}
+
 if ($convId <= 0 || $propertyId <= 0 || $studentId <= 0) {
     echo json_encode(['ok' => false, 'error' => 'Missing parameters']);
     exit;
@@ -93,6 +98,7 @@ try {
         'property_id'    => $propertyId,
         'property_title' => $prop['title'],
         'student_id'     => $studentId,
+        'recipient_role' => $recipientRole,  // ← NEW
         'prefill' => [
             'tenant_name'  => $student['full_name'] ?? '',
             'tenant_phone' => $student['phone'] ?? '',
@@ -102,7 +108,6 @@ try {
             'deposit'      => $prop['deposit'],
         ],
     ]);
-
     $bodyText = 'Tenant info form sent for property "' . $prop['title'] . '"';
 
 error_log('[send_tenant_form] payload=' . var_export($payload, true));
@@ -141,20 +146,21 @@ try {
     $stmt->execute([substr($bodyText, 0, 120), $agentId, $convId]);
 
     // Notify landlord
-    if (function_exists('notify')) {
-        notify(
-            $landlordId,
-            'tenant_info_form_received',
-            'Tenant info form to fill',
-            'Your agent sent a form to collect tenant details for "' . $prop['title'] . '"',
-            "/rentbridge/chat/conversation.php?id={$convId}"
-        );
-    }
+if (function_exists('notify')) {
+    $notifyUserId = ($recipientRole === 'student') ? $studentId : $landlordId;
+    notify(
+        $notifyUserId,
+        'tenant_info_form_received',
+        'Tenant info form to fill',
+        'Your agent sent a form to collect tenant details for "' . $prop['title'] . '"',
+        "/rentbridge/chat/conversation.php?id={$convId}"
+    );
+}   
 
     $pdo->commit();
     echo json_encode([
         'ok' => true,
-        'message' => 'Form sent to landlord. They will fill in tenant details.',
+        'message' => 'Form sent. They will fill in tenant details.',
     ]);
 } catch (Throwable $e) {
     if ($pdo->inTransaction()) $pdo->rollBack();
