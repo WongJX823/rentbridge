@@ -71,7 +71,7 @@ $urgentCases = (int)$stmt->fetchColumn();
                 aria-expanded="false">
             <?php
             require_once __DIR__ . '/avatar.php';
-            $_avatarPath = get_avatar_path($userId, 'landlord');
+            $_avatarPath = get_avatar_path($userId, 'agent');
             render_avatar($_avatarPath, $myName, 32);
             ?>
             <span class="topbar-user-name d-none d-md-inline">
