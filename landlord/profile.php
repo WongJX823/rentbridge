@@ -152,33 +152,33 @@ ob_start();
 
 <?php require_once __DIR__ . '/../includes/avatar.php'; ?>
 
-<!-- AVATAR -->
-<div class="bg-white border rounded-3 p-4 mb-3">
-    <h6 class="text-secondary text-uppercase small mb-3">Profile photo</h6>
-    <div class="d-flex align-items-center gap-4">
-        <?php render_avatar($landlord['avatar_path'] ?? null, $landlord['full_name'], 96); ?>
-        <div class="flex-grow-1">
-            <form method="POST" action="/rentbridge/auth/avatar_upload.php"
-                  enctype="multipart/form-data" class="d-flex gap-2 align-items-center">
-                <?= csrf_field() ?>
-                <input type="file" name="avatar" class="form-control form-control-sm"
-                       accept="image/jpeg,image/png,image/webp" required
-                       style="max-width: 320px;">
-                <button type="submit" class="btn btn-primary btn-sm">
-                    <i class="bi bi-upload me-1"></i> Upload
-                </button>
-            </form>
-            <small class="text-secondary d-block mt-2">
-                JPG, PNG, or WebP · max 5MB · square images look best
-            </small>
-        </div>
-    </div>
-</div>
-
 <?php if ($isEditMode): ?>
     <!-- EDIT MODE -->
     <form method="POST">
         <?= csrf_field() ?>
+
+        <!-- AVATAR -->
+        <div class="bg-white border rounded-3 p-4 mb-3">
+            <h6 class="text-secondary text-uppercase small mb-3">Profile photo</h6>
+            <div class="d-flex align-items-center gap-4">
+                <?php render_avatar($landlord['avatar_path'] ?? null, $landlord['full_name'], 96); ?>
+                <div class="flex-grow-1">
+                    <form method="POST" action="/rentbridge/auth/avatar_upload.php"
+                        enctype="multipart/form-data" class="d-flex gap-2 align-items-center">
+                        <?= csrf_field() ?>
+                        <input type="file" name="avatar" class="form-control form-control-sm"
+                            accept="image/jpeg,image/png,image/webp" required
+                            style="max-width: 320px;">
+                        <button type="submit" class="btn btn-primary btn-sm">
+                            <i class="bi bi-upload me-1"></i> Upload
+                        </button>
+                    </form>
+                    <small class="text-secondary d-block mt-2">
+                        JPG, PNG, or WebP · max 5MB · square images look best
+                    </small>
+                </div>
+            </div>
+        </div>
 
         <div class="bg-white border rounded-3 p-4 mb-3">
             <h6 class="text-secondary text-uppercase small mb-3">Basic info</h6>
@@ -268,15 +268,15 @@ ob_start();
             <tr><th class="text-secondary">Email</th><td><?= e($landlord['email']) ?></td></tr>
             <tr><th class="text-secondary">Phone</th><td>
                 <?= e($landlord['phone']) ?>
-                <?php
-                $waPhone = preg_replace('/\D/', '', $landlord['phone'] ?? '');
-                if ($waPhone && str_starts_with($waPhone, '0')) $waPhone = '60' . ltrim($waPhone, '0');
-                if ($waPhone): ?>
+                <?php if ((int)($landlord['allow_whatsapp'] ?? 0) === 1):
+                    $waPhone = preg_replace('/\D/', '', $landlord['phone'] ?? '');
+                    if ($waPhone && str_starts_with($waPhone, '0')) $waPhone = '60' . ltrim($waPhone, '0');
+                    if ($waPhone): ?>
                 <a href="https://wa.me/<?= e($waPhone) ?>" target="_blank" rel="noopener"
                    class="btn btn-success btn-sm rounded-pill ms-2 py-0 px-2" title="Open WhatsApp">
                     <i class="bi bi-whatsapp" style="font-size:.8rem;"></i>
                 </a>
-                <?php endif; ?>
+                <?php endif; endif; ?>
             </td></tr>
             <tr><th class="text-secondary">Home address</th><td><?= e($landlord['address'] ?: '—') ?></td></tr>
         </table>

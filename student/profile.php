@@ -34,6 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $university     = trim($_POST['university'] ?? 'UTeM');
     $phone          = trim($_POST['phone'] ?? '');
     $looking        = isset($_POST['looking_for_housing']) ? 1 : 0;
+    $allow_whatsapp = isset($_POST['allow_whatsapp']) ? 1 : 0;
     $pref_city      = trim($_POST['housing_pref_city'] ?? '');
     $pref_max_rent  = $_POST['housing_pref_max_rent'] ?? '';
     $pref_move_in   = trim($_POST['housing_pref_move_in'] ?? '');
@@ -53,6 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                        matric_no = ?,
                        university = ?,
                        phone = ?,
+                       allow_whatsapp = ?,
                        looking_for_housing = ?,
                        housing_pref_city = ?,
                        housing_pref_max_rent = ?,
@@ -62,6 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ");
             $stmt->execute([
                 $full_name, $preferred_name, $matric_no, $university, $phone,
+                $allow_whatsapp,
                 $looking,
                 $pref_city ?: null,
                 $pref_max_rent !== '' ? (float)$pref_max_rent : null,
@@ -85,6 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'matric_no' => $matric_no,
         'university' => $university,
         'phone' => $phone,
+        'allow_whatsapp' => $allow_whatsapp,
         'looking_for_housing' => $looking,
         'housing_pref_city' => $pref_city,
         'housing_pref_max_rent' => $pref_max_rent,
@@ -120,20 +124,14 @@ ob_start();
 
 <?php if ($isEditMode): ?>
     <!-- EDIT MODE -->
-    <form method="POST">
-        <?= csrf_field() ?>
 
-        <?php require_once __DIR__ . '/../includes/avatar.php'; ?>
+    <?php require_once __DIR__ . '/../includes/avatar.php'; ?>
 
-    <!-- AVATAR -->
+    <!-- AVATAR (separate form — must not nest inside the profile form) -->
     <div class="bg-white border rounded-3 p-4 mb-3">
         <h6 class="text-secondary text-uppercase small mb-3">Profile photo</h6>
         <div class="d-flex align-items-center gap-4">
-            <?php render_avatar(
-                $student['avatar_path'] ?? $landlord['avatar_path'] ?? $agent['avatar_path'] ?? null,
-                $student['full_name'] ?? $landlord['full_name'] ?? $agent['full_name'] ?? 'User',
-                96
-            ); ?>
+            <?php render_avatar($student['avatar_path'] ?? null, $student['full_name'] ?? 'User', 96); ?>
             <div class="flex-grow-1">
                 <form method="POST" action="/rentbridge/auth/avatar_upload.php"
                     enctype="multipart/form-data" class="d-flex gap-2 align-items-center">
@@ -151,6 +149,9 @@ ob_start();
             </div>
         </div>
     </div>
+
+    <form method="POST">
+        <?= csrf_field() ?>
 
         <div class="bg-white border rounded-3 p-4 mb-3">
             <h6 class="text-secondary text-uppercase small mb-3">Basic info</h6>
@@ -190,6 +191,17 @@ ob_start();
                     <label class="form-label fw-semibold">Email</label>
                     <input type="email" class="form-control" value="<?= e($student['email']) ?>" disabled>
                     <small class="text-secondary">Email cannot be changed here.</small>
+                </div>
+            </div>
+
+            <div class="form-check mt-3">
+                <input type="checkbox" name="allow_whatsapp" id="allowWa" class="form-check-input"
+                       <?= (int)($student['allow_whatsapp'] ?? 0) === 1 ? 'checked' : '' ?>>
+                <label for="allowWa" class="form-check-label fw-semibold">
+                    Allow contact via WhatsApp
+                </label>
+                <div class="small text-secondary">
+                    When checked, a WhatsApp shortcut is shown next to your phone number.
                 </div>
             </div>
         </div>
@@ -272,15 +284,15 @@ ob_start();
             <tr><th class="text-secondary">Email</th><td><?= e($student['email']) ?></td></tr>
             <tr><th class="text-secondary">Phone</th><td>
                 <?= e($student['phone']) ?>
-                <?php
-                $waPhone = preg_replace('/\D/', '', $student['phone'] ?? '');
-                if ($waPhone && str_starts_with($waPhone, '0')) $waPhone = '60' . ltrim($waPhone, '0');
-                if ($waPhone): ?>
+                <?php if ((int)($student['allow_whatsapp'] ?? 0) === 1):
+                    $waPhone = preg_replace('/\D/', '', $student['phone'] ?? '');
+                    if ($waPhone && str_starts_with($waPhone, '0')) $waPhone = '60' . ltrim($waPhone, '0');
+                    if ($waPhone): ?>
                 <a href="https://wa.me/<?= e($waPhone) ?>" target="_blank" rel="noopener"
                    class="btn btn-success btn-sm rounded-pill ms-2 py-0 px-2" title="Open WhatsApp">
                     <i class="bi bi-whatsapp" style="font-size:.8rem;"></i>
                 </a>
-                <?php endif; ?>
+                <?php endif; endif; ?>
             </td></tr>
         </table>
     </div>

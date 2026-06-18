@@ -38,8 +38,9 @@ $isEditMode = isset($_GET['edit']) && $_GET['edit'] === '1';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
 
-    $full_name = trim($_POST['full_name'] ?? '');
-    $phone     = trim($_POST['phone'] ?? '');
+    $full_name      = trim($_POST['full_name'] ?? '');
+    $phone          = trim($_POST['phone'] ?? '');
+    $allow_whatsapp = isset($_POST['allow_whatsapp']) ? 1 : 0;
 
     if ($full_name === '') $errors['full_name'] = 'Full name required';
     if ($phone === '')     $errors['phone'] = 'Phone required';
@@ -49,10 +50,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $pdo->prepare("
                 UPDATE agents
                    SET full_name = ?,
-                       phone = ?
+                       phone = ?,
+                       allow_whatsapp = ?
                  WHERE user_id = ?
             ");
-            $stmt->execute([$full_name, $phone, $userId]);
+            $stmt->execute([$full_name, $phone, $allow_whatsapp, $userId]);
 
             set_flash('success', 'Profile updated successfully.');
             header('Location: /rentbridge/agent/profile.php');
@@ -63,8 +65,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     $agent = array_merge($agent, [
-        'full_name' => $full_name,
-        'phone' => $phone,
+        'full_name'      => $full_name,
+        'phone'          => $phone,
+        'allow_whatsapp' => $allow_whatsapp,
     ]);
     $isEditMode = true;
 }
@@ -180,6 +183,17 @@ ob_start();
                     <small class="text-secondary">Email cannot be changed here.</small>
                 </div>
             </div>
+
+            <div class="form-check mt-3">
+                <input type="checkbox" name="allow_whatsapp" id="allowWa" class="form-check-input"
+                       <?= (int)($agent['allow_whatsapp'] ?? 0) === 1 ? 'checked' : '' ?>>
+                <label for="allowWa" class="form-check-label fw-semibold">
+                    Allow contact via WhatsApp
+                </label>
+                <div class="small text-secondary">
+                    When checked, a WhatsApp shortcut is shown next to your phone number.
+                </div>
+            </div>
         </div>
 
         <div class="d-flex justify-content-end gap-2">
@@ -200,15 +214,15 @@ ob_start();
             <tr><th class="text-secondary">Email</th><td><?= e($agent['email']) ?></td></tr>
             <tr><th class="text-secondary">Phone</th><td>
                 <?= e($agent['phone']) ?>
-                <?php
-                $waPhone = preg_replace('/\D/', '', $agent['phone'] ?? '');
-                if ($waPhone && str_starts_with($waPhone, '0')) $waPhone = '60' . ltrim($waPhone, '0');
-                if ($waPhone): ?>
+                <?php if ((int)($agent['allow_whatsapp'] ?? 0) === 1):
+                    $waPhone = preg_replace('/\D/', '', $agent['phone'] ?? '');
+                    if ($waPhone && str_starts_with($waPhone, '0')) $waPhone = '60' . ltrim($waPhone, '0');
+                    if ($waPhone): ?>
                 <a href="https://wa.me/<?= e($waPhone) ?>" target="_blank" rel="noopener"
                    class="btn btn-success btn-sm rounded-pill ms-2 py-0 px-2" title="Open WhatsApp">
                     <i class="bi bi-whatsapp" style="font-size:.8rem;"></i>
                 </a>
-                <?php endif; ?>
+                <?php endif; endif; ?>
             </td></tr>
         </table>
     </div>
