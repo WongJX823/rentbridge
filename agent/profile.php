@@ -198,7 +198,18 @@ ob_start();
             <tr><th class="text-secondary" style="width:200px;">Full name</th><td><?= e($agent['full_name']) ?></td></tr>
             <tr><th class="text-secondary">Staff ID</th><td><code><?= e($agent['staff_id'] ?? '—') ?></code></td></tr>
             <tr><th class="text-secondary">Email</th><td><?= e($agent['email']) ?></td></tr>
-            <tr><th class="text-secondary">Phone</th><td><?= e($agent['phone']) ?></td></tr>
+            <tr><th class="text-secondary">Phone</th><td>
+                <?= e($agent['phone']) ?>
+                <?php
+                $waPhone = preg_replace('/\D/', '', $agent['phone'] ?? '');
+                if ($waPhone && str_starts_with($waPhone, '0')) $waPhone = '60' . ltrim($waPhone, '0');
+                if ($waPhone): ?>
+                <a href="https://wa.me/<?= e($waPhone) ?>" target="_blank" rel="noopener"
+                   class="btn btn-success btn-sm rounded-pill ms-2 py-0 px-2" title="Open WhatsApp">
+                    <i class="bi bi-whatsapp" style="font-size:.8rem;"></i>
+                </a>
+                <?php endif; ?>
+            </td></tr>
         </table>
     </div>
 

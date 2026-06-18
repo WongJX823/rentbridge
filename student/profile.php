@@ -246,6 +246,20 @@ ob_start();
 
 <?php else: ?>
     <!-- VIEW MODE -->
+
+    <!-- Avatar -->
+    <?php require_once __DIR__ . '/../includes/avatar.php'; ?>
+    <div class="bg-white border rounded-3 p-4 mb-3 d-flex align-items-center gap-4 flex-wrap">
+        <?php render_avatar($student['avatar_path'] ?? null, $student['full_name'] ?? 'User', 88); ?>
+        <div>
+            <h4 class="mb-0 fw-bold"><?= e($student['full_name']) ?></h4>
+            <?php if (!empty($student['preferred_name'])): ?>
+                <p class="text-secondary mb-1 small">Known as <?= e($student['preferred_name']) ?></p>
+            <?php endif; ?>
+            <p class="text-secondary small mb-0"><?= e($student['university']) ?> · <?= e($student['email']) ?></p>
+        </div>
+    </div>
+
     <div class="bg-white border rounded-3 p-4 mb-3">
         <h6 class="text-secondary text-uppercase small mb-3">Basic info</h6>
         <table class="table table-sm mb-0">
@@ -256,19 +270,35 @@ ob_start();
             <tr><th class="text-secondary">Matric number</th><td><code><?= e($student['matric_no']) ?></code></td></tr>
             <tr><th class="text-secondary">University</th><td><?= e($student['university']) ?></td></tr>
             <tr><th class="text-secondary">Email</th><td><?= e($student['email']) ?></td></tr>
-            <tr><th class="text-secondary">Phone</th><td><?= e($student['phone']) ?></td></tr>
+            <tr><th class="text-secondary">Phone</th><td>
+                <?= e($student['phone']) ?>
+                <?php
+                $waPhone = preg_replace('/\D/', '', $student['phone'] ?? '');
+                if ($waPhone && str_starts_with($waPhone, '0')) $waPhone = '60' . ltrim($waPhone, '0');
+                if ($waPhone): ?>
+                <a href="https://wa.me/<?= e($waPhone) ?>" target="_blank" rel="noopener"
+                   class="btn btn-success btn-sm rounded-pill ms-2 py-0 px-2" title="Open WhatsApp">
+                    <i class="bi bi-whatsapp" style="font-size:.8rem;"></i>
+                </a>
+                <?php endif; ?>
+            </td></tr>
         </table>
     </div>
 
     <div class="bg-white border rounded-3 p-4 mb-3">
-        <h6 class="text-secondary text-uppercase small mb-3">
-            Housing preferences
-            <?php if ((int)$student['looking_for_housing'] === 1): ?>
-                <span class="badge bg-success ms-1">Actively looking</span>
-            <?php else: ?>
-                <span class="badge bg-secondary ms-1">Not actively looking</span>
-            <?php endif; ?>
-        </h6>
+        <div class="d-flex align-items-center justify-content-between mb-3">
+            <h6 class="text-secondary text-uppercase small mb-0">Housing preferences</h6>
+            <div class="d-flex align-items-center gap-2">
+                <span class="small text-secondary" id="lookingLabel">
+                    <?= (int)$student['looking_for_housing'] === 1 ? 'Actively looking' : 'Not looking' ?>
+                </span>
+                <div class="form-check form-switch mb-0">
+                    <input class="form-check-input" type="checkbox" id="lookingToggle"
+                           <?= (int)$student['looking_for_housing'] === 1 ? 'checked' : '' ?>
+                           style="cursor:pointer;" title="Toggle find housemates">
+                </div>
+            </div>
+        </div>
         <table class="table table-sm mb-0">
             <tr>
                 <th class="text-secondary" style="width:200px;">Preferred city</th>
@@ -485,6 +515,30 @@ ob_start();
         newInput.value = '';
         confirmInput.value = '';
         errorBox.classList.add('d-none');
+    });
+})();
+</script>
+
+<script>
+(function() {
+    const toggle = document.getElementById('lookingToggle');
+    const label  = document.getElementById('lookingLabel');
+    if (!toggle) return;
+    toggle.addEventListener('change', async function() {
+        const checked = this.checked;
+        label.textContent = checked ? 'Actively looking' : 'Not looking';
+        try {
+            const resp = await fetch('/rentbridge/student/toggle_looking.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: new URLSearchParams({_csrf: '<?= csrf_token() ?>', looking: checked ? 1 : 0}),
+            });
+            const data = await resp.json();
+            if (!data.ok) throw new Error(data.error);
+        } catch {
+            this.checked = !checked;
+            label.textContent = !checked ? 'Actively looking' : 'Not looking';
+        }
     });
 })();
 </script>
