@@ -150,23 +150,23 @@ $urgentCases = (int)$stmt->fetchColumn();
                     <span class="sidebar-badge"><?= $totalUnread > 9 ? '9+' : $totalUnread ?></span>
                 <?php endif; ?>
             </a>
-            <a href="/rentbridge/faq.php"
-            class="sidebar-link <?= $activeNav === 'faq' ? 'active' : '' ?>">
-                <i class="bi bi-question-circle"></i>
-                <span class="sidebar-label">FAQ</span>
-            </a>
-            <a href="/rentbridge/contact.php"
-            class="sidebar-link <?= $activeNav === 'contact' ? 'active' : '' ?>">
-                <i class="bi bi-envelope"></i>
-                <span class="sidebar-label">Contact</span>
-            </a>
+            <!-- Help & Info -->
+            <div class="sidebar-collapsible">
+                <button class="sidebar-link sidebar-collapsible-toggle" type="button">
+                    <i class="bi bi-question-circle"></i>
+                    <span class="sidebar-label">Help &amp; Info</span>
+                    <i class="bi bi-chevron-down sidebar-chevron"></i>
+                </button>
+                <div class="sidebar-submenu">
+                    <a href="/rentbridge/about.php"   class="sidebar-link sidebar-sublink">About RentBridge</a>
+                    <a href="/rentbridge/faq.php"     class="sidebar-link sidebar-sublink <?= $activeNav === 'faq' ? 'active' : '' ?>">FAQ</a>
+                    <a href="/rentbridge/contact.php" class="sidebar-link sidebar-sublink <?= $activeNav === 'contact' ? 'active' : '' ?>">Feedback &amp; Contact</a>
+                    <a href="/rentbridge/legal.php"   class="sidebar-link sidebar-sublink">Terms &amp; Conditions</a>
+                    <a href="/rentbridge/privacy.php" class="sidebar-link sidebar-sublink">Privacy &amp; Security</a>
+                </div>
+            </div>
         </nav>
         <div class="sidebar-footer">
-            <a href="/rentbridge/agent/profile.php"
-               class="sidebar-link <?= $activeNav === 'profile' ? 'active' : '' ?>">
-                <i class="bi bi-person-fill"></i>
-                <span class="sidebar-label">Profile</span>
-            </a>
             <a href="/rentbridge/agent/settings.php"
                class="sidebar-link <?= $activeNav === 'settings' ? 'active' : '' ?>">
                 <i class="bi bi-gear-fill"></i>
@@ -229,6 +229,7 @@ $urgentCases = (int)$stmt->fetchColumn();
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+// Sidebar freeze toggle
 (function() {
     const toggle = document.getElementById('sidebarToggle');
     const body = document.body;
@@ -247,6 +248,8 @@ $urgentCases = (int)$stmt->fetchColumn();
         updateTooltip();
     });
 })();
+
+// Filter drawer
 (function() {
     const toggle = document.getElementById('filterToggle');
     const drawer = document.getElementById('filterDrawer');
@@ -256,6 +259,33 @@ $urgentCases = (int)$stmt->fetchColumn();
         toggle.classList.toggle('active');
     });
 })();
+
+// Sidebar submenu — independent of sidebar collapsed/expanded state
+document.querySelectorAll('.sidebar-collapsible-toggle').forEach(btn => {
+    btn.replaceWith(btn.cloneNode(true));
+});
+document.querySelectorAll('.sidebar-collapsible-toggle').forEach(btn => {
+    btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const parent = this.closest('.sidebar-collapsible');
+        const opening = !parent.classList.contains('open');
+        if (opening && document.body.classList.contains('sidebar-collapsed')) {
+            const rect = this.getBoundingClientRect();
+            parent.querySelector('.sidebar-submenu').style.top = rect.top + 'px';
+        }
+        parent.classList.toggle('open');
+    });
+});
+
+// Close floating submenu when clicking outside
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.sidebar-collapsible')) {
+        document.querySelectorAll('.sidebar-collapsible.open').forEach(el => {
+            el.classList.remove('open');
+        });
+    }
+});
 </script>
 </body>
 </html>

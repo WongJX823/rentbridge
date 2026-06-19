@@ -234,6 +234,7 @@ $pendingRequests = (int)$stmt->fetchColumn();
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+// Sidebar freeze toggle
 (function() {
     const toggle = document.getElementById('sidebarToggle');
     const body = document.body;
@@ -250,15 +251,10 @@ $pendingRequests = (int)$stmt->fetchColumn();
         localStorage.setItem('rb-user-sidebar',
             body.classList.contains('sidebar-collapsed') ? 'collapsed' : 'expanded');
         updateTooltip();
-        
-        // Close any open Help & Info submenu when collapsing
-        if (body.classList.contains('sidebar-collapsed')) {
-            document.querySelectorAll('.sidebar-collapsible.open').forEach(el => {
-                el.classList.remove('open');
-            });
-        }
     });
 })();
+
+// Filter drawer
 (function() {
     const toggle = document.getElementById('filterToggle');
     const drawer = document.getElementById('filterDrawer');
@@ -269,24 +265,31 @@ $pendingRequests = (int)$stmt->fetchColumn();
     });
 })();
 
+// Sidebar submenu — independent of sidebar collapsed/expanded state
 document.querySelectorAll('.sidebar-collapsible-toggle').forEach(btn => {
-    // Remove any duplicate listeners
     btn.replaceWith(btn.cloneNode(true));
 });
-
 document.querySelectorAll('.sidebar-collapsible-toggle').forEach(btn => {
     btn.addEventListener('click', function(e) {
         e.preventDefault();
         e.stopPropagation();
-        
-        // Don't open submenu when sidebar is collapsed
-        if (document.body.classList.contains('sidebar-collapsed')) {
-            return;
-        }
-        
         const parent = this.closest('.sidebar-collapsible');
+        const opening = !parent.classList.contains('open');
+        if (opening && document.body.classList.contains('sidebar-collapsed')) {
+            const rect = this.getBoundingClientRect();
+            parent.querySelector('.sidebar-submenu').style.top = rect.top + 'px';
+        }
         parent.classList.toggle('open');
     });
+});
+
+// Close floating submenu when clicking outside
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.sidebar-collapsible')) {
+        document.querySelectorAll('.sidebar-collapsible.open').forEach(el => {
+            el.classList.remove('open');
+        });
+    }
 });
 </script>
 </body>
