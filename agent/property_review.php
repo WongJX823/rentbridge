@@ -23,16 +23,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 : ('Failed: ' . $result['error']));
         header('Location: /rentbridge/agent/property_review.php?id=' . $propertyId);
         exit;
-    } elseif ($action === 'reject') {
+
+    } elseif ($action === 'pass') {
         $reason = trim($_POST['reason'] ?? '');
         if ($reason === '') {
-            set_flash('warning', 'Please provide a reason for rejection.');
+            set_flash('warning', 'Please provide a reason before passing.');
         } else {
-            $result = agent_reject_property($propertyId, $agentId, $reason);
+            $result = agent_pass_property($propertyId, $agentId, $reason);
             if ($result['ok']) {
                 set_flash('info', $result['no_agents_left']
-                    ? 'Rejected. No more agents available — escalated to admin.'
-                    : 'Rejected. Reassigning to next agent.');
+                    ? 'Passed. No more agents available — escalated to admin.'
+                    : 'Passed to next agent in queue.');
+            } else {
+                set_flash('danger', 'Failed: ' . ($result['error'] ?? 'Unknown error'));
+            }
+            header('Location: /rentbridge/agent/dashboard.php');
+            exit;
+        }
+
+    } elseif ($action === 'reject_listing') {
+        $reason = trim($_POST['reason'] ?? '');
+        if ($reason === '') {
+            set_flash('warning', 'Please provide a reason for rejecting the listing.');
+        } else {
+            $result = agent_reject_listing($propertyId, $agentId, $reason);
+            if ($result['ok']) {
+                set_flash('success', 'Listing rejected. The landlord has been notified.');
             } else {
                 set_flash('danger', 'Failed: ' . ($result['error'] ?? 'Unknown error'));
             }
@@ -186,24 +202,30 @@ ob_start();
 
             <?php if ($prop['agent_status'] === 'pending'): ?>
                 <h6 class="text-secondary text-uppercase small mb-3">Decision</h6>
+
                 <form method="POST" class="mb-2">
                     <?= csrf_field() ?>
                     <input type="hidden" name="action" value="accept">
                     <button type="submit" class="btn btn-success w-100"
-                            onclick="return confirm('Approve this property as verified?');">
-                        <i class="bi bi-check-circle me-1"></i> Accept & Approve
+                            onclick="return confirm('Approve this property as verified and make it live?');">
+                        <i class="bi bi-check-circle me-1"></i> Accept &amp; Approve
                     </button>
                 </form>
 
-                <button type="button" class="btn btn-outline-danger w-100"
-                        data-bs-toggle="modal" data-bs-target="#rejectModal">
-                    <i class="bi bi-x-circle me-1"></i> Reject
+                <button type="button" class="btn btn-outline-warning w-100 mb-2"
+                        data-bs-toggle="modal" data-bs-target="#passModal">
+                    <i class="bi bi-arrow-right-circle me-1"></i> Pass to another agent
                 </button>
 
-                <p class="text-secondary small text-center mt-3 mb-0">
-                    <i class="bi bi-info-circle"></i>
-                    Rejecting will reassign this property to the next available agent.
-                </p>
+                <button type="button" class="btn btn-outline-danger w-100"
+                        data-bs-toggle="modal" data-bs-target="#rejectModal">
+                    <i class="bi bi-slash-circle me-1"></i> Reject listing
+                </button>
+
+                <div class="mt-3 p-2 bg-light rounded small text-secondary">
+                    <p class="mb-1"><strong>Pass</strong> — I can't handle this (area, workload) but property looks valid. Sends to the next agent in queue.</p>
+                    <p class="mb-0"><strong>Reject listing</strong> — Fake documents, scam, or illegal property. Landlord is notified and listing is permanently rejected.</p>
+                </div>
             <?php elseif ($prop['agent_status'] === 'accepted'): ?>
                 <div class="alert alert-success small mb-0">
                     <i class="bi bi-check-circle-fill"></i>
@@ -216,28 +238,56 @@ ob_start();
     </div>
 </div>
 
-<!-- Reject modal -->
+<!-- Pass modal -->
+<div class="modal fade" id="passModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="POST" class="modal-content">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" value="pass">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-arrow-right-circle text-warning me-2"></i>Pass to another agent</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning small py-2">
+                    The property will be reassigned to the next available agent in the queue. Use this when you're unable to handle this property — not because of a problem with the listing itself.
+                </div>
+                <label class="form-label fw-semibold">Reason <small class="text-danger">*</small></label>
+                <textarea name="reason" class="form-control" rows="3" required
+                          placeholder="e.g. Property is outside my coverage area. / Current workload too high."></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-warning">Pass to next agent</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Reject listing modal -->
 <div class="modal fade" id="rejectModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <form method="POST" class="modal-content">
             <?= csrf_field() ?>
-            <input type="hidden" name="action" value="reject">
+            <input type="hidden" name="action" value="reject_listing">
             <div class="modal-header">
-                <h5 class="modal-title">Reject this property</h5>
+                <h5 class="modal-title"><i class="bi bi-slash-circle text-danger me-2"></i>Reject listing</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <p class="text-secondary small">
-                    Provide a clear reason. The next agent will see this. Use this if the
-                    documents look fake, the photos don't match the address, you're unable
-                    to inspect in your area, etc.
-                </p>
-                <textarea name="reason" class="form-control" rows="4" required
-                          placeholder="e.g. Property is outside my coverage area in Melaka Tengah."></textarea>
+                <div class="alert alert-danger small py-2">
+                    <strong>Permanent action.</strong> The listing will be rejected immediately and the landlord will be notified with your reason. Use this only for fake documents, scam listings, or illegal properties.
+                </div>
+                <label class="form-label fw-semibold">Reason <small class="text-danger">*</small></label>
+                <textarea name="reason" class="form-control" rows="3" required
+                          placeholder="e.g. Documents appear forged. Photos do not match the stated address."></textarea>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="submit" class="btn btn-danger">Submit rejection</button>
+                <button type="submit" class="btn btn-danger"
+                        onclick="return confirm('This will permanently reject the listing and notify the landlord. Continue?');">
+                    Reject listing
+                </button>
             </div>
         </form>
     </div>

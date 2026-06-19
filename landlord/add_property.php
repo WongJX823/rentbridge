@@ -263,16 +263,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             $pdo->commit();
 
-            // Auto-assign agent for NEW properties (not edits)
+            // Auto-assign agent:
+            //  - always on new properties
+            //  - on edits when the property has no agent assigned yet (e.g. after a rejection reset)
+            require_once __DIR__ . '/../includes/agent_assignment.php';
+            $needsAssignment = false;
             if (!$isEdit) {
-                require_once __DIR__ . '/../includes/agent_assignment.php';
+                $needsAssignment = true;
+            } else {
+                // Check if property is now pending_approval but has no assigned agent
+                $stmt = $pdo->prepare("SELECT assigned_agent_id, status FROM properties WHERE id = ?");
+                $stmt->execute([$propertyId]);
+                $latest = $stmt->fetch();
+                if ($latest && $latest['status'] === 'pending_approval' && empty($latest['assigned_agent_id'])) {
+                    $needsAssignment = true;
+                }
+            }
+
+            if ($needsAssignment) {
                 $assignResult = assign_agent_to_property((int)$propertyId);
                 if ($assignResult['ok']) {
-                    set_flash('success',
-                        'Property submitted! An agent has been assigned to verify your listing.');
+                    set_flash('success', $isEdit
+                        ? 'Property updated and sent for re-review. An agent has been assigned.'
+                        : 'Property submitted! An agent has been assigned to verify your listing.');
                 } else {
-                    set_flash('warning',
-                        'Property submitted, but no agent could be assigned right now: ' . $assignResult['error']);
+                    set_flash('warning', ($isEdit ? 'Property updated' : 'Property submitted')
+                        . ', but no agent could be assigned right now: ' . $assignResult['error']);
                 }
             } else {
                 set_flash('success', 'Property updated successfully.');

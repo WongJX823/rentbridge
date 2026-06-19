@@ -1486,7 +1486,7 @@ CREATE TABLE IF NOT EXISTS property_agent_assignments (
     round_number INT NOT NULL,
     assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     responded_at TIMESTAMP NULL,
-    outcome ENUM('pending','accepted','rejected','timeout','reassigned') NOT NULL DEFAULT 'pending',
+    outcome ENUM('pending','accepted','passed','rejected_listing','timeout','reassigned') NOT NULL DEFAULT 'pending',
     rejection_reason VARCHAR(500) NULL,
     PRIMARY KEY (id),
     INDEX idx_property (property_id),

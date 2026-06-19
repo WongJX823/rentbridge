@@ -4,44 +4,48 @@ require_once __DIR__ . '/auth.php';
 const ASSIGNMENT_TIMEOUT_HOURS = 24;
 
 /**
- * Pick the next agent for a property.
- * Strategy: 
- *   1. Get list of all agent users, ordered by id ASC
- *   2. Skip agents who already declined this property
- *   3. Skip the currently-assigned agent (if any)
- *   4. Return the first eligible agent_id, or null if none available
+ * Pick the next agent for a property — FIFO by pending-review workload.
+ * Strategy:
+ *   1. Order agents by number of currently-pending property assignments ASC
+ *      (fewest pending reviews goes first), ties broken by user_id ASC.
+ *   2. Skip the currently-assigned agent.
+ *   3. Skip any agent who already has a terminal outcome for this property
+ *      (passed, rejected, timeout, reassigned).
  */
 function pick_next_agent_for_property(int $propertyId, ?int $currentAgentId = null): ?int {
     $pdo = db();
 
-    // Get all agents (by user_id ascending)
+    // Agents ordered by pending review workload (FIFO)
     $stmt = $pdo->query("
-        SELECT u.id
-          FROM users u
-          JOIN agents a ON a.user_id = u.id
+        SELECT a.user_id
+          FROM agents a
+          JOIN users u ON u.id = a.user_id
+          LEFT JOIN property_agent_assignments paa
+            ON paa.agent_id = a.user_id AND paa.outcome = 'pending'
          WHERE u.primary_role = 'agent'
-         ORDER BY u.id ASC
+         GROUP BY a.user_id
+         ORDER BY COUNT(paa.id) ASC, a.user_id ASC
     ");
     $allAgents = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
     if (empty($allAgents)) return null;
 
-    // Get agents who already have a non-pending outcome for this property
+    // Agents who already have a terminal outcome for this property
     $stmt = $pdo->prepare("
         SELECT DISTINCT agent_id
           FROM property_agent_assignments
          WHERE property_id = ?
-           AND outcome IN ('rejected', 'timeout', 'reassigned')
+           AND outcome IN ('passed', 'rejected_listing', 'timeout', 'reassigned')
     ");
     $stmt->execute([$propertyId]);
-    $excluded = $stmt->fetchAll(PDO::FETCH_COLUMN);
+    $excluded = array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
 
     if ($currentAgentId !== null) {
         $excluded[] = $currentAgentId;
     }
 
     foreach ($allAgents as $agentId) {
-        if (!in_array((int)$agentId, array_map('intval', $excluded), true)) {
+        if (!in_array((int)$agentId, $excluded, true)) {
             return (int)$agentId;
         }
     }
@@ -179,17 +183,14 @@ function agent_accept_property(int $propertyId, int $agentId): array {
 }
 
 /**
- * Agent rejects an assignment.
- * Triggers reassignment to next agent.
+ * Agent passes an assignment — "I can't handle this but it looks valid."
+ * Triggers FIFO reassignment to the next available agent.
+ * Property stays pending_approval.
  */
-function agent_reject_property(int $propertyId, int $agentId, string $reason = ''): array {
+function agent_pass_property(int $propertyId, int $agentId, string $reason = ''): array {
     $pdo = db();
 
-    $stmt = $pdo->prepare("
-        SELECT assigned_agent_id, agent_status, assignment_round
-          FROM properties
-         WHERE id = ?
-    ");
+    $stmt = $pdo->prepare("SELECT assigned_agent_id, agent_status FROM properties WHERE id = ?");
     $stmt->execute([$propertyId]);
     $prop = $stmt->fetch();
 
@@ -201,10 +202,10 @@ function agent_reject_property(int $propertyId, int $agentId, string $reason = '
         return ['ok' => false, 'error' => 'This assignment is no longer pending'];
     }
 
-    // Mark audit row as rejected
+    // Mark audit row as passed
     $stmt = $pdo->prepare("
         UPDATE property_agent_assignments
-           SET outcome = 'rejected',
+           SET outcome = 'passed',
                responded_at = NOW(),
                rejection_reason = ?
          WHERE property_id = ? AND agent_id = ? AND outcome = 'pending'
@@ -216,10 +217,64 @@ function agent_reject_property(int $propertyId, int $agentId, string $reason = '
     $result = assign_agent_to_property($propertyId);
 
     return [
-        'ok' => true,
+        'ok'            => true,
         'reassigned_to' => $result['agent_id'] ?? null,
-        'no_agents_left' => ($result['agent_id'] === null),
+        'no_agents_left'=> ($result['agent_id'] === null),
     ];
+}
+
+/**
+ * Agent rejects the listing outright — fake docs, scam, illegal property.
+ * Sets status = 'rejected', notifies landlord, no reassignment.
+ */
+function agent_reject_listing(int $propertyId, int $agentId, string $reason = ''): array {
+    $pdo = db();
+
+    $stmt = $pdo->prepare("SELECT assigned_agent_id, agent_status, landlord_id FROM properties WHERE id = ?");
+    $stmt->execute([$propertyId]);
+    $prop = $stmt->fetch();
+
+    if (!$prop) return ['ok' => false, 'error' => 'Property not found'];
+    if ((int)$prop['assigned_agent_id'] !== $agentId) {
+        return ['ok' => false, 'error' => 'You are not the assigned agent'];
+    }
+    if ($prop['agent_status'] !== 'pending') {
+        return ['ok' => false, 'error' => 'This assignment is no longer pending'];
+    }
+
+    // Mark property as rejected — no reassignment
+    $stmt = $pdo->prepare("
+        UPDATE properties
+           SET agent_status = 'rejected',
+               status = 'rejected'
+         WHERE id = ?
+    ");
+    $stmt->execute([$propertyId]);
+
+    // Mark audit row
+    $stmt = $pdo->prepare("
+        UPDATE property_agent_assignments
+           SET outcome = 'rejected_listing',
+               responded_at = NOW(),
+               rejection_reason = ?
+         WHERE property_id = ? AND agent_id = ? AND outcome = 'pending'
+         ORDER BY id DESC LIMIT 1
+    ");
+    $stmt->execute([$reason, $propertyId, $agentId]);
+
+    // Notify landlord
+    $landlordId = (int)$prop['landlord_id'];
+    if ($landlordId && function_exists('notify')) {
+        notify(
+            $landlordId,
+            'property_rejected',
+            'Your property listing was rejected',
+            "Your property listing has been rejected by our agent. Reason: {$reason}",
+            "/rentbridge/landlord/properties.php"
+        );
+    }
+
+    return ['ok' => true];
 }
 
 /**
