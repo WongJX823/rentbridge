@@ -24,6 +24,12 @@ $sortBy      = $_GET['sort'] ?? 'recent';
 $where = "p.status = 'available'";
 $params = [];
 
+// Landlords don't see their own properties
+if (is_logged_in() && current_role() === 'landlord') {
+    $where .= " AND p.landlord_id != ?";
+    $params[] = current_user_id();
+}
+
 if ($searchQuery !== '') {
     $where .= " AND (p.title LIKE ? OR p.address LIKE ? OR p.city LIKE ?)";
     $like = '%' . $searchQuery . '%';
@@ -55,9 +61,12 @@ $orderBy = match($sortBy) {
 
 $stmt = $pdo->prepare("
     SELECT p.*,
+           l.full_name      AS landlord_name,
+           l.preferred_name AS landlord_preferred_name,
            (SELECT image_path FROM property_images
              WHERE property_id = p.id ORDER BY is_primary DESC, id LIMIT 1) AS image_path
       FROM properties p
+      JOIN landlords l ON l.user_id = p.landlord_id
      WHERE $where
      ORDER BY $orderBy
 ");
@@ -141,8 +150,8 @@ ob_start();
         to save listings, message landlords, and book properties.
     </div>
     <div class="d-flex gap-2">
-        <a href="/rentbridge/auth/login.php" class="btn btn-sm btn-outline-dark">Log in</a>
-        <a href="/rentbridge/auth/register_student.php" class="btn btn-sm btn-primary">Sign up</a>
+        <a href="/rentbridge/auth/login.php" class="btn btn-sm btn-primary">Log in</a>
+        <a href="/rentbridge/auth/register_student.php" class="btn btn-sm btn-outline-secondary">Sign up</a>
     </div>
 </div>
 <?php endif; ?>
@@ -201,6 +210,9 @@ ob_start();
                                     <strong class="text-emerald">RM <?= number_format((float)$p['monthly_rent']) ?></strong>
                                     <small class="text-secondary">/ mo</small>
                                 </div>
+                                <small class="text-secondary text-truncate ms-2" style="max-width:120px;">
+                                    <?= e($p['landlord_preferred_name'] ?: $p['landlord_name']) ?>
+                                </small>
                             </div>
                         </div>
                     </div>

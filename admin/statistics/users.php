@@ -19,7 +19,7 @@ $dateWhere = $intervalSql
     : '';
 
 // === KPI cards ===
-$stmt = $pdo->query("SELECT primary_role, COUNT(*) AS cnt FROM users GROUP BY primary_role");
+$stmt = $pdo->query("SELECT primary_role, COUNT(*) AS cnt FROM users WHERE primary_role != 'admin' GROUP BY primary_role");
 $roleCounts = [];
 foreach ($stmt->fetchAll() as $r) {
     $roleCounts[$r['primary_role']] = (int)$r['cnt'];
@@ -73,8 +73,9 @@ $growthRaw = $stmt->fetchAll();
 
 // Pivot for chart
 $months = [];
-$growthByRole = ['student' => [], 'landlord' => [], 'agent' => [], 'admin' => []];
+$growthByRole = ['student' => [], 'landlord' => [], 'agent' => []]; // admin excluded from stats
 foreach ($growthRaw as $r) {
+    if ($r['primary_role'] === 'admin') continue;
     $months[$r['month']] = true;
 }
 $months = array_keys($months);
@@ -349,19 +350,18 @@ ob_start();
         }
     });
 
-    // Role doughnut
+    // Role doughnut (admin excluded from statistics)
     new Chart(document.getElementById('roleChart'), {
         type: 'doughnut',
         data: {
-            labels: ['Students', 'Landlords', 'Agents', 'Admins'],
+            labels: ['Students', 'Landlords', 'Agents'],
             datasets: [{
                 data: [
                     <?= $roleCounts['student']  ?? 0 ?>,
                     <?= $roleCounts['landlord'] ?? 0 ?>,
                     <?= $roleCounts['agent']    ?? 0 ?>,
-                    <?= $roleCounts['admin']    ?? 0 ?>,
                 ],
-                backgroundColor: ['#2E8B57', '#C9923F', '#D4A017', '#0F2C52'],
+                backgroundColor: ['#2E8B57', '#C9923F', '#D4A017'],
             }]
         },
         options: {

@@ -1,9 +1,13 @@
 <?php
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/contracts.php';
 require_role('student');
 
 $pdo = db();
 $userId = current_user_id();
+
+// Check for contract expiry notifications (lazy, deduped)
+check_contract_expiry_notifications();
 
 // Get student profile
 $stmt = $pdo->prepare('SELECT * FROM students WHERE user_id = ?');

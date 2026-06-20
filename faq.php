@@ -17,7 +17,7 @@ $faqs = [
             ['q' => 'How do I save a property for later?',
              'a' => 'Click the heart icon on any property card or detail page. Your saved properties appear in the "Saved" tab in your sidebar.'],
             ['q' => 'Can I rent with friends?',
-             'a' => 'Yes! Use the "Find Partners" feature to discover other students looking for the same property. The primary tenant (you) creates the booking; additional co-tenants are added via a chat form sent by the agent before contract generation. Only the primary tenant needs a RentBridge account.'],
+             'a' => 'Yes! Use the "Find Housemates" feature to discover other students looking for the same property. The primary tenant (you) creates the booking; additional co-tenants are added via a chat form sent by the agent before contract generation. Only the primary tenant needs a RentBridge account.'],
             ['q' => 'What happens after I apply for a property?',
              'a' => 'The landlord receives your application and reviews it. If accepted, a UTeM agent is auto-assigned to inspect the property within 5 days. Once inspection passes, the agent generates a tenancy contract for all parties to sign offline. The agent then uploads the signed contract back to the system.'],
         ],

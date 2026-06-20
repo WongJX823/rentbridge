@@ -25,8 +25,9 @@ ob_start();
 <?php else: ?>
     <div class="bg-white border rounded-3 overflow-hidden">
         <?php foreach ($conversations as $i => $c):
-            $other = chat_get_user_display((int)$c['other_user_id']);
-            $unread = (int)$c['unread_count'];
+            $isGroup  = ($c['context_type'] === 'housemate_group');
+            $other    = $isGroup ? null : chat_get_user_display((int)$c['other_user_id']);
+            $unread   = (int)$c['unread_count'];
             $isLocked = (int)($c['is_locked'] ?? 0) === 1;
         ?>
             <a href="/rentbridge/chat/conversation.php?id=<?= (int)$c['id'] ?>"
@@ -37,25 +38,39 @@ ob_start();
                onmouseout="this.style.background='white'">
                 <div class="p-3 d-flex justify-content-between align-items-start">
                     <div class="d-flex gap-3 flex-grow-1 me-3">
-                        <!-- Avatar -->
-                        <?php
-                        require_once __DIR__ . '/includes/avatar.php';
-                        $_otherAvatar = get_avatar_path((int)$other['id'], $other['primary_role']);
-                        ?>
-                        <?php render_avatar($_otherAvatar, $other['name'], 44); ?>
+                        <?php if ($isGroup): ?>
+                            <!-- Group avatar -->
+                            <div style="width:44px; height:44px; border-radius:50%; background:#E4F2EA;
+                                        color:#0F2C52; display:flex; align-items:center; justify-content:center;
+                                        font-size:1.2rem; flex-shrink:0;">
+                                <i class="bi bi-people-fill"></i>
+                            </div>
+                        <?php else: ?>
+                            <!-- Regular avatar -->
+                            <?php
+                            require_once __DIR__ . '/includes/avatar.php';
+                            $_otherAvatar = get_avatar_path((int)$other['id'], $other['primary_role']);
+                            ?>
+                            <?php render_avatar($_otherAvatar, $other['name'], 44); ?>
+                        <?php endif; ?>
                         <div class="flex-grow-1">
                             <div class="d-flex align-items-center gap-2 mb-1">
-                                <strong><?= e($other['name']) ?></strong>
-                                <span class="badge"
-                                      style="background: <?php
-                                          echo match($other['primary_role']) {
-                                              'student'=>'#E4F2EA','landlord'=>'#E6ECF4',
-                                              'agent'=>'#FFF4D6','admin'=>'#F8D7DA',
-                                              default=>'#E2E2E2',
-                                          };
-                                      ?>; color:#0F2C52; font-weight:500;">
-                                    <?= e(ucfirst($other['primary_role'])) ?>
-                                </span>
+                                <?php if ($isGroup): ?>
+                                    <strong>Housemate Group</strong>
+                                    <span class="badge bg-success" style="font-weight:500;">Group</span>
+                                <?php else: ?>
+                                    <strong><?= e($other['name']) ?></strong>
+                                    <span class="badge"
+                                          style="background: <?php
+                                              echo match($other['primary_role']) {
+                                                  'student'=>'#E4F2EA','landlord'=>'#E6ECF4',
+                                                  'agent'=>'#FFF4D6','admin'=>'#F8D7DA',
+                                                  default=>'#E2E2E2',
+                                              };
+                                          ?>; color:#0F2C52; font-weight:500;">
+                                        <?= e(ucfirst($other['primary_role'])) ?>
+                                    </span>
+                                <?php endif; ?>
                                 <?php if ($isLocked): ?>
                                     <span class="badge bg-secondary" title="Closed">
                                         <i class="bi bi-lock-fill"></i>

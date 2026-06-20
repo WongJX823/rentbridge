@@ -23,15 +23,33 @@ $totals = [
     'released' => 0.0,
     'paid'     => 0.0,
 ];
+$totalBaseRent = 0.0;
 foreach ($commissions as $c) {
     $totals[$c['status']] += (float)$c['total_payable'];
+    if (in_array($c['status'], ['earned','released','paid'])) {
+        $totalBaseRent += (float)$c['base_rent'];
+    }
 }
+
+// 70/30 split: agent receives 30% of base rent per contract
+$agentShare   = $totalBaseRent * 0.30;
+$utemShare    = $totalBaseRent * 0.70;
 
 $pageTitle = 'Earnings';
 $activeNav = 'earnings';
 
 ob_start();
 ?>
+
+<!-- Commission split info banner -->
+<div class="alert border mb-4 d-flex gap-3 align-items-start"
+     style="background:#F4F8FF; border-color:#0F2C52;">
+    <i class="bi bi-info-circle text-secondary fs-4"></i>
+    <div class="small">
+        <strong>Commission structure:</strong> Each successful contract earns 1&times; base rent as commission.
+        <strong>30%</strong> goes to you (agent) and <strong>70%</strong> is remitted to UTeM.
+    </div>
+</div>
 
 <div class="row g-3 mb-4">
     <div class="col-md-3">
@@ -44,23 +62,24 @@ ob_start();
     </div>
     <div class="col-md-3">
         <div class="bg-white border rounded-3 p-3">
-            <div class="small text-secondary">Earned</div>
+            <div class="small text-secondary">Earned (30% share)</div>
             <div style="font-family:'Fraunces',serif; font-size:1.4rem; font-weight:600; color:#0F2C52;">
-                RM <?= number_format($totals['earned'], 2) ?>
+                RM <?= number_format($agentShare, 2) ?>
             </div>
+            <div class="small text-secondary mt-1">From RM <?= number_format($totalBaseRent, 2) ?> total commission</div>
         </div>
     </div>
     <div class="col-md-3">
         <div class="bg-white border rounded-3 p-3">
-            <div class="small text-secondary">Released</div>
-            <div style="font-family:'Fraunces',serif; font-size:1.4rem; font-weight:600; color:#0F2C52;">
-                RM <?= number_format($totals['released'], 2) ?>
+            <div class="small text-secondary">UTeM share (70%)</div>
+            <div style="font-family:'Fraunces',serif; font-size:1.4rem; font-weight:600; color:#6c757d;">
+                RM <?= number_format($utemShare, 2) ?>
             </div>
         </div>
     </div>
     <div class="col-md-3">
         <div class="bg-white border rounded-3 p-3" style="background:linear-gradient(135deg,#fff,#F4FBF7);">
-            <div class="small text-secondary">Paid</div>
+            <div class="small text-secondary">Paid out</div>
             <div style="font-family:'Fraunces',serif; font-size:1.4rem; font-weight:600; color:#2E8B57;">
                 RM <?= number_format($totals['paid'], 2) ?>
             </div>
@@ -83,21 +102,25 @@ ob_start();
                     <th>Property</th>
                     <th>Base rent</th>
                     <th>Commission</th>
-                    <th>SST</th>
-                    <th>Total</th>
+                    <th>Your share (30%)</th>
+                    <th>UTeM (70%)</th>
                     <th>Status</th>
                     <th>Earned</th>
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ($commissions as $c): ?>
+                <?php foreach ($commissions as $c):
+                    $base = (float)$c['commission_amt'];
+                    $myShare   = $base * 0.30;
+                    $utemPart  = $base * 0.70;
+                ?>
                     <tr>
                         <td class="ps-3"><code><?= e($c['contract_code']) ?></code></td>
                         <td class="small"><?= e($c['property_title']) ?></td>
                         <td>RM <?= number_format((float)$c['base_rent'], 2) ?></td>
-                        <td>RM <?= number_format((float)$c['commission_amt'], 2) ?></td>
-                        <td>RM <?= number_format((float)$c['sst_amt'], 2) ?></td>
-                        <td><strong class="text-emerald">RM <?= number_format((float)$c['total_payable'], 2) ?></strong></td>
+                        <td class="small text-secondary">RM <?= number_format($base, 2) ?></td>
+                        <td><strong class="text-emerald">RM <?= number_format($myShare, 2) ?></strong></td>
+                        <td class="small text-secondary">RM <?= number_format($utemPart, 2) ?></td>
                         <td>
                             <?php
                             $color = match($c['status']) {

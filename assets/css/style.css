@@ -35,14 +35,20 @@ h1, h2, h3, h4, h5 {
    All buttons invert to white background + navy text on hover
    ================================================ */
 
-/* Shared base style for all buttons */
+/* Consistent pill shape + centred text for every Bootstrap button variant */
+.btn {
+    border-radius: 999px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
 .btn-primary,
 .btn-success,
 .btn-outline-light {
-    border-radius: 999px;
     padding: 0.55rem 1.4rem;
-    font-weight: 600;
-    transition: all 0.2s ease;
 }
 
 /* Default colors */
@@ -287,9 +293,7 @@ h1, h2, h3, h4, h5 {
     background: transparent;
     color: var(--rb-navy);
     border: 1px solid var(--rb-line);
-    border-radius: 999px;
     padding: 0.55rem 1.4rem;
-    font-weight: 600;
 }
 .btn-ghost:hover {
     background: var(--rb-cream);
