@@ -39,8 +39,9 @@ $recentProperties = $stmt->fetchAll();
 // Total available properties
 $totalAvailable = (int)$pdo->query("SELECT COUNT(*) FROM properties WHERE status = 'available'")->fetchColumn();
 
-$pageTitle = 'Browse properties';
-$activeNav = 'dashboard';
+$pageTitle     = 'Browse properties';
+$activeNav     = 'dashboard';
+$showPageTitle = false;
 
 ob_start();
 ?>

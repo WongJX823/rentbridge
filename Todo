@@ -1,3 +1,30 @@
+
+
+Landlord-Property-Register
+Delete property registration if same address.
+Show agent assigned in summary even in pending. 
+Must add at least 1 document to show not scam.
+Notify landlord when the price insert is less than estimated price - 200. 
+When register or edit, the inspection option remove "either", and prompt that agree to hand in the key and enable agent to control the property inspection.
+Landlord-Browse
+2 idea: 
+    1. Show Landlord name in properties grid in browse page.
+    2. Not show owned properties in browse page. 
+
+Landlord-Browse-Chat
+Remove chat btn for landlord in browse page to prevent chat from start. 
+
+Agent-Inspection
+Trigger: agent clicks "Accept" on property_review.php (existing action, agent_status → accepted). Everything below is new and sits between that moment and the existing approve/reject-listing decision. Accept status does not equal to approved(property be live)
+    On accept, find-or-create the landlord-agent conversation for this property (reuse your start.php logic), context_type = 'agent_case'. Post a system_notice: "Agent [name] accepted this property — propose an inspection time below."
+    Agent sends a new message type, inspection_schedule_request — a form-in-chat (same pattern as tenant_info_form) with one or more proposed date/time slots plus a free-text note.
+    Landlord responds with inspection_schedule_response: picks a slot (or requests reschedule), selects an access method (landlord_present / lockbox_code / other, with a text field for the code/details), and ticks a consent statement — "I authorize [agent] to inspect [property] at [date/time] on my behalf." Submitting this writes the row described below.
+    If the landlord requests reschedule instead of confirming: wipe the pending schedule row (same wipe-and-resend pattern you use for tenant info forms) and let the agent send a new inspection_schedule_request. No separate state machine needed — it's just resend.
+    On confirm, system posts a system_notice to both sides: "Inspection confirmed: [date/time], access: [method]." This is the only place "trust" language shows up, and it's just the consent line from step 3 — no key, no separate prompt.
+    Offline: the actual visit happens however the access method says (agent meets landlord, or uses the lockbox code, etc.) — nothing for the system to track here.
+    Agent returns to property_review.php (or a new button there) and clicks "Mark inspection complete," setting completed_at on the inspection row.
+    From there your existing approve/reject-listing logic takes over unchanged — agent_verified_at, agent_verified_by, property status transitions all stay as they are.
+
 Agent-Assignment
 Agent need to be assigned after property edited if not assigned before. 
 Assigned to another agent instead of assign to same agent until full task. FIFO
@@ -11,43 +38,14 @@ MODEL B — Two-button approach (cleaner)
      → landlord notified
      → no reassignment
 
-Landlord-Property-Register
-Delete property registration if same address.
-Show agent assigned in summary even in pending. 
-Must add at least 1 document to show not scam.
-Notify landlord when the price insert is less than estimated price - 200. 
-When register or edit, the inspection option remove "either", and prompt that agree to hand in the key and enable agent to control the property inspection.
-Landlord-Browse
-2 idea: 
-    1. Show Landlord name in properties grid in browse page.
-    2. Not show owned properties in browse page. 
-
-Agent-Inspection
-Trigger: agent clicks "Accept" on property_review.php (existing action, agent_status → accepted). Everything below is new and sits between that moment and the existing approve/reject-listing decision. Accept status does not equal to approved(property be live)
-    On accept, find-or-create the landlord-agent conversation for this property (reuse your start.php logic), context_type = 'agent_case'. Post a system_notice: "Agent [name] accepted this property — propose an inspection time below."
-    Agent sends a new message type, inspection_schedule_request — a form-in-chat (same pattern as tenant_info_form) with one or more proposed date/time slots plus a free-text note.
-    Landlord responds with inspection_schedule_response: picks a slot (or requests reschedule), selects an access method (landlord_present / lockbox_code / other, with a text field for the code/details), and ticks a consent statement — "I authorize [agent] to inspect [property] at [date/time] on my behalf." Submitting this writes the row described below.
-    If the landlord requests reschedule instead of confirming: wipe the pending schedule row (same wipe-and-resend pattern you use for tenant info forms) and let the agent send a new inspection_schedule_request. No separate state machine needed — it's just resend.
-    On confirm, system posts a system_notice to both sides: "Inspection confirmed: [date/time], access: [method]." This is the only place "trust" language shows up, and it's just the consent line from step 3 — no key, no separate prompt.
-    Offline: the actual visit happens however the access method says (agent meets landlord, or uses the lockbox code, etc.) — nothing for the system to track here.
-    Agent returns to property_review.php (or a new button there) and clicks "Mark inspection complete," setting completed_at on the inspection row.
-    From there your existing approve/reject-listing logic takes over unchanged — agent_verified_at, agent_verified_by, property status transitions all stay as they are.
-
-Landlord-Browse-Chat
-Remove chat btn for landlord in browse page to prevent chat from start. 
-
 Agent&Landlord-Avatar
-Not update yet
+Not update yet /
 
 Agent-Contract Sign
 e-signature as contract sign alternative.
 contract term- notify earlier > 2months for moving out
 Notify student for 4 month earlier, state the contract term
 duration>= 2 sem 
-
-Chat
-put all the form, photo upload, doc upload in chat system to a plus sign beside input field.
-Make sure the form will shown only for correct primary_role.
 
 Find partner(Change to find housemate) 
 Put average price for post, price/tenantNum.
@@ -70,8 +68,12 @@ Legal-Terms and Condition
 Sem based contract which mean the contract will earlier or later based on sem calendar. 
 Change the legal.php back to privacy and security, terms and conditions.
 
-    UI-sidebar
-    SIdebar could be collapsed/open, keep freeze/unfreeze when 3-line-btn beside logo pressed. Sidebar submenu help and info could be collapsed/open for all time(sidebar collapsed or opened no affect), Show sidebar-menu item color change when open the matched page
+UI-sidebar
+SIdebar could be collapsed/open, keep freeze/unfreeze when 3-line-btn beside logo pressed. Sidebar submenu help and info could be collapsed/open for all time(sidebar collapsed or opened no affect), Show sidebar-menu item color change when open the matched page    /
+
+Chat
+put all the form, photo upload, doc upload in chat system to a plus sign beside input field.
+Make sure the form will shown only for correct primary_role.
 
 Future work/ Out of scope 
 Student only 1 sem, how? throw the question out of scope. 
