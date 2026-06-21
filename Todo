@@ -36,6 +36,9 @@ Trigger: agent clicks "Accept" on property_review.php (existing action, agent_st
 Landlord-Browse-Chat
 Remove chat btn for landlord in browse page to prevent chat from start. 
 
+Agent&Landlord-Avatar
+Not update yet
+
 Agent-Contract Sign
 e-signature as contract sign alternative.
 contract term- notify earlier > 2months for moving out
@@ -67,6 +70,8 @@ Legal-Terms and Condition
 Sem based contract which mean the contract will earlier or later based on sem calendar. 
 Change the legal.php back to privacy and security, terms and conditions.
 
+    UI-sidebar
+    SIdebar could be collapsed/open, keep freeze/unfreeze when 3-line-btn beside logo pressed. Sidebar submenu help and info could be collapsed/open for all time(sidebar collapsed or opened no affect), Show sidebar-menu item color change when open the matched page
 
 Future work/ Out of scope 
 Student only 1 sem, how? throw the question out of scope. 

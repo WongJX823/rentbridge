@@ -213,6 +213,39 @@ body:not(.sidebar-collapsed) .topbar-toggle:hover {
 .sidebar-collapsed .admin-sidebar {
     width: var(--admin-sidebar-w-collapsed);
 }
+
+/* === Sidebar edge expand button (triangle) ===================== */
+.sidebar-edge-btn {
+    position: fixed;
+    left: var(--admin-sidebar-w);
+    top: calc(50% + var(--admin-topbar-h) / 2);
+    transform: translate(-50%, -50%);
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.2);
+    background: var(--admin-sidebar-bg);
+    color: var(--admin-sidebar-text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 2px 2px 8px rgba(15,44,82,0.35);
+    transition: left 0.2s ease, color 0.15s, background 0.15s;
+    z-index: 1025;
+    padding: 0;
+    font-size: 0.8rem;
+    line-height: 1;
+}
+.sidebar-edge-btn:hover {
+    background: var(--admin-sidebar-bg-hover);
+    color: white;
+}
+.sidebar-collapsed .sidebar-edge-btn {
+    left: var(--admin-sidebar-w-collapsed);
+}
+body:not(.sidebar-collapsed) .sidebar-edge-btn .bi-chevron-right { display: none; }
+body.sidebar-collapsed .sidebar-edge-btn .bi-chevron-left  { display: none; }
 .sidebar-collapsed .sidebar-label {
     display: none;
 }
@@ -433,4 +466,5 @@ body:not(.sidebar-collapsed) .topbar-toggle:hover {
     .admin-filter-drawer.open { padding: 16px; }
     .topbar-tag { display: none; }
     .topbar-clock { display: none; }
+    .sidebar-edge-btn { display: none; }
 }

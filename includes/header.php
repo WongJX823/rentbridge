@@ -63,8 +63,8 @@ require_once __DIR__ . '/auth.php';
                         Sign out
                     </a>
                 <?php else: ?>
-                    <a class="btn btn-outline-light" href="/rentbridge/auth/login.php">Log in</a>
-                    <a class="btn btn-success" href="/rentbridge/auth/register.php">Register</a>
+                    <a class="btn btn-success" href="/rentbridge/auth/login.php">Log in</a>
+                    <a class="btn btn-outline-light" href="/rentbridge/auth/register.php">Register</a>
                 <?php endif; ?>
             </div>
 

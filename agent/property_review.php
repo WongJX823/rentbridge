@@ -11,28 +11,64 @@ if ($propertyId <= 0) {
     die('Property not specified.');
 }
 
-// Handle POST (accept/reject)
+// Handle POST (accept/pass/reject/complete/approve)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
     $action = $_POST['action'] ?? '';
 
     if ($action === 'accept') {
         $result = agent_accept_property($propertyId, $agentId);
+        if ($result['ok']) {
+            set_flash('success', 'Case accepted. Go to the conversation and propose an inspection time.');
+            // Redirect to the newly-created agent↔landlord conversation
+            header('Location: /rentbridge/chat/conversation.php?id=' . $result['conversation_id']);
+        } else {
+            set_flash('danger', 'Failed: ' . $result['error']);
+            header('Location: /rentbridge/agent/property_review.php?id=' . $propertyId);
+        }
+        exit;
+
+    } elseif ($action === 'complete_inspection') {
+        $result = agent_complete_inspection($propertyId, $agentId);
         set_flash($result['ok'] ? 'success' : 'danger',
-                  $result['ok'] ? 'Property approved and is now live.'
+                  $result['ok'] ? 'Inspection marked complete. You can now approve or reject the listing.'
                                 : ('Failed: ' . $result['error']));
         header('Location: /rentbridge/agent/property_review.php?id=' . $propertyId);
         exit;
-    } elseif ($action === 'reject') {
+
+    } elseif ($action === 'approve_listing') {
+        $result = agent_approve_listing($propertyId, $agentId);
+        set_flash($result['ok'] ? 'success' : 'danger',
+                  $result['ok'] ? 'Property approved and is now live!'
+                                : ('Failed: ' . $result['error']));
+        header('Location: /rentbridge/agent/dashboard.php');
+        exit;
+
+    } elseif ($action === 'pass') {
         $reason = trim($_POST['reason'] ?? '');
         if ($reason === '') {
-            set_flash('warning', 'Please provide a reason for rejection.');
+            set_flash('warning', 'Please provide a reason before passing.');
         } else {
-            $result = agent_reject_property($propertyId, $agentId, $reason);
+            $result = agent_pass_property($propertyId, $agentId, $reason);
             if ($result['ok']) {
                 set_flash('info', $result['no_agents_left']
-                    ? 'Rejected. No more agents available — escalated to admin.'
-                    : 'Rejected. Reassigning to next agent.');
+                    ? 'Passed. No more agents available — escalated to admin.'
+                    : 'Passed to next agent in queue.');
+            } else {
+                set_flash('danger', 'Failed: ' . ($result['error'] ?? 'Unknown error'));
+            }
+            header('Location: /rentbridge/agent/dashboard.php');
+            exit;
+        }
+
+    } elseif ($action === 'reject_listing') {
+        $reason = trim($_POST['reason'] ?? '');
+        if ($reason === '') {
+            set_flash('warning', 'Please provide a reason for rejecting the listing.');
+        } else {
+            $result = agent_reject_listing($propertyId, $agentId, $reason);
+            if ($result['ok']) {
+                set_flash('success', 'Listing rejected. The landlord has been notified.');
             } else {
                 set_flash('danger', 'Failed: ' . ($result['error'] ?? 'Unknown error'));
             }
@@ -185,25 +221,102 @@ ob_start();
             <hr>
 
             <?php if ($prop['agent_status'] === 'pending'): ?>
-                <h6 class="text-secondary text-uppercase small mb-3">Decision</h6>
+                <!-- Phase 1: Review listing, then accept to start inspection -->
+                <h6 class="text-secondary text-uppercase small mb-3">Step 1 — Accept case</h6>
+                <p class="small text-secondary mb-3">
+                    Review the documents and photos above, then accept to begin the physical inspection process.
+                    Accepting opens a chat with the landlord to schedule a visit.
+                </p>
+
                 <form method="POST" class="mb-2">
                     <?= csrf_field() ?>
                     <input type="hidden" name="action" value="accept">
-                    <button type="submit" class="btn btn-success w-100"
-                            onclick="return confirm('Approve this property as verified?');">
-                        <i class="bi bi-check-circle me-1"></i> Accept & Approve
+                    <button type="submit" class="btn btn-primary w-100"
+                            onclick="return confirm('Accept this case and start the inspection scheduling process?');">
+                        <i class="bi bi-clipboard-check me-1"></i> Accept &amp; Schedule inspection
                     </button>
                 </form>
 
-                <button type="button" class="btn btn-outline-danger w-100"
-                        data-bs-toggle="modal" data-bs-target="#rejectModal">
-                    <i class="bi bi-x-circle me-1"></i> Reject
+                <button type="button" class="btn btn-outline-warning w-100 mb-2"
+                        data-bs-toggle="modal" data-bs-target="#passModal">
+                    <i class="bi bi-arrow-right-circle me-1"></i> Pass to another agent
                 </button>
 
-                <p class="text-secondary small text-center mt-3 mb-0">
-                    <i class="bi bi-info-circle"></i>
-                    Rejecting will reassign this property to the next available agent.
-                </p>
+                <button type="button" class="btn btn-outline-danger w-100"
+                        data-bs-toggle="modal" data-bs-target="#rejectModal">
+                    <i class="bi bi-slash-circle me-1"></i> Reject listing
+                </button>
+
+                <div class="mt-3 p-2 bg-light rounded small text-secondary">
+                    <p class="mb-1"><strong>Pass</strong> — Can't handle this (area, workload) but listing looks valid. Sends to next agent in queue.</p>
+                    <p class="mb-0"><strong>Reject listing</strong> — Fake documents, scam, or illegal property. Permanently rejects, landlord is notified.</p>
+                </div>
+
+            <?php elseif ($prop['agent_status'] === 'inspecting'): ?>
+                <!-- Phase 2: Inspection in progress — chat open, schedule visit, mark complete -->
+                <?php
+                $inspectionDone = !empty($prop['inspection_completed_at']);
+                // Find the chat conversation for this property
+                $lo  = min($agentId, (int)$prop['landlord_id']);
+                $hi  = max($agentId, (int)$prop['landlord_id']);
+                $stmt = $pdo->prepare("SELECT id FROM conversations WHERE user_a = ? AND user_b = ? AND (property_id <=> ?) AND context_type = 'agent_case' LIMIT 1");
+                $stmt->execute([$lo, $hi, $propertyId]);
+                $convoId = (int)$stmt->fetchColumn();
+                ?>
+
+                <?php if (!$inspectionDone): ?>
+                    <h6 class="text-secondary text-uppercase small mb-2">Step 2 — Inspection</h6>
+                    <p class="small text-secondary mb-3">
+                        Use the conversation with the landlord to schedule and confirm an inspection time.
+                        After you've physically visited the property, click below.
+                    </p>
+
+                    <?php if ($convoId): ?>
+                        <a href="/rentbridge/chat/conversation.php?id=<?= $convoId ?>"
+                           class="btn btn-outline-primary w-100 mb-2">
+                            <i class="bi bi-chat-dots me-1"></i> Open landlord conversation
+                        </a>
+                    <?php endif; ?>
+
+                    <form method="POST" class="mb-2">
+                        <?= csrf_field() ?>
+                        <input type="hidden" name="action" value="complete_inspection">
+                        <button type="submit" class="btn btn-success w-100"
+                                onclick="return confirm('Mark the physical inspection as complete? Do this only after you have visited the property.');">
+                            <i class="bi bi-check2-square me-1"></i> Mark inspection complete
+                        </button>
+                    </form>
+
+                    <button type="button" class="btn btn-outline-danger w-100"
+                            data-bs-toggle="modal" data-bs-target="#rejectModal">
+                        <i class="bi bi-slash-circle me-1"></i> Reject listing
+                    </button>
+
+                <?php else: ?>
+                    <!-- Inspection done — approve or reject -->
+                    <div class="alert alert-success small mb-3">
+                        <i class="bi bi-check-circle-fill"></i>
+                        Inspection completed <?= e(date('d M Y', strtotime($prop['inspection_completed_at']))) ?>.
+                        Make your final decision:
+                    </div>
+
+                    <h6 class="text-secondary text-uppercase small mb-3">Step 3 — Final decision</h6>
+
+                    <form method="POST" class="mb-2">
+                        <?= csrf_field() ?>
+                        <input type="hidden" name="action" value="approve_listing">
+                        <button type="submit" class="btn btn-success w-100"
+                                onclick="return confirm('Approve this property? It will go live and be visible to students.');">
+                            <i class="bi bi-check-circle me-1"></i> Approve listing
+                        </button>
+                    </form>
+
+                    <button type="button" class="btn btn-outline-danger w-100"
+                            data-bs-toggle="modal" data-bs-target="#rejectModal">
+                        <i class="bi bi-slash-circle me-1"></i> Reject listing
+                    </button>
+                <?php endif; ?>
+
             <?php elseif ($prop['agent_status'] === 'accepted'): ?>
                 <div class="alert alert-success small mb-0">
                     <i class="bi bi-check-circle-fill"></i>
@@ -216,28 +329,56 @@ ob_start();
     </div>
 </div>
 
-<!-- Reject modal -->
+<!-- Pass modal -->
+<div class="modal fade" id="passModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="POST" class="modal-content">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" value="pass">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-arrow-right-circle text-warning me-2"></i>Pass to another agent</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning small py-2">
+                    The property will be reassigned to the next available agent in the queue. Use this when you're unable to handle this property — not because of a problem with the listing itself.
+                </div>
+                <label class="form-label fw-semibold">Reason <small class="text-danger">*</small></label>
+                <textarea name="reason" class="form-control" rows="3" required
+                          placeholder="e.g. Property is outside my coverage area. / Current workload too high."></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-warning">Pass to next agent</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Reject listing modal -->
 <div class="modal fade" id="rejectModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <form method="POST" class="modal-content">
             <?= csrf_field() ?>
-            <input type="hidden" name="action" value="reject">
+            <input type="hidden" name="action" value="reject_listing">
             <div class="modal-header">
-                <h5 class="modal-title">Reject this property</h5>
+                <h5 class="modal-title"><i class="bi bi-slash-circle text-danger me-2"></i>Reject listing</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <p class="text-secondary small">
-                    Provide a clear reason. The next agent will see this. Use this if the
-                    documents look fake, the photos don't match the address, you're unable
-                    to inspect in your area, etc.
-                </p>
-                <textarea name="reason" class="form-control" rows="4" required
-                          placeholder="e.g. Property is outside my coverage area in Melaka Tengah."></textarea>
+                <div class="alert alert-danger small py-2">
+                    <strong>Permanent action.</strong> The listing will be rejected immediately and the landlord will be notified with your reason. Use this only for fake documents, scam listings, or illegal properties.
+                </div>
+                <label class="form-label fw-semibold">Reason <small class="text-danger">*</small></label>
+                <textarea name="reason" class="form-control" rows="3" required
+                          placeholder="e.g. Documents appear forged. Photos do not match the stated address."></textarea>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="submit" class="btn btn-danger">Submit rejection</button>
+                <button type="submit" class="btn btn-danger"
+                        onclick="return confirm('This will permanently reject the listing and notify the landlord. Continue?');">
+                    Reject listing
+                </button>
             </div>
         </form>
     </div>

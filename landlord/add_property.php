@@ -47,7 +47,7 @@ $old = [
     'description'   => $existing['description']   ?? '',
     'facilities'    => $existing['facilities']    ?? '',
     'furnishing'    => $existing['furnishing']    ?? 'partial',
-    'viewing_mode'  => $existing['viewing_mode']  ?? 'either',
+    'viewing_mode'  => $existing['viewing_mode']  ?? '',
 ];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -97,6 +97,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors['furnishing'] = 'Invalid furnishing option.';
     }
 
+    // Validate viewing_mode (no "either")
+    if (!in_array($old['viewing_mode'], ['landlord_led','agent_led'], true)) {
+        $errors['viewing_mode'] = 'Please select a viewing arrangement.';
+    }
+
     // Validate at least 1 photo
     $hasExistingPhotos = false;
     if ($isEdit) {
@@ -108,6 +113,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (!$hasExistingPhotos && !$hasNewPhotos) {
         $errors['photos'] = 'At least 1 photo is required.';
+    }
+
+    // Validate at least 1 document (new listings only, or if no existing docs in edit)
+    $hasExistingDocs = false;
+    if ($isEdit) {
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM property_documents WHERE property_id = ?");
+        $stmt->execute([$editId]);
+        $hasExistingDocs = (int)$stmt->fetchColumn() > 0;
+    }
+    $hasNewDocs = false;
+    if (!empty($_FILES['document_files']['name'])) {
+        foreach ($_FILES['document_files']['error'] as $err) {
+            if ($err === UPLOAD_ERR_OK) { $hasNewDocs = true; break; }
+        }
+    }
+    if (!$hasExistingDocs && !$hasNewDocs) {
+        $errors['documents'] = 'At least 1 ownership document is required to verify your property.';
+    }
+
+    // Duplicate address check (new properties only, or edit changing address)
+    if (!$isEdit && empty($errors['address'])) {
+        $stmt = $pdo->prepare("
+            SELECT COUNT(*) FROM properties
+             WHERE landlord_id = ?
+               AND address = ?
+               AND status NOT IN ('rejected','deleted')
+        ");
+        $stmt->execute([$userId, $old['address']]);
+        if ((int)$stmt->fetchColumn() > 0) {
+            $errors['address'] = 'You already have an active listing at this address. Please edit the existing one instead.';
+        }
     }
 
     if (empty($errors)) {
@@ -263,16 +299,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             $pdo->commit();
 
-            // Auto-assign agent for NEW properties (not edits)
+            // Auto-assign agent:
+            //  - always on new properties
+            //  - on edits when the property has no agent assigned yet (e.g. after a rejection reset)
+            require_once __DIR__ . '/../includes/agent_assignment.php';
+            $needsAssignment = false;
             if (!$isEdit) {
-                require_once __DIR__ . '/../includes/agent_assignment.php';
+                $needsAssignment = true;
+            } else {
+                // Check if property is now pending_approval but has no assigned agent
+                $stmt = $pdo->prepare("SELECT assigned_agent_id, status FROM properties WHERE id = ?");
+                $stmt->execute([$propertyId]);
+                $latest = $stmt->fetch();
+                if ($latest && $latest['status'] === 'pending_approval' && empty($latest['assigned_agent_id'])) {
+                    $needsAssignment = true;
+                }
+            }
+
+            if ($needsAssignment) {
                 $assignResult = assign_agent_to_property((int)$propertyId);
                 if ($assignResult['ok']) {
-                    set_flash('success',
-                        'Property submitted! An agent has been assigned to verify your listing.');
+                    set_flash('success', $isEdit
+                        ? 'Property updated and sent for re-review. An agent has been assigned.'
+                        : 'Property submitted! An agent has been assigned to verify your listing.');
                 } else {
-                    set_flash('warning',
-                        'Property submitted, but no agent could be assigned right now: ' . $assignResult['error']);
+                    set_flash('warning', ($isEdit ? 'Property updated' : 'Property submitted')
+                        . ', but no agent could be assigned right now: ' . $assignResult['error']);
                 }
             } else {
                 set_flash('success', 'Property updated successfully.');
@@ -280,6 +332,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if (!empty($docErrors)) {
                 set_flash('warning', $docSavedCount . ' document(s) saved. Issues: ' . implode('; ', $docErrors));
+            }
+
+            // Notify landlord if their rent is > RM200 below the market benchmark for same city+type
+            if (!empty($old['city']) && !empty($old['property_type'])) {
+                $bmStmt = $pdo->prepare("
+                    SELECT ROUND(AVG(monthly_rent), 0) AS avg_rent
+                      FROM properties
+                     WHERE city = ? AND property_type = ?
+                       AND status IN ('available','booked','rented')
+                       AND id != ?
+                ");
+                $bmStmt->execute([$old['city'], $old['property_type'], $propertyId]);
+                $benchmark = (float)$bmStmt->fetchColumn();
+                $enteredRent = (float)$old['monthly_rent'];
+                if ($benchmark > 0 && $enteredRent < ($benchmark - 200)) {
+                    if (function_exists('notify')) {
+                        notify(
+                            $userId,
+                            'pricing_warning',
+                            'Your rent may be too low',
+                            sprintf(
+                                'Your listing "%s" is set at RM%s, which is more than RM200 below the market average of RM%s for %s %s properties. Consider reviewing your price.',
+                                $old['title'],
+                                number_format($enteredRent, 0),
+                                number_format($benchmark, 0),
+                                $old['city'],
+                                $old['property_type']
+                            ),
+                            "/rentbridge/landlord/add_property.php?edit={$propertyId}"
+                        );
+                    }
+                }
             }
 
             header('Location: /rentbridge/landlord/properties.php');
@@ -456,12 +540,27 @@ ob_start();
         </div>  
 
         <div>
-            <label class="form-label fw-semibold">Viewing arrangement</label>
-            <select name="viewing_mode" class="form-select">
-                <option value="either"        <?= $old['viewing_mode']==='either'?'selected':'' ?>>Either landlord or agent shows the property</option>
-                <option value="landlord_led"  <?= $old['viewing_mode']==='landlord_led'?'selected':'' ?>>I (landlord) will show it myself</option>
-                <option value="agent_led"     <?= $old['viewing_mode']==='agent_led'?'selected':'' ?>>Only agent shows it (I'm not always around)</option>
+            <label class="form-label fw-semibold">
+                Inspection &amp; viewing arrangement <small class="text-danger">*</small>
+            </label>
+            <select name="viewing_mode"
+                    class="form-select <?= isset($errors['viewing_mode']) ? 'is-invalid' : '' ?>"
+                    required>
+                <option value="" disabled <?= !in_array($old['viewing_mode'],['landlord_led','agent_led']) ? 'selected' : '' ?>>— Select an option —</option>
+                <option value="landlord_led" <?= $old['viewing_mode']==='landlord_led'?'selected':'' ?>>I (landlord) will be present for all viewings</option>
+                <option value="agent_led"    <?= $old['viewing_mode']==='agent_led'?'selected':'' ?>>Agent-led — I will hand over a key or lockbox code for agent access</option>
             </select>
+            <?php if (isset($errors['viewing_mode'])): ?>
+                <div class="invalid-feedback"><?= e($errors['viewing_mode']) ?></div>
+            <?php endif; ?>
+            <div class="form-check mt-2">
+                <input class="form-check-input" type="checkbox" id="inspectionConsent" name="inspection_consent" value="1"
+                       <?= !empty($_POST['inspection_consent']) ? 'checked' : '' ?> required>
+                <label class="form-check-label small" for="inspectionConsent">
+                    I agree to allow the assigned RentBridge agent to inspect this property and facilitate viewings on my behalf.
+                    <span class="text-danger">*</span>
+                </label>
+            </div>
             <small class="text-secondary">Students will never view alone — agent or landlord must be present.</small>
         </div>
     </div>
@@ -836,6 +935,9 @@ ob_start();
         <strong>Only you, admin, and your assigned agent can see these.</strong>
         Students never see your documents. Used to verify you're the legitimate owner.
     </div>
+    <?php if (isset($errors['documents'])): ?>
+        <div class="alert alert-danger small py-2"><?= e($errors['documents']) ?></div>
+    <?php endif; ?>
 
      <?php for ($i = 0; $i < 3; $i++): ?>
         <div class="row g-2 mb-3 align-items-end pb-3 border-bottom">

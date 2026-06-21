@@ -788,6 +788,7 @@ CREATE TABLE `students` (
   `matric_no` varchar(20) NOT NULL,
   `university` varchar(80) NOT NULL DEFAULT 'UTeM',
   `phone` varchar(20) NOT NULL,
+  `allow_whatsapp` tinyint(1) NOT NULL DEFAULT 0,
   `looking_for_housing` tinyint(1) NOT NULL DEFAULT 0,
   `housing_pref_city` varchar(80) DEFAULT NULL,
   `housing_pref_max_rent` decimal(8,2) DEFAULT NULL,
@@ -804,25 +805,25 @@ TRUNCATE TABLE `students`;
 -- Dumping data for table `students`
 --
 
-INSERT INTO `students` (`user_id`, `full_name`, `preferred_name`, `matric_no`, `university`, `phone`, `looking_for_housing`, `housing_pref_city`, `housing_pref_max_rent`, `housing_pref_move_in`, `housing_bio`) VALUES
-(2, 'Wong Jia Xi', 'Jia Xi', 'B032310495', 'UTeM', '012-3456789', 0, NULL, NULL, NULL, NULL),
-(3, 'Lim Mei Ling', 'Mei Ling', 'B032310123', 'UTeM', '012-9876543', 1, 'Ayer Keroh', 500.00, '2026-09-01', 'Quiet, study-focused, non-smoker. Looking for a clean place near campus.'),
-(4, 'Ali Bin Abdullah', 'Ali', 'B032310234', 'UTeM', '013-1234567', 1, 'Durian Tunggal', 600.00, '2026-08-15', 'Easy-going engineering student. Like cooking on weekends.'),
-(5, 'Ramesh Kumar', 'Ramesh', 'B032310345', 'UTeM', '011-2233445', 0, NULL, NULL, NULL, NULL),
-(6, 'Siti Aishah', 'Aishah', 'B032310456', 'UTeM', '019-3344556', 0, NULL, NULL, NULL, NULL),
-(7, 'Tan Wei Zhe', 'Wei Zhe', 'B032310567', 'UTeM', '012-4455667', 0, NULL, NULL, NULL, NULL),
-(8, 'Farah Aliyah', 'Farah', 'B032310678', 'UTeM', '014-5566778', 0, NULL, NULL, NULL, NULL),
-(9, 'Kelvin Lee', 'Kelvin', 'B032310789', 'UTeM', '012-6677889', 0, NULL, NULL, NULL, NULL),
-(19, 'Mohd Azlan Bin Ismail', 'Azlan', 'B032310890', 'UTeM', '012-7890123', 0, NULL, NULL, NULL, NULL),
-(20, 'Devi A/P Murugan', 'Devi', 'B032310901', 'UTeM', '012-8901234', 1, NULL, NULL, NULL, NULL),
-(21, 'Mohd Farid Bin Hashim', 'Farid', 'B032310912', 'UTeM', '011-9012345', 0, NULL, NULL, NULL, NULL),
-(22, 'Kavitha A/P Selvaraj', 'Kavitha', 'B032310923', 'UTeM', '019-0123456', 1, NULL, NULL, NULL, NULL),
-(23, 'Mohd Syafiq Bin Adnan', 'Syafiq', 'B032310934', 'UTeM', '012-1234560', 0, NULL, NULL, NULL, NULL),
-(24, 'Jasmine Tan', 'Jasmine', 'B032310945', 'UTeM', '013-2345601', 0, NULL, NULL, NULL, NULL),
-(25, 'Mohd Hafiz Bin Yusoff', 'Hafiz', 'B032310956', 'UTeM', '014-3456012', 0, NULL, NULL, NULL, NULL),
-(26, 'Amelia Wong', 'Amelia', 'B032310967', 'UTeM', '012-4560123', 1, NULL, NULL, NULL, NULL),
-(27, 'Mohd Zafri Bin Karim', 'Zafri', 'B032310978', 'UTeM', '015-5601234', 0, NULL, NULL, NULL, NULL),
-(28, 'Nadia Binti Razak', 'Nadia', 'B032310989', 'UTeM', '016-6012345', 1, NULL, NULL, NULL, NULL);
+INSERT INTO `students` (`user_id`, `full_name`, `preferred_name`, `matric_no`, `university`, `phone`, `allow_whatsapp`, `looking_for_housing`, `housing_pref_city`, `housing_pref_max_rent`, `housing_pref_move_in`, `housing_bio`) VALUES
+(2, 'Wong Jia Xi', 'Jia Xi', 'B032310495', 'UTeM', '012-3456789', 0, 0, NULL, NULL, NULL, NULL),
+(3, 'Lim Mei Ling', 'Mei Ling', 'B032310123', 'UTeM', '012-9876543', 0, 1, 'Ayer Keroh', 500.00, '2026-09-01', 'Quiet, study-focused, non-smoker. Looking for a clean place near campus.'),
+(4, 'Ali Bin Abdullah', 'Ali', 'B032310234', 'UTeM', '013-1234567', 0, 1, 'Durian Tunggal', 600.00, '2026-08-15', 'Easy-going engineering student. Like cooking on weekends.'),
+(5, 'Ramesh Kumar', 'Ramesh', 'B032310345', 'UTeM', '011-2233445', 0, 0, NULL, NULL, NULL, NULL),
+(6, 'Siti Aishah', 'Aishah', 'B032310456', 'UTeM', '019-3344556', 0, 0, NULL, NULL, NULL, NULL),
+(7, 'Tan Wei Zhe', 'Wei Zhe', 'B032310567', 'UTeM', '012-4455667', 0, 0, NULL, NULL, NULL, NULL),
+(8, 'Farah Aliyah', 'Farah', 'B032310678', 'UTeM', '014-5566778', 0, 0, NULL, NULL, NULL, NULL),
+(9, 'Kelvin Lee', 'Kelvin', 'B032310789', 'UTeM', '012-6677889', 0, 0, NULL, NULL, NULL, NULL),
+(19, 'Mohd Azlan Bin Ismail', 'Azlan', 'B032310890', 'UTeM', '012-7890123', 0, 0, NULL, NULL, NULL, NULL),
+(20, 'Devi A/P Murugan', 'Devi', 'B032310901', 'UTeM', '012-8901234', 0, 1, NULL, NULL, NULL, NULL),
+(21, 'Mohd Farid Bin Hashim', 'Farid', 'B032310912', 'UTeM', '011-9012345', 0, 0, NULL, NULL, NULL, NULL),
+(22, 'Kavitha A/P Selvaraj', 'Kavitha', 'B032310923', 'UTeM', '019-0123456', 0, 1, NULL, NULL, NULL, NULL),
+(23, 'Mohd Syafiq Bin Adnan', 'Syafiq', 'B032310934', 'UTeM', '012-1234560', 0, 0, NULL, NULL, NULL, NULL),
+(24, 'Jasmine Tan', 'Jasmine', 'B032310945', 'UTeM', '013-2345601', 0, 0, NULL, NULL, NULL, NULL),
+(25, 'Mohd Hafiz Bin Yusoff', 'Hafiz', 'B032310956', 'UTeM', '014-3456012', 0, 0, NULL, NULL, NULL, NULL),
+(26, 'Amelia Wong', 'Amelia', 'B032310967', 'UTeM', '012-4560123', 0, 1, NULL, NULL, NULL, NULL),
+(27, 'Mohd Zafri Bin Karim', 'Zafri', 'B032310978', 'UTeM', '015-5601234', 0, 0, NULL, NULL, NULL, NULL),
+(28, 'Nadia Binti Razak', 'Nadia', 'B032310989', 'UTeM', '016-6012345', 0, 1, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -1485,7 +1486,7 @@ CREATE TABLE IF NOT EXISTS property_agent_assignments (
     round_number INT NOT NULL,
     assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     responded_at TIMESTAMP NULL,
-    outcome ENUM('pending','accepted','rejected','timeout','reassigned') NOT NULL DEFAULT 'pending',
+    outcome ENUM('pending','accepted','passed','rejected_listing','timeout','reassigned') NOT NULL DEFAULT 'pending',
     rejection_reason VARCHAR(500) NULL,
     PRIMARY KEY (id),
     INDEX idx_property (property_id),

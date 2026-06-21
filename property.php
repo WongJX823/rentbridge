@@ -284,7 +284,12 @@ ob_start();
         <!-- Action buttons -->
         <div class="rail-actions">
             <?php if (is_logged_in()): ?>
-                <!-- PRIMARY: Chat -->
+                <!-- PRIMARY: Chat — landlords cannot initiate chat from browse -->
+                <?php if (current_role() === 'landlord'): ?>
+                    <div class="alert alert-light border small text-secondary py-2">
+                        <i class="bi bi-info-circle"></i> Landlords cannot contact other landlords through RentBridge.
+                    </div>
+                <?php else: ?>
                 <?php
                     // Route chat target based on property's viewing mode
                     $chatTargetUserId = null;
@@ -354,6 +359,8 @@ ob_start();
                     </a>
                 <?php endif; ?>
 
+                <?php endif; /* end landlord check */ ?>
+
             <?php else: ?>
                 <!-- GUEST -->
                 <button type="button" class="btn btn-success rail-btn-primary"
@@ -384,11 +391,13 @@ ob_start();
 <!-- MOBILE ACTION BAR (fixed bottom, hidden on desktop) -->
 <div class="property-mobile-bar d-lg-none">
     <?php if (is_logged_in()): ?>
+        <?php if (current_role() !== 'landlord'): ?>
         <a href="/rentbridge/chat/start.php?type=property_inquiry&with=<?= (int)$prop['landlord_user_id'] ?>&property_id=<?= (int)$prop['id'] ?>"
            class="mobile-bar-btn primary">
             <i class="bi bi-chat-dots-fill"></i>
             <span>Chat</span>
         </a>
+        <?php endif; ?>
         <?php if (!empty($waUrl)): ?>
             <a href="<?= e($waUrl) ?>" target="_blank" class="mobile-bar-btn">
                 <i class="bi bi-whatsapp"></i>

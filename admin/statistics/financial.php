@@ -79,6 +79,14 @@ $projectedRevenue = (float)$pdo->query("
      WHERE status = 'pending'
 ")->fetchColumn();
 
+// 70/30 split: commission_amt = base_rent (1 month). UTeM gets 70%, agent gets 30%.
+$splitBase = (float)$pdo->query("
+    SELECT COALESCE(SUM(commission_amt),0) FROM agent_commissions
+     WHERE status IN ('earned','released','paid')
+")->fetchColumn();
+$utemRevenue   = $splitBase * 0.70;
+$agentEarnings = $splitBase * 0.30;
+
 // === CHART: Revenue over time (line) ===
 $stmt = $pdo->prepare("
     SELECT DATE_FORMAT(earned_at, '%Y-%m') AS month,
@@ -105,19 +113,20 @@ $stmt = $pdo->query("
 ");
 $statusBreakdown = $stmt->fetchAll();
 
-// === LEADERBOARD: Agent earnings ===
+// === LEADERBOARD: Agent earnings (30% of commission_amt) ===
 $stmt = $pdo->query("
     SELECT a.full_name AS agent_name,
            a.staff_id, a.department,
            COUNT(ac.id) AS contracts_closed,
-           COALESCE(SUM(ac.total_payable),0) AS total_earned,
-           COALESCE(SUM(CASE WHEN ac.status = 'paid' THEN ac.total_payable ELSE 0 END),0) AS total_paid,
-           COALESCE(SUM(CASE WHEN ac.status IN ('earned','released') THEN ac.total_payable ELSE 0 END),0) AS pending_payout
+           COALESCE(SUM(ac.commission_amt),0) AS commission_base,
+           ROUND(COALESCE(SUM(ac.commission_amt),0) * 0.30, 2) AS agent_share,
+           ROUND(COALESCE(SUM(CASE WHEN ac.status = 'paid' THEN ac.commission_amt ELSE 0 END),0) * 0.30, 2) AS agent_paid,
+           ROUND(COALESCE(SUM(CASE WHEN ac.status IN ('earned','released') THEN ac.commission_amt ELSE 0 END),0) * 0.30, 2) AS agent_pending
       FROM agents a
       LEFT JOIN agent_commissions ac ON ac.agent_id = a.user_id
                                      AND ac.status IN ('earned','released','paid')
      GROUP BY a.user_id, a.full_name, a.staff_id, a.department
-     ORDER BY total_earned DESC
+     ORDER BY agent_share DESC
 ");
 $agentLeaderboard = $stmt->fetchAll();
 
@@ -240,6 +249,43 @@ ob_start();
     </div>
 </div>
 
+<!-- 70/30 COMMISSION SPLIT -->
+<div class="bg-white border rounded-3 p-4 mb-4">
+    <h6 class="text-secondary text-uppercase small mb-3">Commission split (70% UTeM / 30% Agent)</h6>
+    <div class="row g-3 align-items-center">
+        <div class="col-lg-5">
+            <canvas id="chartSplit" style="max-height:220px;"></canvas>
+        </div>
+        <div class="col-lg-7">
+            <div class="row g-3">
+                <div class="col-6">
+                    <div class="rounded-3 p-3 text-center" style="background:#E6ECF4;">
+                        <div class="small text-secondary text-uppercase mb-1">UTeM revenue (70%)</div>
+                        <div style="font-family:'Fraunces',serif; font-size:1.6rem; font-weight:700; color:#0F2C52;">
+                            RM <?= number_format($utemRevenue, 0) ?>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="rounded-3 p-3 text-center" style="background:#E4F2EA;">
+                        <div class="small text-secondary text-uppercase mb-1">Agent earnings (30%)</div>
+                        <div style="font-family:'Fraunces',serif; font-size:1.6rem; font-weight:700; color:#2E8B57;">
+                            RM <?= number_format($agentEarnings, 0) ?>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <div class="small text-secondary">
+                        Based on <strong>RM <?= number_format($splitBase, 0) ?></strong> total commission
+                        from <?= $contractCount ?> contract<?= $contractCount !== 1 ? 's' : '' ?>.
+                        Each contract = 1 month base rent. 30% goes to the assigned agent, 70% is retained by UTeM.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- REVENUE TREND CHART -->
 <div class="bg-white border rounded-3 p-4 mb-4">
     <h6 class="text-secondary text-uppercase small mb-3">Commission revenue over time</h6>
@@ -287,7 +333,7 @@ ob_start();
                             <th style="width:30px;"></th>
                             <th>Agent</th>
                             <th class="text-end">Contracts</th>
-                            <th class="text-end">Total earned</th>
+                            <th class="text-end">Agent share (30%)</th>
                             <th class="text-end">Paid</th>
                             <th class="text-end">Pending</th>
                         </tr>
@@ -312,14 +358,14 @@ ob_start();
                                 <td class="text-end"><?= (int)$a['contracts_closed'] ?></td>
                                 <td class="text-end">
                                     <strong class="text-emerald">
-                                        RM <?= number_format((float)$a['total_earned'], 0) ?>
+                                        RM <?= number_format((float)$a['agent_share'], 0) ?>
                                     </strong>
                                 </td>
                                 <td class="text-end small text-secondary">
-                                    RM <?= number_format((float)$a['total_paid'], 0) ?>
+                                    RM <?= number_format((float)$a['agent_paid'], 0) ?>
                                 </td>
                                 <td class="text-end small text-secondary">
-                                    RM <?= number_format((float)$a['pending_payout'], 0) ?>
+                                    RM <?= number_format((float)$a['agent_pending'], 0) ?>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -468,6 +514,32 @@ new Chart(document.getElementById('chartRevenue'), {
     }
 });
 <?php endif; ?>
+
+// === 70/30 SPLIT DOUGHNUT ===
+new Chart(document.getElementById('chartSplit'), {
+    type: 'doughnut',
+    data: {
+        labels: ['UTeM (70%)', 'Agent earnings (30%)'],
+        datasets: [{
+            data: [<?= round($utemRevenue, 2) ?>, <?= round($agentEarnings, 2) ?>],
+            backgroundColor: ['#0F2C52', '#2E8B57'],
+            borderWidth: 3,
+            borderColor: 'white'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { position: 'bottom' },
+            tooltip: {
+                callbacks: {
+                    label: ctx => ctx.label + ': RM ' + parseFloat(ctx.raw).toLocaleString()
+                }
+            }
+        }
+    }
+});
 
 <?php if (!empty($statusBreakdown)): ?>
 // === STATUS DOUGHNUT ===
