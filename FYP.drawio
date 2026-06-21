@@ -1,6 +1,10 @@
 <mxfile host="app.diagrams.net">
   <diagram name="Page-1" id="CNTMdKkPQs8V5Xc73TAt">
+<<<<<<< Updated upstream
     <mxGraphModel dx="858" dy="1539" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+=======
+    <mxGraphModel dx="10" dy="1803" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+>>>>>>> Stashed changes
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -724,8 +728,118 @@
         <mxCell id="VgxK3RGLdCcwTv41P8I5-35" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="SIgn" vertex="1">
           <mxGeometry height="30" width="60" x="3192.5" y="680" as="geometry" />
         </mxCell>
+<<<<<<< Updated upstream
         <mxCell id="VgxK3RGLdCcwTv41P8I5-36" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Show approved" vertex="1">
           <mxGeometry height="30" width="60" x="3910" y="200" as="geometry" />
+=======
+        <mxCell id="Y7FoYmEN5TfSn-X6A1HG-16" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" value="End" vertex="1">
+          <mxGeometry height="40" width="60" x="4730" y="850" as="geometry" />
+        </mxCell>
+        <mxCell id="Y7FoYmEN5TfSn-X6A1HG-26" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="No need" vertex="1">
+          <mxGeometry height="30" width="60" x="4870" y="268.61" as="geometry" />
+        </mxCell>
+        <mxCell id="Y7FoYmEN5TfSn-X6A1HG-28" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Enough" vertex="1">
+          <mxGeometry height="30" width="60" x="5010" y="228.61" as="geometry" />
+        </mxCell>
+        <mxCell id="Y7FoYmEN5TfSn-X6A1HG-30" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Not Enough" vertex="1">
+          <mxGeometry height="30" width="70" x="4885" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="Y7FoYmEN5TfSn-X6A1HG-32" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="GIve up, change another property" vertex="1">
+          <mxGeometry height="30" width="60" x="4635" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="Y7FoYmEN5TfSn-X6A1HG-40" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Satisfy" vertex="1">
+          <mxGeometry height="30" width="60" x="4946.5" y="753" as="geometry" />
+        </mxCell>
+        <mxCell id="Y7FoYmEN5TfSn-X6A1HG-41" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Not satisfy" vertex="1">
+          <mxGeometry height="30" width="60" x="4886.5" y="663.61" as="geometry" />
+        </mxCell>
+        <mxCell id="Y7FoYmEN5TfSn-X6A1HG-46" edge="1" parent="1" source="Y7FoYmEN5TfSn-X6A1HG-42" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="Y7FoYmEN5TfSn-X6A1HG-4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Y7FoYmEN5TfSn-X6A1HG-64" edge="1" parent="1" source="Y7FoYmEN5TfSn-X6A1HG-42" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="Y7FoYmEN5TfSn-X6A1HG-15">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Y7FoYmEN5TfSn-X6A1HG-42" parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" value="Negotiate" vertex="1">
+          <mxGeometry height="80" width="115" x="4770" y="664" as="geometry" />
+        </mxCell>
+        <mxCell id="Y7FoYmEN5TfSn-X6A1HG-52" edge="1" parent="1" source="Y7FoYmEN5TfSn-X6A1HG-11" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="Y7FoYmEN5TfSn-X6A1HG-8" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Y7FoYmEN5TfSn-X6A1HG-11" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" value="Find housemates via rental group" vertex="1">
+          <mxGeometry height="60" width="120" x="4763" y="145" as="geometry" />
+        </mxCell>
+        <mxCell id="Y7FoYmEN5TfSn-X6A1HG-65" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" value="" vertex="1">
+          <mxGeometry height="40" width="40" x="4310" y="705" as="geometry" />
+        </mxCell>
+        <mxCell id="Y7FoYmEN5TfSn-X6A1HG-70" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Failed" vertex="1">
+          <mxGeometry height="30" width="60" x="4703" y="670" as="geometry" />
+        </mxCell>
+        <mxCell id="Y7FoYmEN5TfSn-X6A1HG-71" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Success" vertex="1">
+          <mxGeometry height="30" width="60" x="4826.5" y="755" as="geometry" />
+        </mxCell>
+        <mxCell id="Y7FoYmEN5TfSn-X6A1HG-72" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Available" vertex="1">
+          <mxGeometry height="30" width="60" x="5000" y="500" as="geometry" />
+        </mxCell>
+        <mxCell id="Y7FoYmEN5TfSn-X6A1HG-73" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Expired" vertex="1">
+          <mxGeometry height="30" width="60" x="4870" y="410" as="geometry" />
+        </mxCell>
+        <mxCell id="Y7FoYmEN5TfSn-X6A1HG-75" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="SHORTEST ROUTE" vertex="1">
+          <mxGeometry height="30" width="160" x="4350" y="715" as="geometry" />
+        </mxCell>
+        <mxCell id="Y7FoYmEN5TfSn-X6A1HG-76" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="FIND HOUSEMATE ROUTE" vertex="1">
+          <mxGeometry height="30" width="200" x="4350" y="775" as="geometry" />
+        </mxCell>
+        <mxCell id="Y7FoYmEN5TfSn-X6A1HG-77" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="NEGOTIATION ROUTE" vertex="1">
+          <mxGeometry height="30" width="180" x="4350" y="835" as="geometry" />
+        </mxCell>
+        <mxCell id="Y7FoYmEN5TfSn-X6A1HG-78" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" value="" vertex="1">
+          <mxGeometry height="40" width="40" x="4310" y="770" as="geometry" />
+        </mxCell>
+        <mxCell id="Y7FoYmEN5TfSn-X6A1HG-79" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" value="" vertex="1">
+          <mxGeometry height="40" width="40" x="4310" y="835" as="geometry" />
+        </mxCell>
+        <mxCell id="ZO5wpIZcIYxiJQe_9ncm-1" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="&lt;span id=&quot;docs-internal-guid-234559b0-7fff-dd1f-0b25-ae50bb5a527e&quot;&gt;&lt;span style=&quot;font-size: 11pt; font-family: &amp;quot;Times New Roman&amp;quot;, serif; background-color: transparent; font-weight: 700; font-variant: normal; vertical-align: baseline; white-space: pre-wrap;&quot;&gt;Figure 3.1: Flowchart of the Current Manual Rental Search Process for UTeM Students&lt;/span&gt;&lt;/span&gt;" vertex="1">
+          <mxGeometry height="30" width="570" x="4376.5" y="960" as="geometry" />
+        </mxCell>
+        <mxCell id="ZO5wpIZcIYxiJQe_9ncm-3" parent="1" style="ellipse;whiteSpace=wrap;html=1;" value="Post/ Join Housemeate&lt;div&gt;Invitation&lt;/div&gt;" vertex="1">
+          <mxGeometry height="56.39" width="180" x="5410" y="162.22" as="geometry" />
+        </mxCell>
+        <mxCell id="ZO5wpIZcIYxiJQe_9ncm-5" parent="1" style="ellipse;whiteSpace=wrap;html=1;" value="Send/ Receive Messages" vertex="1">
+          <mxGeometry height="56.39" width="180" x="5400" y="470" as="geometry" />
+        </mxCell>
+        <mxCell id="ZO5wpIZcIYxiJQe_9ncm-6" parent="1" style="ellipse;whiteSpace=wrap;html=1;" value="View/ Sign Contract" vertex="1">
+          <mxGeometry height="56.39" width="180" x="5400" y="306.8" as="geometry" />
+        </mxCell>
+        <mxCell id="ZO5wpIZcIYxiJQe_9ncm-7" parent="1" style="ellipse;whiteSpace=wrap;html=1;" value="Find/ Join Housemate Group" vertex="1">
+          <mxGeometry height="56.39" width="180" x="5400" y="390" as="geometry" />
+        </mxCell>
+        <mxCell id="ZO5wpIZcIYxiJQe_9ncm-8" parent="1" style="ellipse;whiteSpace=wrap;html=1;" value="Register Property" vertex="1">
+          <mxGeometry height="56.39" width="180" x="5400" y="558.61" as="geometry" />
+        </mxCell>
+        <mxCell id="IlhY3UQUgK8Gr7vp7zOj-1" parent="1" style="ellipse;whiteSpace=wrap;html=1;" value="Browse Property List" vertex="1">
+          <mxGeometry height="56.39" width="180" x="5410" y="660" as="geometry" />
+        </mxCell>
+        <mxCell id="IlhY3UQUgK8Gr7vp7zOj-2" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;" value="Student&lt;div&gt;(Tenant)&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="30" x="5190" y="290" as="geometry" />
+        </mxCell>
+        <mxCell id="IlhY3UQUgK8Gr7vp7zOj-5" parent="1" style="ellipse;whiteSpace=wrap;html=1;" value="Browse Property List" vertex="1">
+          <mxGeometry height="56.39" width="180" x="5600" y="670" as="geometry" />
+        </mxCell>
+        <mxCell id="IlhY3UQUgK8Gr7vp7zOj-6" parent="1" style="ellipse;whiteSpace=wrap;html=1;" value="Browse Property List" vertex="1">
+          <mxGeometry height="56.39" width="180" x="5600" y="670" as="geometry" />
+        </mxCell>
+        <mxCell id="IlhY3UQUgK8Gr7vp7zOj-7" parent="1" style="ellipse;whiteSpace=wrap;html=1;" value="Browse Property List" vertex="1">
+          <mxGeometry height="56.39" width="180" x="5600" y="670" as="geometry" />
+        </mxCell>
+        <mxCell id="IlhY3UQUgK8Gr7vp7zOj-8" parent="1" style="ellipse;whiteSpace=wrap;html=1;" value="Browse Property List" vertex="1">
+          <mxGeometry height="56.39" width="180" x="5600" y="670" as="geometry" />
+        </mxCell>
+        <mxCell id="IlhY3UQUgK8Gr7vp7zOj-9" parent="1" style="ellipse;whiteSpace=wrap;html=1;" value="Browse Property List" vertex="1">
+          <mxGeometry height="56.39" width="180" x="5600" y="670" as="geometry" />
+        </mxCell>
+        <mxCell id="IlhY3UQUgK8Gr7vp7zOj-10" parent="1" style="ellipse;whiteSpace=wrap;html=1;" value="Save Interested Ads" vertex="1">
+          <mxGeometry height="56.39" width="180" x="5400" y="748.61" as="geometry" />
+>>>>>>> Stashed changes
         </mxCell>
       </root>
     </mxGraphModel>

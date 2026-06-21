@@ -1622,6 +1622,64 @@ ALTER TABLE bookings
   ADD COLUMN signed_uploaded_at TIMESTAMP NULL DEFAULT NULL AFTER signed_contract_path,
   ADD COLUMN signed_uploaded_by INT NULL DEFAULT NULL AFTER signed_uploaded_at;
 
+-- Housemate application system + group chat support
+-- Run against dbrb_2026
+
+-- Applications table
+CREATE TABLE IF NOT EXISTS co_tenancy_applications (
+    id             INT AUTO_INCREMENT PRIMARY KEY,
+    post_id        INT NOT NULL,
+    applicant_id   INT NOT NULL,
+    message        TEXT,
+    status         ENUM('pending','accepted','rejected') NOT NULL DEFAULT 'pending',
+    created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    responded_at   DATETIME NULL,
+    UNIQUE KEY uniq_post_applicant (post_id, applicant_id),
+    FOREIGN KEY (post_id)      REFERENCES co_tenancy_posts(id) ON DELETE CASCADE,
+    FOREIGN KEY (applicant_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Group conversation participants (for housemate group chats)
+CREATE TABLE IF NOT EXISTS conversation_participants (
+    id              INT AUTO_INCREMENT PRIMARY KEY,
+    conversation_id INT NOT NULL,
+    user_id         INT NOT NULL,
+    joined_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uniq_conv_user (conversation_id, user_id),
+    FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Add group conversation link to posts
+ALTER TABLE co_tenancy_posts
+    ADD COLUMN IF NOT EXISTS group_conversation_id INT NULL;
+
+-- Allow group conversations to have no user_b (group mode)
+ALTER TABLE conversations MODIFY user_b INT NULL;
+
+-- Add housemate_group to context_type enum
+ALTER TABLE conversations
+    MODIFY context_type ENUM(
+        'property_inquiry','booking','friend','agent_case',
+        'other','contract_prep','housemate_group'
+    ) NOT NULL DEFAULT 'other';
+
+-- Migration: Add inspection scheduling support for property listing verification
+-- Run once against the rentbridge database
+
+-- 1. Track when property listing inspection was completed (before approve/reject)
+ALTER TABLE properties
+    ADD COLUMN IF NOT EXISTS inspection_completed_at DATETIME NULL AFTER agent_status;
+
+-- 2. Track the confirmed inspection schedule on properties
+ALTER TABLE properties
+    ADD COLUMN IF NOT EXISTS inspection_scheduled_at DATETIME NULL AFTER inspection_completed_at,
+    ADD COLUMN IF NOT EXISTS inspection_access_method VARCHAR(50) NULL AFTER inspection_scheduled_at,
+    ADD COLUMN IF NOT EXISTS inspection_access_detail TEXT NULL AFTER inspection_access_method;
+
+-- 3. Allow agent_status ENUM to include 'inspecting' intermediate state
+ALTER TABLE properties
+    MODIFY COLUMN agent_status ENUM('pending','inspecting','accepted','rejected','timeout') NULL;
 
 
 
