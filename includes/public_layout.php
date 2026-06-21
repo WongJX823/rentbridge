@@ -21,6 +21,7 @@ $pageTabs  = $pageTabs  ?? [];
     <link href="/rentbridge/assets/css/style.css" rel="stylesheet">
     <link href="/rentbridge/assets/css/student.css" rel="stylesheet">
     <link href="/rentbridge/assets/css/public_layout.css" rel="stylesheet">
+    <?= $pageExtraHead ?? '' ?>
 </head>
 <body class="student-body">
 

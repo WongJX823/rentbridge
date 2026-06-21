@@ -126,8 +126,10 @@ if ($showSimilar) {
     $similar = $simStmt->fetchAll();
 }
 
-$pageTitle = $prop['title'];
-$activeNav = 'browse';
+$pageTitle    = $prop['title'];
+$activeNav    = 'browse';
+$pageExtraHead = '<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>';
 
 ob_start();
 ?>
@@ -279,6 +281,66 @@ ob_start();
                 <?php endforeach; ?>
             </div>
         <?php endif; ?>
+
+        <!-- LOCATION MAP -->
+        <h5 class="mt-4 mb-2">Location</h5>
+        <div id="propMap" style="height:300px; border-radius:10px; border:1px solid rgba(15,44,82,0.1); overflow:hidden;"></div>
+        <?php if (!empty($prop['maps_url'])): ?>
+            <a href="<?= e($prop['maps_url']) ?>" target="_blank" rel="noopener"
+               class="small text-secondary mt-1 d-inline-block">
+                <i class="bi bi-box-arrow-up-right me-1"></i>Open in Google Maps
+            </a>
+        <?php endif; ?>
+        <script>
+        (function() {
+            const LAT  = <?= !empty($prop['latitude'])  ? (float)$prop['latitude']  : 'null' ?>;
+            const LNG  = <?= !empty($prop['longitude']) ? (float)$prop['longitude'] : 'null' ?>;
+            const ADDR = <?= json_encode(trim($prop['address'] . ', ' . $prop['city'] . ', ' . $prop['state'])) ?>;
+            const TITLE = <?= json_encode($prop['title']) ?>;
+
+            const pinIcon = L.divIcon({
+                className: '',
+                html: '<div style="width:30px;height:30px;background:#2E8B57;border:3px solid white;border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 2px 8px rgba(0,0,0,0.35);"></div>',
+                iconSize: [30, 30],
+                iconAnchor: [15, 30],
+                popupAnchor: [0, -32],
+            });
+
+            function initMap(lat, lng) {
+                const map = L.map('propMap', { scrollWheelZoom: false }).setView([lat, lng], 16);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+                    maxZoom: 19,
+                }).addTo(map);
+                L.marker([lat, lng], { icon: pinIcon })
+                    .addTo(map)
+                    .bindPopup('<strong>' + TITLE + '</strong><br><small>' + ADDR + '</small>')
+                    .openPopup();
+            }
+
+            if (LAT && LNG) {
+                initMap(LAT, LNG);
+            } else {
+                // Geocode via Nominatim as fallback
+                fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(ADDR))
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data && data.length > 0) {
+                            initMap(parseFloat(data[0].lat), parseFloat(data[0].lon));
+                        } else {
+                            document.getElementById('propMap').innerHTML =
+                                '<div class="d-flex align-items-center justify-content-center h-100 text-secondary small bg-light">' +
+                                '<i class="bi bi-map me-2"></i>Map unavailable for this address</div>';
+                        }
+                    })
+                    .catch(() => {
+                        document.getElementById('propMap').innerHTML =
+                            '<div class="d-flex align-items-center justify-content-center h-100 text-secondary small bg-light">' +
+                            '<i class="bi bi-map me-2"></i>Map unavailable</div>';
+                    });
+            }
+        })();
+        </script>
     </div>
 
     <!-- RIGHT RAIL (sticky on desktop, hidden on mobile) -->
