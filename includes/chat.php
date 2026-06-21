@@ -241,6 +241,24 @@ function chat_unread_total(int $userId): int {
 }
 
 /**
+ * Count conversations (not messages) that have at least one unread message.
+ * Use this for sidebar badges — avoids inflated counts when one person sends many messages.
+ */
+function chat_unread_conversations(int $userId): int {
+    $stmt = db()->prepare("
+        SELECT COUNT(DISTINCT m.conversation_id)
+          FROM messages m
+          JOIN conversations c ON c.id = m.conversation_id
+         WHERE (c.user_a = ? OR c.user_b = ?
+                OR c.id IN (SELECT conversation_id FROM conversation_participants WHERE user_id = ?))
+           AND m.sender_id != ?
+           AND m.read_at IS NULL
+    ");
+    $stmt->execute([$userId, $userId, $userId, $userId]);
+    return (int)$stmt->fetchColumn();
+}
+
+/**
  * Get display name + role for a user (used in inbox).
  */
 function chat_get_user_display(int $userId): array {

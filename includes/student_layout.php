@@ -31,8 +31,8 @@ $stmt->execute([$userId]);
 $me = $stmt->fetch() ?: [];
 $myName = ($me['preferred_name'] ?? '') ?: ($me['full_name'] ?? 'User');
 
-// Unread chat count
-$unreadChat = chat_unread_total($userId);
+// Unread message count — messages where read_at IS NULL sent by others
+$unreadChat = unread_message_count($userId);
 
 // Unread notifications
 $stmt = $pdo->prepare("SELECT COUNT(*) FROM notifications WHERE user_id = ? AND is_read = 0");

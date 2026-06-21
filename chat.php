@@ -1,9 +1,15 @@
 <?php
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/chat.php';
+require_once __DIR__ . '/includes/contracts.php';
 require_login();
 
 $userId = current_user_id();
+
+// Trigger contract expiry checks for roles that have contracts (deduped via notification type)
+if (in_array(current_role(), ['student', 'landlord'])) {
+    check_contract_expiry_notifications();
+}
 $conversations = get_user_inbox($userId);
 
 $pageTitle = 'Messages';
