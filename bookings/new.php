@@ -102,7 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             SELECT id FROM bookings
              WHERE property_id = ?
                AND status IN ('pending_landlord','pending_agent','agent_assigned',
-                              'contract_pending','active')
+                              'agent_verifying','agent_verified','contract_pending','active')
                AND start_date <= ?
                AND end_date   >= ?
         ");

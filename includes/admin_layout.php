@@ -106,6 +106,16 @@ $pageContent   = $pageContent   ?? '';
                 <i class="bi bi-bar-chart-fill"></i>
                 <span class="sidebar-label">Statistics</span>
             </a>
+            <a href="/rentbridge/admin/transfers.php"
+               class="sidebar-link <?= $activeNav === 'transfers' ? 'active' : '' ?>">
+                <i class="bi bi-arrow-left-right"></i>
+                <span class="sidebar-label">Transfers</span>
+                <?php
+                $xferCount = (int)($pdo ?? db())->query("SELECT COUNT(*) FROM agent_transfer_requests WHERE status = 'pending_admin'")->fetchColumn();
+                if ($xferCount > 0): ?>
+                    <span class="sidebar-badge"><?= $xferCount > 9 ? '9+' : $xferCount ?></span>
+                <?php endif; ?>
+            </a>
             <a href="/rentbridge/admin/messages.php"
             class="sidebar-link <?= $activeNav === 'messages' ? 'active' : '' ?>">
                 <i class="bi bi-envelope-fill"></i>

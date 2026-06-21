@@ -19,8 +19,9 @@ $attention = [
     'pending_agents'      => (int)$pdo->query("SELECT COUNT(*) FROM users WHERE primary_role = 'agent' AND status = 'pending'")->fetchColumn(),
     'pending_properties'  => (int)$pdo->query("SELECT COUNT(*) FROM properties WHERE status = 'pending_approval'")->fetchColumn(),
     'stuck_bookings'      => (int)$pdo->query("SELECT COUNT(*) FROM bookings WHERE status = 'pending_agent' AND agent_id IS NULL")->fetchColumn(),
+    'pending_transfers'   => (int)$pdo->query("SELECT COUNT(*) FROM agent_transfer_requests WHERE status = 'pending_admin'")->fetchColumn(),
 ];
-$totalAttention = $attention['pending_agents'] + $attention['pending_properties'] + $attention['stuck_bookings'];
+$totalAttention = array_sum($attention);
 
 // --- LAYOUT ---
 $pageTitle = 'Dashboard';
@@ -45,7 +46,12 @@ ob_start();
                     <?= $attention['pending_properties'] ?> propert<?= $attention['pending_properties'] === 1 ? 'y' : 'ies' ?> pending review ·
                 <?php endif; ?>
                 <?php if ($attention['stuck_bookings'] > 0): ?>
-                    <?= $attention['stuck_bookings'] ?> booking<?= $attention['stuck_bookings'] === 1 ? '' : 's' ?> stuck without agent
+                    <?= $attention['stuck_bookings'] ?> booking<?= $attention['stuck_bookings'] === 1 ? '' : 's' ?> stuck without agent ·
+                <?php endif; ?>
+                <?php if ($attention['pending_transfers'] > 0): ?>
+                    <a href="/rentbridge/admin/transfers.php" class="text-warning fw-semibold">
+                        <?= $attention['pending_transfers'] ?> case transfer<?= $attention['pending_transfers'] === 1 ? '' : 's' ?> awaiting review
+                    </a>
                 <?php endif; ?>
             </div>
         </div>

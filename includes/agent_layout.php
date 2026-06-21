@@ -138,6 +138,11 @@ $urgentCases = (int)$stmt->fetchColumn();
                 <i class="bi bi-cash-stack"></i>
                 <span class="sidebar-label">Earnings</span>
             </a>
+            <a href="/rentbridge/agent/request_transfer.php"
+               class="sidebar-link <?= $activeNav === 'transfer' ? 'active' : '' ?>">
+                <i class="bi bi-arrow-left-right"></i>
+                <span class="sidebar-label">Transfer Case</span>
+            </a>
             <a href="/rentbridge/agent/profile.php"
             class="sidebar-link <?= $activeNav === 'profile' ? 'active' : '' ?>">
                 <i class="bi bi-person-circle"></i>

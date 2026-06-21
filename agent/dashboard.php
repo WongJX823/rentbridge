@@ -9,6 +9,22 @@ $userId = current_user_id();
 // Lazy timeout check on dashboard load
 check_and_reassign_timeouts();
 
+// Transfer offers pending this agent's response
+$stmt = $pdo->prepare("
+    SELECT atn.id AS notif_id, atn.transfer_request_id,
+           p.title AS property_title, p.city,
+           u.full_name AS requesting_agent_name,
+           atr.reason
+      FROM agent_transfer_notifications atn
+      JOIN agent_transfer_requests atr ON atr.id = atn.transfer_request_id
+      JOIN properties p ON p.id = atr.property_id
+      JOIN users u ON u.id = atr.requesting_agent_id
+     WHERE atn.agent_id = ? AND atn.outcome = 'pending' AND atr.status = 'finding_agent'
+     ORDER BY atn.notified_at ASC
+");
+$stmt->execute([$userId]);
+$transferOffers = $stmt->fetchAll();
+
 // Fetch this agent's pending property reviews
 $stmt = $pdo->prepare("
     SELECT p.id, p.title, p.city, p.monthly_rent, p.agent_assigned_at,
@@ -203,6 +219,40 @@ ob_start();
     </div>
 
 </div>
+
+<?php if (!empty($transferOffers)): ?>
+<div class="bg-white border rounded-3 p-4 mb-4" style="border-left:4px solid #6f42c1 !important;">
+    <h5 class="mb-3">
+        <i class="bi bi-arrow-left-right text-purple" style="color:#6f42c1;"></i>
+        Property case transfer offered to you
+        <span class="badge ms-1" style="background:#6f42c1;"><?= count($transferOffers) ?></span>
+    </h5>
+    <p class="small text-secondary mb-3">
+        The following property cases have been offered to you. Accept or decline each one.
+    </p>
+    <table class="table table-sm">
+        <thead>
+            <tr><th>Property</th><th>From agent</th><th>Reason</th><th></th></tr>
+        </thead>
+        <tbody>
+        <?php foreach ($transferOffers as $t): ?>
+            <tr>
+                <td>
+                    <strong><?= e($t['property_title']) ?></strong>
+                    <div class="small text-secondary"><?= e($t['city']) ?></div>
+                </td>
+                <td class="small"><?= e($t['requesting_agent_name']) ?></td>
+                <td class="small text-secondary"><?= e(mb_strimwidth($t['reason'], 0, 60, '…')) ?></td>
+                <td>
+                    <a href="/rentbridge/agent/transfer_response.php?id=<?= (int)$t['transfer_request_id'] ?>"
+                       class="btn btn-sm btn-primary">Respond</a>
+                </td>
+            </tr>
+        <?php endforeach; ?>
+        </tbody>
+    </table>
+</div>
+<?php endif; ?>
 
 <?php if (!empty($pendingReviews)): ?>
 <div class="bg-white border rounded-3 p-4 mb-4" style="border-left:4px solid #C9923F !important;">
