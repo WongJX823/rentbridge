@@ -60,18 +60,25 @@ function send_message(int $conversationId, int $senderId, string $body): array {
     $pdo = db();
 
     $stmt = $pdo->prepare("
-        SELECT user_a, user_b, is_locked FROM conversations WHERE id = ? LIMIT 1
+        SELECT user_a, user_b, context_type, is_locked FROM conversations WHERE id = ? LIMIT 1
     ");
     $stmt->execute([$conversationId]);
     $convo = $stmt->fetch();
     if (!$convo) {
         return [false, 'Conversation not found.', null];
     }
-    if ($senderId !== (int)$convo['user_a'] && $senderId !== (int)$convo['user_b']) {
-        return [false, 'You are not a participant in this conversation.', null];
-    }
     if (!empty($convo['is_locked'])) {
         return [false, 'This conversation is closed.', null];
+    }
+    // Group conversation: check participants table
+    if ($convo['context_type'] === 'housemate_group') {
+        $pcheck = $pdo->prepare("SELECT 1 FROM conversation_participants WHERE conversation_id = ? AND user_id = ?");
+        $pcheck->execute([$conversationId, $senderId]);
+        if (!$pcheck->fetchColumn()) {
+            return [false, 'You are not a participant in this conversation.', null];
+        }
+    } elseif ($senderId !== (int)$convo['user_a'] && $senderId !== (int)$convo['user_b']) {
+        return [false, 'You are not a participant in this conversation.', null];
     }
 
     $pdo->beginTransaction();
@@ -115,7 +122,7 @@ function get_conversation_for_user(int $conversationId, int $userId, string $rol
                p.title AS property_title
           FROM conversations c
           JOIN users ua ON ua.id = c.user_a
-          JOIN users ub ON ub.id = c.user_b
+          LEFT JOIN users ub ON ub.id = c.user_b
           LEFT JOIN properties p ON p.id = c.property_id
          WHERE c.id = ?
          LIMIT 1
@@ -124,9 +131,18 @@ function get_conversation_for_user(int $conversationId, int $userId, string $rol
     $convo = $stmt->fetch();
     if (!$convo) return null;
 
-    if ($role !== 'admin' &&
-        $userId !== (int)$convo['user_a'] &&
-        $userId !== (int)$convo['user_b']) {
+    if ($role === 'admin') return $convo;
+
+    // Group conversation — check participants table
+    if ($convo['context_type'] === 'housemate_group') {
+        $pcheck = $pdo->prepare("
+            SELECT 1 FROM conversation_participants WHERE conversation_id = ? AND user_id = ?
+        ");
+        $pcheck->execute([$conversationId, $userId]);
+        return $pcheck->fetchColumn() ? $convo : null;
+    }
+
+    if ($userId !== (int)$convo['user_a'] && $userId !== (int)$convo['user_b']) {
         return null;
     }
     return $convo;
@@ -184,7 +200,9 @@ function get_user_inbox(int $userId): array {
     $stmt = db()->prepare("
         SELECT c.id, c.context_type, c.property_id, c.booking_id, c.is_locked,
                c.last_message_at, c.last_message_preview, c.last_sender_id,
-               CASE WHEN c.user_a = ? THEN c.user_b ELSE c.user_a END AS other_user_id,
+               CASE WHEN c.context_type = 'housemate_group' THEN NULL
+                    WHEN c.user_a = ? THEN c.user_b
+                    ELSE c.user_a END AS other_user_id,
                p.title AS property_title,
                (SELECT COUNT(*) FROM messages m
                  WHERE m.conversation_id = c.id
@@ -193,9 +211,10 @@ function get_user_inbox(int $userId): array {
           FROM conversations c
           LEFT JOIN properties p ON p.id = c.property_id
          WHERE c.user_a = ? OR c.user_b = ?
+            OR c.id IN (SELECT conversation_id FROM conversation_participants WHERE user_id = ?)
          ORDER BY c.last_message_at DESC, c.created_at DESC
     ");
-    $stmt->execute([$userId, $userId, $userId, $userId]);
+    $stmt->execute([$userId, $userId, $userId, $userId, $userId]);
     return $stmt->fetchAll();
 }
 
@@ -207,11 +226,12 @@ function unread_message_count(int $userId): int {
     $stmt = db()->prepare("
         SELECT COUNT(*) FROM messages m
           JOIN conversations c ON c.id = m.conversation_id
-         WHERE (c.user_a = ? OR c.user_b = ?)
+         WHERE (c.user_a = ? OR c.user_b = ?
+                OR c.id IN (SELECT conversation_id FROM conversation_participants WHERE user_id = ?))
            AND m.sender_id != ?
            AND m.read_at IS NULL
     ");
-    $stmt->execute([$userId, $userId, $userId]);
+    $stmt->execute([$userId, $userId, $userId, $userId]);
     return (int)$stmt->fetchColumn();
 }
 

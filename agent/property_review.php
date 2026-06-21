@@ -11,17 +11,37 @@ if ($propertyId <= 0) {
     die('Property not specified.');
 }
 
-// Handle POST (accept/reject)
+// Handle POST (accept/pass/reject/complete/approve)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
     $action = $_POST['action'] ?? '';
 
     if ($action === 'accept') {
         $result = agent_accept_property($propertyId, $agentId);
+        if ($result['ok']) {
+            set_flash('success', 'Case accepted. Go to the conversation and propose an inspection time.');
+            // Redirect to the newly-created agent↔landlord conversation
+            header('Location: /rentbridge/chat/conversation.php?id=' . $result['conversation_id']);
+        } else {
+            set_flash('danger', 'Failed: ' . $result['error']);
+            header('Location: /rentbridge/agent/property_review.php?id=' . $propertyId);
+        }
+        exit;
+
+    } elseif ($action === 'complete_inspection') {
+        $result = agent_complete_inspection($propertyId, $agentId);
         set_flash($result['ok'] ? 'success' : 'danger',
-                  $result['ok'] ? 'Property approved and is now live.'
+                  $result['ok'] ? 'Inspection marked complete. You can now approve or reject the listing.'
                                 : ('Failed: ' . $result['error']));
         header('Location: /rentbridge/agent/property_review.php?id=' . $propertyId);
+        exit;
+
+    } elseif ($action === 'approve_listing') {
+        $result = agent_approve_listing($propertyId, $agentId);
+        set_flash($result['ok'] ? 'success' : 'danger',
+                  $result['ok'] ? 'Property approved and is now live!'
+                                : ('Failed: ' . $result['error']));
+        header('Location: /rentbridge/agent/dashboard.php');
         exit;
 
     } elseif ($action === 'pass') {
@@ -201,14 +221,19 @@ ob_start();
             <hr>
 
             <?php if ($prop['agent_status'] === 'pending'): ?>
-                <h6 class="text-secondary text-uppercase small mb-3">Decision</h6>
+                <!-- Phase 1: Review listing, then accept to start inspection -->
+                <h6 class="text-secondary text-uppercase small mb-3">Step 1 — Accept case</h6>
+                <p class="small text-secondary mb-3">
+                    Review the documents and photos above, then accept to begin the physical inspection process.
+                    Accepting opens a chat with the landlord to schedule a visit.
+                </p>
 
                 <form method="POST" class="mb-2">
                     <?= csrf_field() ?>
                     <input type="hidden" name="action" value="accept">
-                    <button type="submit" class="btn btn-success w-100"
-                            onclick="return confirm('Approve this property as verified and make it live?');">
-                        <i class="bi bi-check-circle me-1"></i> Accept &amp; Approve
+                    <button type="submit" class="btn btn-primary w-100"
+                            onclick="return confirm('Accept this case and start the inspection scheduling process?');">
+                        <i class="bi bi-clipboard-check me-1"></i> Accept &amp; Schedule inspection
                     </button>
                 </form>
 
@@ -223,9 +248,75 @@ ob_start();
                 </button>
 
                 <div class="mt-3 p-2 bg-light rounded small text-secondary">
-                    <p class="mb-1"><strong>Pass</strong> — I can't handle this (area, workload) but property looks valid. Sends to the next agent in queue.</p>
-                    <p class="mb-0"><strong>Reject listing</strong> — Fake documents, scam, or illegal property. Landlord is notified and listing is permanently rejected.</p>
+                    <p class="mb-1"><strong>Pass</strong> — Can't handle this (area, workload) but listing looks valid. Sends to next agent in queue.</p>
+                    <p class="mb-0"><strong>Reject listing</strong> — Fake documents, scam, or illegal property. Permanently rejects, landlord is notified.</p>
                 </div>
+
+            <?php elseif ($prop['agent_status'] === 'inspecting'): ?>
+                <!-- Phase 2: Inspection in progress — chat open, schedule visit, mark complete -->
+                <?php
+                $inspectionDone = !empty($prop['inspection_completed_at']);
+                // Find the chat conversation for this property
+                $lo  = min($agentId, (int)$prop['landlord_id']);
+                $hi  = max($agentId, (int)$prop['landlord_id']);
+                $stmt = $pdo->prepare("SELECT id FROM conversations WHERE user_a = ? AND user_b = ? AND (property_id <=> ?) AND context_type = 'agent_case' LIMIT 1");
+                $stmt->execute([$lo, $hi, $propertyId]);
+                $convoId = (int)$stmt->fetchColumn();
+                ?>
+
+                <?php if (!$inspectionDone): ?>
+                    <h6 class="text-secondary text-uppercase small mb-2">Step 2 — Inspection</h6>
+                    <p class="small text-secondary mb-3">
+                        Use the conversation with the landlord to schedule and confirm an inspection time.
+                        After you've physically visited the property, click below.
+                    </p>
+
+                    <?php if ($convoId): ?>
+                        <a href="/rentbridge/chat/conversation.php?id=<?= $convoId ?>"
+                           class="btn btn-outline-primary w-100 mb-2">
+                            <i class="bi bi-chat-dots me-1"></i> Open landlord conversation
+                        </a>
+                    <?php endif; ?>
+
+                    <form method="POST" class="mb-2">
+                        <?= csrf_field() ?>
+                        <input type="hidden" name="action" value="complete_inspection">
+                        <button type="submit" class="btn btn-success w-100"
+                                onclick="return confirm('Mark the physical inspection as complete? Do this only after you have visited the property.');">
+                            <i class="bi bi-check2-square me-1"></i> Mark inspection complete
+                        </button>
+                    </form>
+
+                    <button type="button" class="btn btn-outline-danger w-100"
+                            data-bs-toggle="modal" data-bs-target="#rejectModal">
+                        <i class="bi bi-slash-circle me-1"></i> Reject listing
+                    </button>
+
+                <?php else: ?>
+                    <!-- Inspection done — approve or reject -->
+                    <div class="alert alert-success small mb-3">
+                        <i class="bi bi-check-circle-fill"></i>
+                        Inspection completed <?= e(date('d M Y', strtotime($prop['inspection_completed_at']))) ?>.
+                        Make your final decision:
+                    </div>
+
+                    <h6 class="text-secondary text-uppercase small mb-3">Step 3 — Final decision</h6>
+
+                    <form method="POST" class="mb-2">
+                        <?= csrf_field() ?>
+                        <input type="hidden" name="action" value="approve_listing">
+                        <button type="submit" class="btn btn-success w-100"
+                                onclick="return confirm('Approve this property? It will go live and be visible to students.');">
+                            <i class="bi bi-check-circle me-1"></i> Approve listing
+                        </button>
+                    </form>
+
+                    <button type="button" class="btn btn-outline-danger w-100"
+                            data-bs-toggle="modal" data-bs-target="#rejectModal">
+                        <i class="bi bi-slash-circle me-1"></i> Reject listing
+                    </button>
+                <?php endif; ?>
+
             <?php elseif ($prop['agent_status'] === 'accepted'): ?>
                 <div class="alert alert-success small mb-0">
                     <i class="bi bi-check-circle-fill"></i>

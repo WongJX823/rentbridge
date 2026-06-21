@@ -49,8 +49,8 @@ $pageTabs  = $pageTabs  ?? [];
                 <i class="bi bi-speedometer2 me-1"></i> Dashboard
             </a>
         <?php else: ?>
-            <a href="/rentbridge/auth/login.php" class="btn btn-sm btn-outline-secondary me-2">Log in</a>
-            <a href="/rentbridge/auth/register_student.php" class="btn btn-sm btn-primary">Register</a>
+            <a href="/rentbridge/auth/login.php" class="btn btn-sm btn-primary me-2">Log in</a>
+            <a href="/rentbridge/auth/register_student.php" class="btn btn-sm btn-outline-secondary">Register</a>
         <?php endif; ?>
     </div>
 </header>
@@ -79,11 +79,12 @@ $pageTabs  = $pageTabs  ?? [];
                     <i class="bi bi-chevron-down sidebar-chevron"></i>
                 </button>
                 <div class="sidebar-submenu">
-                    <a href="/rentbridge/about.php"   class="sidebar-link sidebar-sublink <?= $activeNav === 'about'   ? 'active' : '' ?>">About RentBridge</a>
-                    <a href="/rentbridge/faq.php"     class="sidebar-link sidebar-sublink <?= $activeNav === 'faq'     ? 'active' : '' ?>">FAQ</a>
-                    <a href="/rentbridge/contact.php" class="sidebar-link sidebar-sublink <?= $activeNav === 'contact' ? 'active' : '' ?>">Feedback &amp; Contact</a>
-                    <a href="/rentbridge/legal.php"   class="sidebar-link sidebar-sublink <?= $activeNav === 'legal'   ? 'active' : '' ?>">Terms &amp; Conditions</a>
-                    <a href="/rentbridge/privacy.php" class="sidebar-link sidebar-sublink <?= $activeNav === 'privacy' ? 'active' : '' ?>">Privacy &amp; Security</a>
+                    <a href="/rentbridge/about.php"        class="sidebar-link sidebar-sublink <?= $activeNav === 'about'        ? 'active' : '' ?>">About RentBridge</a>
+                    <a href="/rentbridge/how_it_works.php" class="sidebar-link sidebar-sublink <?= $activeNav === 'how_it_works' ? 'active' : '' ?>">How it works</a>
+                    <a href="/rentbridge/faq.php"          class="sidebar-link sidebar-sublink <?= $activeNav === 'faq'          ? 'active' : '' ?>">FAQ</a>
+                    <a href="/rentbridge/contact.php"      class="sidebar-link sidebar-sublink <?= $activeNav === 'contact'      ? 'active' : '' ?>">Feedback &amp; Contact</a>
+                    <a href="/rentbridge/legal.php"        class="sidebar-link sidebar-sublink <?= $activeNav === 'legal'        ? 'active' : '' ?>">Terms &amp; Conditions</a>
+                    <a href="/rentbridge/privacy.php"      class="sidebar-link sidebar-sublink <?= $activeNav === 'privacy'      ? 'active' : '' ?>">Privacy &amp; Security</a>
                     <div class="sidebar-submenu-social">
                         <a href="#" title="Twitter"   aria-label="Twitter"><i class="bi bi-twitter-x"></i></a>
                         <a href="#" title="Instagram" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
@@ -124,6 +125,10 @@ $pageTabs  = $pageTabs  ?? [];
             <?php endif; ?>
         </div>
     </aside>
+    <button type="button" class="sidebar-edge-btn" id="sidebarEdgeBtn" aria-label="Toggle sidebar">
+        <i class="bi bi-chevron-left"></i>
+        <i class="bi bi-chevron-right"></i>
+    </button>
 
     <!-- MAIN -->
     <main class="user-main">
@@ -149,27 +154,75 @@ $pageTabs  = $pageTabs  ?? [];
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-// Sidebar freeze toggle
+// Sidebar controls
 (function() {
-    const toggle = document.getElementById('sidebarToggle');
+    const freezeBtn = document.getElementById('sidebarToggle');
+    const edgeBtn   = document.getElementById('sidebarEdgeBtn');
     const body = document.body;
     function updateTooltip() {
-        toggle.setAttribute('data-tooltip',
+        freezeBtn.setAttribute('data-tooltip',
             body.classList.contains('sidebar-collapsed') ? 'Show sidebar' : 'Hide sidebar');
+    }
+    function closeAllFloating() {
+        document.querySelectorAll('.sidebar-collapsible.open').forEach(el => closeFloatingSubmenu(el));
+    }
+    function toggle(freeze) {
+        closeAllFloating();
+        body.classList.toggle('sidebar-collapsed');
+        if (freeze) {
+            localStorage.setItem('rb-user-sidebar',
+                body.classList.contains('sidebar-collapsed') ? 'collapsed' : 'expanded');
+        }
+        updateTooltip();
     }
     if (localStorage.getItem('rb-user-sidebar') === 'collapsed') {
         body.classList.add('sidebar-collapsed');
     }
     updateTooltip();
-    toggle.addEventListener('click', function() {
-        body.classList.toggle('sidebar-collapsed');
-        localStorage.setItem('rb-user-sidebar',
-            body.classList.contains('sidebar-collapsed') ? 'collapsed' : 'expanded');
-        updateTooltip();
-    });
+    freezeBtn.addEventListener('click', function() { toggle(true); });
+    if (edgeBtn) edgeBtn.addEventListener('click', function() { toggle(false); });
 })();
 
-// Sidebar submenu — independent of sidebar collapsed/expanded state
+// Sidebar submenu — portal pattern (moves submenu to <body> when floating to escape stacking context)
+function positionFloatingSubmenu(btn, parent) {
+    const rect    = btn.getBoundingClientRect();
+    let   submenu = parent._floatingSub || parent.querySelector('.sidebar-submenu');
+    if (!submenu) return;
+    if (!submenu.classList.contains('sidebar-submenu--floating')) {
+        submenu._origParent  = submenu.parentNode;
+        submenu._origNextSib = submenu.nextSibling || null;
+        parent._floatingSub  = submenu;
+        document.body.appendChild(submenu);
+        submenu.classList.add('sidebar-submenu--floating');
+    }
+    const topbarH    = 56;
+    const spaceAbove = rect.bottom - topbarH;
+    const spaceBelow = window.innerHeight - rect.top;
+    submenu.style.left = '64px';
+    submenu.style.top  = submenu.style.bottom = submenu.style.maxHeight = '';
+    if (spaceAbove >= spaceBelow) {
+        submenu.style.top       = 'auto';
+        submenu.style.bottom    = (window.innerHeight - rect.bottom) + 'px';
+        submenu.style.maxHeight = spaceAbove + 'px';
+    } else {
+        submenu.style.bottom    = 'auto';
+        submenu.style.top       = rect.top + 'px';
+        submenu.style.maxHeight = spaceBelow + 'px';
+    }
+}
+function closeFloatingSubmenu(el) {
+    el.classList.remove('open');
+    const sub = el._floatingSub || el.querySelector('.sidebar-submenu');
+    if (!sub) return;
+    if (sub.classList.contains('sidebar-submenu--floating')) {
+        if (sub._origParent) sub._origParent.insertBefore(sub, sub._origNextSib);
+        sub.classList.remove('sidebar-submenu--floating');
+        sub.style.left = sub.style.top = sub.style.bottom = sub.style.maxHeight = '';
+        el._floatingSub = null;
+    } else {
+        sub.style.top = sub.style.bottom = sub.style.maxHeight = '';
+    }
+}
 document.querySelectorAll('.sidebar-collapsible-toggle').forEach(btn => {
     btn.replaceWith(btn.cloneNode(true));
 });
@@ -177,22 +230,21 @@ document.querySelectorAll('.sidebar-collapsible-toggle').forEach(btn => {
     btn.addEventListener('click', function(e) {
         e.preventDefault();
         e.stopPropagation();
-        const parent = this.closest('.sidebar-collapsible');
-        const opening = !parent.classList.contains('open');
-        if (opening && document.body.classList.contains('sidebar-collapsed')) {
-            const rect = this.getBoundingClientRect();
-            parent.querySelector('.sidebar-submenu').style.top = rect.top + 'px';
+        const parent  = this.closest('.sidebar-collapsible');
+        if (document.body.classList.contains('sidebar-collapsed')) {
+            const opening = !parent.classList.contains('open');
+            if (opening) { positionFloatingSubmenu(this, parent); parent.classList.add('open'); }
+            else         { closeFloatingSubmenu(parent); }
+        } else {
+            parent.classList.toggle('open');
         }
-        parent.classList.toggle('open');
     });
 });
 
 // Close floating submenu when clicking outside
 document.addEventListener('click', function(e) {
-    if (!e.target.closest('.sidebar-collapsible')) {
-        document.querySelectorAll('.sidebar-collapsible.open').forEach(el => {
-            el.classList.remove('open');
-        });
+    if (!e.target.closest('.sidebar-collapsible') && !e.target.closest('.sidebar-submenu--floating')) {
+        document.querySelectorAll('.sidebar-collapsible.open').forEach(el => closeFloatingSubmenu(el));
     }
 });
 </script>

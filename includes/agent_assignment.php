@@ -123,17 +123,18 @@ function assign_agent_to_property(int $propertyId): array {
 }
 
 /**
- * Agent accepts an assignment.
- * Marks property as 'available' (goes live).
+ * Agent accepts an assignment and starts the inspection process.
+ * Creates (or finds) the agent↔landlord conversation for this property,
+ * posts a system_notice, and sets agent_status = 'inspecting'.
+ * Property does NOT go live yet — that happens after inspection via agent_approve_listing().
  */
 function agent_accept_property(int $propertyId, int $agentId): array {
     $pdo = db();
 
-    // Verify the agent IS the currently assigned one
     $stmt = $pdo->prepare("
-        SELECT assigned_agent_id, agent_status
-          FROM properties
-         WHERE id = ?
+        SELECT p.assigned_agent_id, p.agent_status, p.landlord_id, p.title
+          FROM properties p
+         WHERE p.id = ?
     ");
     $stmt->execute([$propertyId]);
     $prop = $stmt->fetch();
@@ -146,11 +147,12 @@ function agent_accept_property(int $propertyId, int $agentId): array {
         return ['ok' => false, 'error' => 'This assignment is no longer pending'];
     }
 
-    // Update property → available
+    $landlordId = (int)$prop['landlord_id'];
+
+    // Update property → inspecting (inspection in progress, not live yet)
     $stmt = $pdo->prepare("
         UPDATE properties
-           SET agent_status = 'accepted',
-               status = 'available'
+           SET agent_status = 'inspecting'
          WHERE id = ?
     ");
     $stmt->execute([$propertyId]);
@@ -165,16 +167,147 @@ function agent_accept_property(int $propertyId, int $agentId): array {
     ");
     $stmt->execute([$propertyId, $agentId]);
 
-    // Notify the landlord
-    $stmt = $pdo->prepare("SELECT landlord_id FROM properties WHERE id = ?");
+    // Find or create the agent↔landlord conversation for this property
+    require_once __DIR__ . '/chat.php';
+    $lo  = min($agentId, $landlordId);
+    $hi  = max($agentId, $landlordId);
+
+    $stmt = $pdo->prepare("
+        SELECT id FROM conversations
+         WHERE user_a = ? AND user_b = ?
+           AND (property_id <=> ?) AND context_type = 'agent_case'
+         LIMIT 1
+    ");
+    $stmt->execute([$lo, $hi, $propertyId]);
+    $convoId = $stmt->fetchColumn();
+
+    if (!$convoId) {
+        $stmt = $pdo->prepare("
+            INSERT INTO conversations (user_a, user_b, property_id, booking_id, context_type)
+            VALUES (?, ?, ?, NULL, 'agent_case')
+        ");
+        $stmt->execute([$lo, $hi, $propertyId]);
+        $convoId = (int)$pdo->lastInsertId();
+    }
+
+    // Fetch agent's display name
+    $stmt = $pdo->prepare("SELECT full_name FROM agents WHERE user_id = ?");
+    $stmt->execute([$agentId]);
+    $agentName = $stmt->fetchColumn() ?: 'Agent';
+
+    // Post system_notice in the conversation
+    $noticeBody = "Agent {$agentName} accepted this property for inspection — propose an inspection time below.";
+    $stmt = $pdo->prepare("
+        INSERT INTO messages (conversation_id, sender_id, body, message_type, sent_at)
+        VALUES (?, ?, ?, 'system_notice', NOW())
+    ");
+    $stmt->execute([$convoId, $agentId, $noticeBody]);
+    $pdo->prepare("UPDATE conversations SET last_message_at = NOW(), last_message_preview = ?, last_sender_id = ? WHERE id = ?")
+        ->execute([substr($noticeBody, 0, 120), $agentId, $convoId]);
+
+    // Notify landlord
+    if ($landlordId && function_exists('notify')) {
+        notify(
+            $landlordId,
+            'agent_accepted',
+            'Agent accepted your property for inspection',
+            "Agent {$agentName} has accepted your property \"{$prop['title']}\" and will schedule an inspection.",
+            "/rentbridge/chat/conversation.php?id={$convoId}"
+        );
+    }
+
+    return ['ok' => true, 'conversation_id' => (int)$convoId];
+}
+
+/**
+ * Agent marks the inspection as complete (physical visit done).
+ * Sets inspection_completed_at. Approve/reject decision can now be made.
+ */
+function agent_complete_inspection(int $propertyId, int $agentId): array {
+    $pdo = db();
+
+    $stmt = $pdo->prepare("
+        SELECT assigned_agent_id, agent_status, landlord_id, title
+          FROM properties WHERE id = ?
+    ");
     $stmt->execute([$propertyId]);
-    $landlordId = (int)$stmt->fetchColumn();
+    $prop = $stmt->fetch();
+
+    if (!$prop) return ['ok' => false, 'error' => 'Property not found'];
+    if ((int)$prop['assigned_agent_id'] !== $agentId) {
+        return ['ok' => false, 'error' => 'You are not the assigned agent'];
+    }
+    if (!in_array($prop['agent_status'], ['inspecting','pending'], true)) {
+        return ['ok' => false, 'error' => 'Not in inspection phase'];
+    }
+
+    $stmt = $pdo->prepare("
+        UPDATE properties SET inspection_completed_at = NOW() WHERE id = ?
+    ");
+    $stmt->execute([$propertyId]);
+
+    // Post a system_notice in the agent↔landlord conversation
+    $landlordId = (int)$prop['landlord_id'];
+    $lo  = min($agentId, $landlordId);
+    $hi  = max($agentId, $landlordId);
+    $stmt = $pdo->prepare("
+        SELECT id FROM conversations
+         WHERE user_a = ? AND user_b = ? AND (property_id <=> ?) AND context_type = 'agent_case'
+         LIMIT 1
+    ");
+    $stmt->execute([$lo, $hi, $propertyId]);
+    $convoId = $stmt->fetchColumn();
+
+    if ($convoId) {
+        $body = "Inspection complete. The agent is now reviewing the property for final approval.";
+        $pdo->prepare("INSERT INTO messages (conversation_id, sender_id, body, message_type, sent_at) VALUES (?, ?, ?, 'system_notice', NOW())")
+            ->execute([(int)$convoId, $agentId, $body]);
+        $pdo->prepare("UPDATE conversations SET last_message_at = NOW(), last_message_preview = ?, last_sender_id = ? WHERE id = ?")
+            ->execute([substr($body, 0, 120), $agentId, (int)$convoId]);
+    }
+
+    return ['ok' => true];
+}
+
+/**
+ * Agent approves the listing after completing inspection.
+ * Marks property as 'available' (goes live).
+ */
+function agent_approve_listing(int $propertyId, int $agentId): array {
+    $pdo = db();
+
+    $stmt = $pdo->prepare("
+        SELECT assigned_agent_id, agent_status, inspection_completed_at, landlord_id, title
+          FROM properties WHERE id = ?
+    ");
+    $stmt->execute([$propertyId]);
+    $prop = $stmt->fetch();
+
+    if (!$prop) return ['ok' => false, 'error' => 'Property not found'];
+    if ((int)$prop['assigned_agent_id'] !== $agentId) {
+        return ['ok' => false, 'error' => 'You are not the assigned agent'];
+    }
+    if (empty($prop['inspection_completed_at'])) {
+        return ['ok' => false, 'error' => 'Mark inspection complete before approving'];
+    }
+
+    $stmt = $pdo->prepare("
+        UPDATE properties
+           SET agent_status = 'accepted',
+               status = 'available',
+               agent_verified_at = NOW(),
+               agent_verified_by = ?
+         WHERE id = ?
+    ");
+    $stmt->execute([$agentId, $propertyId]);
+
+    $landlordId = (int)$prop['landlord_id'];
     if ($landlordId && function_exists('notify')) {
         notify(
             $landlordId,
             'property_approved',
-            'Your property is now live',
-            "Your property has been verified and is now listed.",
+            'Your property is now live!',
+            "Agent inspection passed. Your property \"{$prop['title']}\" is now listed on RentBridge.",
             "/rentbridge/landlord/properties.php"
         );
     }
@@ -238,8 +371,8 @@ function agent_reject_listing(int $propertyId, int $agentId, string $reason = ''
     if ((int)$prop['assigned_agent_id'] !== $agentId) {
         return ['ok' => false, 'error' => 'You are not the assigned agent'];
     }
-    if ($prop['agent_status'] !== 'pending') {
-        return ['ok' => false, 'error' => 'This assignment is no longer pending'];
+    if (!in_array($prop['agent_status'], ['pending', 'inspecting'], true)) {
+        return ['ok' => false, 'error' => 'This assignment is no longer active'];
     }
 
     // Mark property as rejected — no reassignment

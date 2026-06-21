@@ -141,7 +141,7 @@ ob_start();
             <div class="d-flex justify-content-end gap-2">
                 <a href="/rentbridge/properties/<?= (int)$propertyId ?>" class="btn btn-outline-secondary">Cancel</a>
                 <button type="submit" class="btn btn-primary">
-                    <i class="bi bi-megaphone me-1"></i> Post to Find Partners
+                    <i class="bi bi-megaphone me-1"></i> Post to Find Housemates
                 </button>
             </div>
         </form>

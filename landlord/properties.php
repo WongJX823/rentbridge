@@ -46,7 +46,6 @@ if ($searchQuery !== '') {
 
 $stmt = $pdo->prepare("
     SELECT p.*,
-           u.email AS agent_email,
            a.full_name AS agent_name,
            a.phone AS agent_phone,
            (SELECT COUNT(*) FROM bookings b
@@ -57,14 +56,11 @@ $stmt = $pdo->prepare("
              ORDER BY pi.is_primary DESC, pi.id ASC
              LIMIT 1) AS image_path
       FROM properties p
-      LEFT JOIN users u ON u.id = p.assigned_agent_id
       LEFT JOIN agents a ON a.user_id = p.assigned_agent_id
-     WHERE p.landlord_id = ?
+     WHERE $where
      ORDER BY p.created_at DESC
 ");
-$stmt->execute([$userId]);
-$properties = $stmt->fetchAll();$stmt->execute([$userId]);
-$properties = $stmt->fetchAll();$stmt->execute([$userId]);
+$stmt->execute($params);
 $properties = $stmt->fetchAll();
 
 
@@ -220,6 +216,22 @@ ob_start();
                                     <?= e(date('d M Y', strtotime($p['created_at']))) ?>
                                 </small>
                             </div>
+
+                            <?php if (!empty($p['agent_name'])): ?>
+                                <div class="mt-2 pt-2 border-top small text-secondary">
+                                    <i class="bi bi-person-badge"></i>
+                                    <?= e($p['agent_name']) ?>
+                                    <?php if ($p['agent_status'] === 'pending'): ?>
+                                        <span class="badge bg-warning text-dark ms-1" style="font-size:0.65rem;">Reviewing</span>
+                                    <?php elseif ($p['agent_status'] === 'accepted'): ?>
+                                        <span class="badge bg-success ms-1" style="font-size:0.65rem;">Verified</span>
+                                    <?php endif; ?>
+                                </div>
+                            <?php elseif ($p['status'] === 'pending_approval'): ?>
+                                <div class="mt-2 pt-2 border-top small text-secondary">
+                                    <i class="bi bi-hourglass-split"></i> Assigning agent…
+                                </div>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </a>
