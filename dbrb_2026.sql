@@ -22,6 +22,45 @@ SET time_zone = "+00:00";
 --
 
 -- --------------------------------------------------------
+-- Drop all tables (reverse dependency order) before recreating
+-- --------------------------------------------------------
+
+SET FOREIGN_KEY_CHECKS = 0;
+
+DROP TABLE IF EXISTS `agent_transfer_notifications`;
+DROP TABLE IF EXISTS `agent_transfer_requests`;
+DROP TABLE IF EXISTS `agent_verification_photos`;
+DROP TABLE IF EXISTS `agent_verifications`;
+DROP TABLE IF EXISTS `agent_commissions`;
+DROP TABLE IF EXISTS `move_in_photos`;
+DROP TABLE IF EXISTS `move_in_inspections`;
+DROP TABLE IF EXISTS `co_tenancy_applications`;
+DROP TABLE IF EXISTS `co_tenants`;
+DROP TABLE IF EXISTS `co_tenancy_posts`;
+DROP TABLE IF EXISTS `contracts`;
+DROP TABLE IF EXISTS `property_agent_assignments`;
+DROP TABLE IF EXISTS `property_documents`;
+DROP TABLE IF EXISTS `property_images`;
+DROP TABLE IF EXISTS `saved_properties`;
+DROP TABLE IF EXISTS `bookings`;
+DROP TABLE IF EXISTS `properties`;
+DROP TABLE IF EXISTS `messages`;
+DROP TABLE IF EXISTS `conversation_participants`;
+DROP TABLE IF EXISTS `conversations`;
+DROP TABLE IF EXISTS `notifications`;
+DROP TABLE IF EXISTS `friend_requests`;
+DROP TABLE IF EXISTS `friends`;
+DROP TABLE IF EXISTS `contact_messages`;
+DROP TABLE IF EXISTS `verification_codes`;
+DROP TABLE IF EXISTS `agents`;
+DROP TABLE IF EXISTS `students`;
+DROP TABLE IF EXISTS `landlords`;
+DROP TABLE IF EXISTS `reports`;
+DROP TABLE IF EXISTS `users`;
+
+SET FOREIGN_KEY_CHECKS = 1;
+
+-- --------------------------------------------------------
 
 --
 -- Table structure for table `agents`
@@ -838,6 +877,34 @@ CREATE TABLE `verification_codes` (
   `ip_address` varchar(45) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `reports`
+--
+
+CREATE TABLE `reports` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `reporter_id` int(11) NOT NULL,
+  `reported_user_id` int(11) NOT NULL,
+  `context_type` enum('booking','message','general') NOT NULL DEFAULT 'general',
+  `context_id` int(11) DEFAULT NULL,
+  `reason` enum('harassment','scam','fake_information','misconduct','fraud','other') NOT NULL,
+  `details` text DEFAULT NULL,
+  `status` enum('pending','reviewed','dismissed','actioned') NOT NULL DEFAULT 'pending',
+  `reviewed_by` int(11) DEFAULT NULL,
+  `reviewed_at` timestamp NULL DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_reporter` (`reporter_id`),
+  KEY `idx_reported` (`reported_user_id`),
+  KEY `idx_status` (`status`),
+  CONSTRAINT `fk_report_reporter` FOREIGN KEY (`reporter_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_report_reported` FOREIGN KEY (`reported_user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_report_reviewer` FOREIGN KEY (`reviewed_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
 --
 -- Indexes for dumped tables
 --
@@ -1474,3 +1541,4 @@ COMMIT;
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+
