@@ -88,8 +88,21 @@ Report in chat system:
 All reports aggregate in admin dashboard with count, reason, and reporter identity.
 High report count on a user triggers an alert so admin can investigate and suspend.
 
+Find Housemate - Pending
+Tenant info form (currently agent sends via chat as modal) — move to student/tenant_form.php.
+DONE: student/tenant_form.php created; chat card now shows link button for student instead of modal.
+DONE: student/manage_post.php created; poster can view/accept/reject applicants.
+DONE: semesters_needed field added to co-tenancy post (find_housemates.php, dropdown 1–6).
+TODO: migration migrations/add_cotenancy_semesters.sql must be run on production DB.
+TODO: PR for tenant form + conversation.php change not yet pushed (session ended before PR).
+
+Co-tenancy Free Post (no property)
+Allow student to post "looking for housemates" without linking a specific property.
+Currently property_id is NOT NULL; requires schema change + new UI flow.
+STATUS: DEFERRED — low priority, do later.
+
 Future work/ Out of scope
-Student only 1 sem, how? throw the question out of scope. 
+Student only 1 sem, how? throw the question out of scope.
 Real Map pick
 Contract stamping(mati setem)
 Real mail SMTP
