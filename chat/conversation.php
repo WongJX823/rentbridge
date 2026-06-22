@@ -18,8 +18,19 @@ if (!$convo) {
     die('You are not in this conversation.');
 }
 
-$otherUserId = ((int)$convo['user_a'] === $userId) ? (int)$convo['user_b'] : (int)$convo['user_a'];
-$other = chat_get_user_display($otherUserId);
+$isGroupChat = ($convo['context_type'] === 'housemate_group');
+
+// For group chats load all participants; for regular chats load the other party
+$groupParticipants = [];
+if ($isGroupChat) {
+    require_once __DIR__ . '/../includes/partners.php';
+    $groupParticipants = get_group_participants($conversationId);
+    $other = ['name' => 'Housemate Group', 'primary_role' => 'student'];
+    $otherUserId = 0;
+} else {
+    $otherUserId = ((int)$convo['user_a'] === $userId) ? (int)$convo['user_b'] : (int)$convo['user_a'];
+    $other = chat_get_user_display($otherUserId);
+}
 
 // Fetch property details if conversation tied to one
 $property = null;
@@ -46,34 +57,43 @@ $lastMessageId = !empty($messages) ? max(array_column($messages, 'id')) : 0;
 
 $isLocked = (int)($convo['is_locked'] ?? 0) === 1;
 
-// Quick replies — different per role
-$quickReplies = match ($currentRole) {
-    'student' => [
-        'Hi, is this still available?',
-        'Can I view it?',
-        'What\'s included in the rent?',
-        'Is the deposit negotiable?',
-    ],
-    'landlord' => [
-        'Yes, still available.',
-        'When would you like to view?',
-        'Rent includes WiFi and water.',
-        'Let me check and get back to you.',
-    ],
-    'agent' => [
-        'I can arrange an inspection.',
-        'Let me schedule a viewing.',
-        'Inspection report is ready.',
-        'Please proceed to sign the contract.',
-    ],
-    default => [
-        'Hello',
-        'Thank you',
-        'Can we discuss?',
-    ],
-};
+// Quick replies — different per context
+if ($isGroupChat) {
+    $quickReplies = [
+        'Hi everyone!',
+        'When can we meet to discuss?',
+        'Sounds good to me.',
+        'Let me check and get back.',
+    ];
+} else {
+    $quickReplies = match ($currentRole) {
+        'student' => [
+            'Hi, is this still available?',
+            'Can I view it?',
+            'What\'s included in the rent?',
+            'Is the deposit negotiable?',
+        ],
+        'landlord' => [
+            'Yes, still available.',
+            'When would you like to view?',
+            'Rent includes WiFi and water.',
+            'Let me check and get back to you.',
+        ],
+        'agent' => [
+            'I can arrange an inspection.',
+            'Let me schedule a viewing.',
+            'Inspection report is ready.',
+            'Please proceed to sign the contract.',
+        ],
+        default => [
+            'Hello',
+            'Thank you',
+            'Can we discuss?',
+        ],
+    };
+}
 
-$pageTitle = 'Chat with ' . $other['name'];
+$pageTitle = $isGroupChat ? 'Housemate Group Chat' : ('Chat with ' . $other['name']);
 $activeNav = 'chat';
 
 ob_start();
@@ -85,9 +105,33 @@ ob_start();
 
 <div class="chat-shell">
 
-    <!-- HEADER (with property card if applicable) -->
+    <!-- HEADER -->
     <div class="chat-header">
-        <?php if ($property): ?>
+        <?php if ($isGroupChat): ?>
+            <!-- Group chat header -->
+            <div class="d-flex gap-3 align-items-center">
+                <div style="width:44px; height:44px; border-radius:50%; background:#E4F2EA;
+                            color:#0F2C52; display:inline-flex; align-items:center;
+                            justify-content:center; font-size:1.2rem; font-weight:700; flex-shrink:0;">
+                    <i class="bi bi-people-fill"></i>
+                </div>
+                <div class="flex-grow-1">
+                    <strong>Housemate Group</strong>
+                    <?php if ($property): ?>
+                        <div class="small text-secondary">
+                            <?= e($property['title']) ?> · <?= e($property['city']) ?>
+                        </div>
+                    <?php endif; ?>
+                    <div class="small text-secondary mt-1">
+                        <?php foreach ($groupParticipants as $gp): ?>
+                            <span class="badge bg-light text-dark me-1" data-username="<?= e($gp['preferred_name'] ?: $gp['full_name']) ?>">
+                                @<?= e($gp['preferred_name'] ?: $gp['full_name']) ?>
+                            </span>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            </div>
+        <?php elseif ($property): ?>
             <a href="/rentbridge/property.php?id=<?= (int)$property['id'] ?>"
                class="d-flex gap-3 align-items-start text-decoration-none text-dark">
                 <div style="width:60px; height:60px; border-radius:8px; overflow:hidden; flex-shrink:0;
@@ -285,6 +329,60 @@ if (
     </div>
 <?php endif; ?>
 
+<?php
+// Show inspection schedule button if agent↔landlord for an 'inspecting' property
+$showInspectionScheduleBtn = false;
+$inspectionPropId = null;
+if (
+    current_role() === 'agent' &&
+    !empty($propId) &&
+    !empty($otherId) &&
+    $otherRole === 'landlord'
+) {
+    $stmt = $pdo->prepare("SELECT agent_status, assigned_agent_id FROM properties WHERE id = ?");
+    $stmt->execute([$propId]);
+    $inspRow = $stmt->fetch();
+    if ($inspRow && $inspRow['agent_status'] === 'inspecting' && (int)$inspRow['assigned_agent_id'] === current_user_id()) {
+        // Check no pending unanswered schedule request
+        $stmt = $pdo->prepare("
+            SELECT m.id FROM messages m
+             WHERE m.conversation_id = ?
+               AND m.message_type = 'inspection_schedule_request'
+               AND NOT EXISTS (
+                   SELECT 1 FROM messages r
+                    WHERE r.conversation_id = m.conversation_id
+                      AND r.message_type IN ('inspection_schedule_response','inspection_schedule_reschedule')
+                      AND r.sent_at > m.sent_at
+               )
+             ORDER BY m.id DESC LIMIT 1
+        ");
+        $stmt->execute([(int)$convData['id']]);
+        $showInspectionScheduleBtn = !$stmt->fetchColumn();
+        $inspectionPropId = (int)$propId;
+    }
+}
+?>
+<?php if ($showInspectionScheduleBtn): ?>
+    <div class="p-3 mb-2" style="background:#EAF6FB; border:1px solid #0dcaf0; border-radius:10px;">
+        <div class="d-flex gap-3 align-items-start">
+            <i class="bi bi-calendar-plus fs-4 text-info"></i>
+            <div class="flex-grow-1">
+                <strong>Schedule inspection visit</strong>
+                <p class="small text-secondary mb-2">
+                    Propose one or more date/time options for the landlord to pick from.
+                </p>
+                <button type="button" class="btn btn-info btn-sm text-white"
+                        data-bs-toggle="modal"
+                        data-bs-target="#sendInspectionScheduleModal"
+                        data-conv-id="<?= (int)($convData['id'] ?? 0) ?>"
+                        data-prop-id="<?= $inspectionPropId ?>">
+                    <i class="bi bi-calendar2-plus me-1"></i> Propose inspection times
+                </button>
+            </div>
+        </div>
+    </div>
+<?php endif; ?>
+
 <!-- MESSAGES AREA -->
     <div class="chat-body" id="chatBody">
         <?php if (empty($messages)): ?>
@@ -311,6 +409,141 @@ if (
                         <i class="bi bi-info-circle me-1"></i>
                         <?= e($msg['body']) ?>
                     </span>
+                </div>
+
+            <?php elseif ($msgType === 'inspection_schedule_request'):
+                // Agent proposed inspection times — landlord picks one
+                $propId    = (int)($meta['property_id'] ?? 0);
+                $propTitle = $meta['property_title'] ?? 'this property';
+                $slots     = $meta['slots'] ?? '';
+                $note      = $meta['note'] ?? '';
+                // Has it already been answered?
+                $stmt = $pdo->prepare("
+                    SELECT id FROM messages
+                     WHERE conversation_id = ?
+                       AND message_type IN ('inspection_schedule_response','inspection_schedule_reschedule')
+                       AND JSON_EXTRACT(metadata,'$.source_form_id') = ?
+                     LIMIT 1
+                ");
+                $stmt->execute([$msg['conversation_id'], $msg['id']]);
+                $answered = (bool)$stmt->fetchColumn();
+            ?>
+                <div class="my-3 d-flex justify-content-center">
+                    <div class="card border-info" style="max-width:520px; background:#EAF6FB; width:100%;">
+                        <div class="card-body">
+                            <div class="d-flex gap-2 align-items-start mb-2">
+                                <i class="bi bi-calendar-check fs-4 text-info"></i>
+                                <div>
+                                    <h6 class="mb-0">Inspection schedule request</h6>
+                                    <small class="text-secondary">Property: <strong><?= e($propTitle) ?></strong></small>
+                                </div>
+                            </div>
+                            <div class="mb-2">
+                                <strong class="small">Proposed times:</strong>
+                                <p class="small mb-0" style="white-space:pre-line;"><?= nl2br(e($slots)) ?></p>
+                            </div>
+                            <?php if ($note): ?>
+                                <div class="small text-secondary mb-2"><?= nl2br(e($note)) ?></div>
+                            <?php endif; ?>
+
+                            <?php if ($answered): ?>
+                                <span class="badge bg-success"><i class="bi bi-check2-circle"></i> Responded</span>
+                            <?php elseif (!$isMine && $currentRole === 'landlord'): ?>
+                                <button type="button" class="btn btn-info btn-sm text-white"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#inspectionScheduleModal"
+                                        data-form-msg-id="<?= (int)$msg['id'] ?>"
+                                        data-conv-id="<?= (int)$msg['conversation_id'] ?>"
+                                        data-slots="<?= e($slots) ?>"
+                                        data-prop-id="<?= $propId ?>"
+                                        data-prop-title="<?= e($propTitle) ?>">
+                                    <i class="bi bi-calendar2-check me-1"></i> Confirm or reschedule
+                                </button>
+                            <?php else: ?>
+                                <span class="badge bg-secondary">Awaiting landlord response</span>
+                            <?php endif; ?>
+
+                            <div class="chat-meta mt-2"><?= e(date('H:i', strtotime($msg['sent_at']))) ?></div>
+                        </div>
+                    </div>
+                </div>
+
+            <?php elseif ($msgType === 'inspection_schedule_response'):
+                $slotPicked    = $meta['slot_confirmed'] ?? '—';
+                $accessMethod  = $meta['access_method'] ?? '—';
+                $accessDetail  = $meta['access_detail'] ?? '';
+                $methodLabel   = match($accessMethod) {
+                    'landlord_present' => 'Landlord will be present',
+                    'lockbox_code'     => 'Lockbox code',
+                    'other'            => 'Other',
+                    default            => $accessMethod,
+                };
+            ?>
+                <div class="my-3 d-flex justify-content-center">
+                    <div class="card border-success" style="max-width:520px; background:#E4F2EA; width:100%;">
+                        <div class="card-body">
+                            <div class="d-flex gap-2 align-items-start mb-2">
+                                <i class="bi bi-check-circle-fill fs-4 text-success"></i>
+                                <div>
+                                    <h6 class="mb-0">Inspection confirmed</h6>
+                                    <small class="text-secondary">Property: <strong><?= e($meta['property_title'] ?? '—') ?></strong></small>
+                                </div>
+                            </div>
+                            <div class="row g-2 small">
+                                <div class="col-6">
+                                    <div class="text-secondary">Date / time</div>
+                                    <strong><?= e($slotPicked) ?></strong>
+                                </div>
+                                <div class="col-6">
+                                    <div class="text-secondary">Access method</div>
+                                    <strong><?= e($methodLabel) ?></strong>
+                                </div>
+                                <?php if ($accessDetail): ?>
+                                <div class="col-12">
+                                    <div class="text-secondary">Details / code</div>
+                                    <code class="small"><?= e($accessDetail) ?></code>
+                                </div>
+                                <?php endif; ?>
+                            </div>
+                            <?php if ($currentRole === 'agent'): ?>
+                                <div class="mt-2">
+                                    <a href="/rentbridge/agent/property_review.php?id=<?= (int)($meta['property_id'] ?? 0) ?>"
+                                       class="btn btn-sm btn-outline-success">
+                                        <i class="bi bi-house-check me-1"></i> Go to property review
+                                    </a>
+                                </div>
+                            <?php endif; ?>
+                            <div class="chat-meta mt-2"><?= e(date('H:i', strtotime($msg['sent_at']))) ?></div>
+                        </div>
+                    </div>
+                </div>
+
+            <?php elseif ($msgType === 'inspection_schedule_reschedule'): ?>
+                <div class="my-3 d-flex justify-content-center">
+                    <div class="card border-warning" style="max-width:480px; background:#FFF4D6; width:100%;">
+                        <div class="card-body">
+                            <div class="d-flex gap-2 align-items-start">
+                                <i class="bi bi-calendar-x fs-4 text-warning"></i>
+                                <div>
+                                    <h6 class="mb-0">Reschedule requested</h6>
+                                    <p class="small text-secondary mb-1"><?= e($msg['body']) ?></p>
+                                    <?php if (!empty($meta['reason'])): ?>
+                                        <p class="small mb-0">Reason: <?= e($meta['reason']) ?></p>
+                                    <?php endif; ?>
+                                    <?php if ($currentRole === 'agent'): ?>
+                                        <button type="button" class="btn btn-sm btn-warning mt-2"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#sendInspectionScheduleModal"
+                                                data-conv-id="<?= (int)$msg['conversation_id'] ?>"
+                                                data-prop-id="<?= (int)($meta['property_id'] ?? 0) ?>">
+                                            <i class="bi bi-calendar-plus me-1"></i> Propose new times
+                                        </button>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                            <div class="chat-meta mt-2"><?= e(date('H:i', strtotime($msg['sent_at']))) ?></div>
+                        </div>
+                    </div>
                 </div>
 
             <?php elseif ($msgType === 'contract_prep_request'): ?>
@@ -521,15 +754,80 @@ if (
 
     <!-- INPUT -->
     <?php if (!$isLocked): ?>
-        <form class="chat-input d-flex gap-2 align-items-center" id="chatForm">
+        <!-- Plus-menu popover (role-specific actions) -->
+        <div class="chat-plus-menu d-none" id="chatPlusMenu"
+             style="position:absolute; bottom:70px; left:16px; z-index:200;
+                    background:white; border:1px solid rgba(15,44,82,0.12);
+                    border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.12);
+                    min-width:220px; overflow:hidden;">
+            <?php
+            // Photo/image upload
+            ?>
+            <label class="chat-plus-item d-flex gap-2 align-items-center px-3 py-2"
+                   style="cursor:pointer;" for="chatImageInput">
+                <i class="bi bi-image text-secondary"></i>
+                <span class="small">Send photo</span>
+                <input type="file" id="chatImageInput" name="chat_image"
+                       accept="image/*" class="d-none">
+            </label>
+            <?php
+            // Document upload (all roles)
+            ?>
+            <label class="chat-plus-item d-flex gap-2 align-items-center px-3 py-2"
+                   style="cursor:pointer;" for="chatDocInput">
+                <i class="bi bi-file-earmark text-secondary"></i>
+                <span class="small">Send document</span>
+                <input type="file" id="chatDocInput" name="chat_doc"
+                       accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" class="d-none">
+            </label>
+            <?php if ($currentRole === 'agent' && $showInspectionScheduleBtn): ?>
+            <button type="button"
+                    class="chat-plus-item d-flex gap-2 align-items-center px-3 py-2 w-100 border-0 bg-transparent text-start"
+                    data-bs-toggle="modal" data-bs-target="#sendInspectionScheduleModal"
+                    data-conv-id="<?= (int)($convData['id'] ?? 0) ?>"
+                    data-prop-id="<?= (int)($inspectionPropId ?? 0) ?>"
+                    onclick="document.getElementById('chatPlusMenu').classList.add('d-none')">
+                <i class="bi bi-calendar-plus text-info"></i>
+                <span class="small">Propose inspection time</span>
+            </button>
+            <?php endif; ?>
+            <?php if ($currentRole === 'agent' && $showAgentSendFormBtn): ?>
+            <button type="button"
+                    class="chat-plus-item d-flex gap-2 align-items-center px-3 py-2 w-100 border-0 bg-transparent text-start"
+                    id="agentSendFormBtnPlus"
+                    data-conv-id="<?= (int)($convData['id'] ?? 0) ?>"
+                    data-property-id="<?= (int)$propId ?>"
+                    data-student-id="<?= (int)$otherId ?>"
+                    onclick="document.getElementById('chatPlusMenu').classList.add('d-none')">
+                <i class="bi bi-clipboard-data text-success"></i>
+                <span class="small">Send tenant info form</span>
+            </button>
+            <?php endif; ?>
+            <?php if ($currentRole === 'landlord' && $showContractPrepBtn): ?>
+            <button type="button"
+                    class="chat-plus-item d-flex gap-2 align-items-center px-3 py-2 w-100 border-0 bg-transparent text-start"
+                    id="contractPrepBtnPlus"
+                    data-conv-id="<?= (int)($convData['id'] ?? 0) ?>"
+                    data-property-id="<?= (int)$propId ?>"
+                    data-student-id="<?= (int)$otherId ?>"
+                    onclick="document.getElementById('chatPlusMenu').classList.add('d-none')">
+                <i class="bi bi-file-earmark-text text-warning"></i>
+                <span class="small">Request contract prep</span>
+            </button>
+            <?php endif; ?>
+        </div>
+
+        <form class="chat-input d-flex gap-2 align-items-center position-relative" id="chatForm">
             <?= csrf_field() ?>
             <input type="hidden" name="conversation_id" value="<?= (int)$conversationId ?>">
-            <button type="button" class="btn btn-link p-2 text-secondary"
-                    title="Image attach (coming in v2)" disabled>
-                <i class="bi bi-image" style="font-size:1.3rem;"></i>
+            <button type="button" id="chatPlusBtn"
+                    class="btn btn-outline-secondary p-0 d-flex align-items-center justify-content-center"
+                    style="width:36px; height:36px; border-radius:50%; flex-shrink:0; border-color:rgba(15,44,82,0.2);"
+                    title="Attachments &amp; forms">
+                <i class="bi bi-plus-lg" style="font-size:1.1rem;"></i>
             </button>
             <textarea name="body" class="form-control" rows="1"
-                      placeholder="Type a message..." required
+                      placeholder="Type a message..."
                       maxlength="2000" id="chatTextarea"></textarea>
             <button type="submit" class="btn btn-primary px-4" id="chatSendBtn">
                 Send
@@ -541,6 +839,106 @@ if (
         </div>
     <?php endif; ?>
 
+</div>
+
+<!-- AGENT: Send inspection schedule request modal -->
+<div class="modal fade" id="sendInspectionScheduleModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <form id="inspectionScheduleForm" class="modal-content">
+            <input type="hidden" name="_csrf" value="<?= csrf_token() ?>">
+            <input type="hidden" name="conversation_id" id="iss_conv_id">
+            <input type="hidden" name="property_id" id="iss_prop_id">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-calendar-plus text-info me-2"></i>Propose inspection time</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <label class="form-label fw-semibold">Proposed date/time slot(s) <small class="text-danger">*</small></label>
+                <textarea name="slots" class="form-control mb-3" rows="4" required
+                          placeholder="e.g.&#10;Monday 23 Jun 2026, 10:00 AM&#10;Tuesday 24 Jun 2026, 2:00 PM&#10;Wednesday 25 Jun 2026, 11:00 AM"></textarea>
+                <label class="form-label fw-semibold">Note to landlord (optional)</label>
+                <textarea name="note" class="form-control" rows="2"
+                          placeholder="Any instructions or context for the landlord"></textarea>
+                <div id="issError" class="alert alert-danger small d-none mt-3"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-info text-white">
+                    <i class="bi bi-send me-1"></i> Send to landlord
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- LANDLORD: Respond to inspection schedule request modal -->
+<div class="modal fade" id="inspectionScheduleModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <form id="inspectionResponseForm" class="modal-content">
+            <input type="hidden" name="_csrf" value="<?= csrf_token() ?>">
+            <input type="hidden" name="conversation_id" id="isr_conv_id">
+            <input type="hidden" name="form_message_id" id="isr_form_msg_id">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-calendar2-check text-info me-2"></i>Confirm inspection</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Proposed slots</label>
+                    <div id="isr_slots" class="p-2 border rounded small bg-light" style="white-space:pre-line;"></div>
+                </div>
+
+                <div id="isr_confirm_section">
+                    <label class="form-label fw-semibold">Confirmed date/time <small class="text-danger">*</small></label>
+                    <input type="text" name="slot_picked" class="form-control mb-3"
+                           placeholder="e.g. Monday 23 Jun 2026, 10:00 AM" required>
+
+                    <label class="form-label fw-semibold">Access method <small class="text-danger">*</small></label>
+                    <select name="access_method" class="form-select mb-2" id="isr_access_method" required>
+                        <option value="">Select...</option>
+                        <option value="landlord_present">I will be present</option>
+                        <option value="lockbox_code">Lockbox / key box (provide code below)</option>
+                        <option value="other">Other arrangement</option>
+                    </select>
+                    <div id="isr_detail_wrap" class="d-none mb-3">
+                        <input type="text" name="access_detail" class="form-control"
+                               placeholder="Lockbox code or access instructions">
+                    </div>
+
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" name="consent" value="1"
+                               id="isr_consent" required>
+                        <label class="form-check-label small" for="isr_consent">
+                            I authorize the assigned agent to inspect my property at the confirmed time on my behalf.
+                        </label>
+                    </div>
+
+                    <input type="hidden" name="decision" value="confirm">
+                </div>
+
+                <hr>
+                <div class="text-center">
+                    <button type="button" class="btn btn-sm btn-outline-warning"
+                            id="isrRequestReschedule">
+                        <i class="bi bi-calendar-x me-1"></i> Request reschedule instead
+                    </button>
+                </div>
+                <div id="isr_reschedule_section" class="d-none mt-3">
+                    <label class="form-label fw-semibold small">Reason for reschedule (optional)</label>
+                    <input type="text" id="isr_reschedule_reason" class="form-control form-control-sm"
+                           placeholder="e.g. I'm not available on those dates. Can we try next week?">
+                </div>
+
+                <div id="isrError" class="alert alert-danger small d-none mt-3"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-success" id="isrSubmitBtn">
+                    <i class="bi bi-check-circle me-1"></i> Confirm inspection
+                </button>
+            </div>
+        </form>
+    </div>
 </div>
 
 <!-- Co-tenant form modal -->
@@ -799,6 +1197,12 @@ if (
     border: 1px solid rgba(15,44,82,0.15);
     padding: 8px 16px;
 }
+.chat-plus-item {
+    transition: background 0.12s;
+}
+.chat-plus-item:hover {
+    background: #F4F8FF;
+}
 </style>
 
 <script>
@@ -920,6 +1324,205 @@ if (
     }
 })();
 
+// ============================================================
+// PLUS BUTTON — toggle attachment / form menu
+// ============================================================
+(function () {
+    const plusBtn  = document.getElementById('chatPlusBtn');
+    const plusMenu = document.getElementById('chatPlusMenu');
+    if (!plusBtn || !plusMenu) return;
+
+    plusBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        plusMenu.classList.toggle('d-none');
+    });
+
+    // Close on outside click
+    document.addEventListener('click', function (e) {
+        if (!plusMenu.contains(e.target) && e.target !== plusBtn) {
+            plusMenu.classList.add('d-none');
+        }
+    });
+
+    // Wire up file inputs to auto-send as chat message (placeholder: show filename in textarea)
+    ['chatImageInput', 'chatDocInput'].forEach(id => {
+        const inp = document.getElementById(id);
+        if (!inp) return;
+        inp.addEventListener('change', function () {
+            if (this.files.length) {
+                const textarea = document.getElementById('chatTextarea');
+                if (textarea && textarea.value === '') {
+                    textarea.value = '[File: ' + this.files[0].name + ']';
+                }
+            }
+            plusMenu.classList.add('d-none');
+        });
+    });
+
+    // Plus-menu clone of agentSendFormBtn
+    const agentSendFormBtnPlus = document.getElementById('agentSendFormBtnPlus');
+    const agentSendFormBtn = document.getElementById('agentSendFormBtn');
+    if (agentSendFormBtnPlus && agentSendFormBtn) {
+        agentSendFormBtnPlus.addEventListener('click', () => agentSendFormBtn.click());
+    }
+
+    // Plus-menu clone of contractPrepBtn
+    const contractPrepBtnPlus = document.getElementById('contractPrepBtnPlus');
+    const contractPrepBtn = document.getElementById('contractPrepBtn');
+    if (contractPrepBtnPlus && contractPrepBtn) {
+        contractPrepBtnPlus.addEventListener('click', () => contractPrepBtn.click());
+    }
+})();
+
+// ============================================================
+// INSPECTION SCHEDULE — agent sends request
+// ============================================================
+(function () {
+    // Populate modal before open
+    const sendModal = document.getElementById('sendInspectionScheduleModal');
+    if (sendModal) {
+        sendModal.addEventListener('show.bs.modal', function (e) {
+            const btn = e.relatedTarget;
+            if (!btn) return;
+            document.getElementById('iss_conv_id').value = btn.dataset.convId || '';
+            document.getElementById('iss_prop_id').value = btn.dataset.propId || '';
+        });
+
+        const form = document.getElementById('inspectionScheduleForm');
+        form.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const errBox = document.getElementById('issError');
+            errBox.classList.add('d-none');
+            const btn = this.querySelector('button[type="submit"]');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Sending...';
+
+            try {
+                const resp = await fetch('/rentbridge/chat/send_inspection_schedule.php', {
+                    method: 'POST', body: new FormData(this)
+                });
+                const data = await resp.json();
+                if (data.ok) {
+                    bootstrap.Modal.getInstance(sendModal).hide();
+                    location.reload();
+                } else {
+                    errBox.textContent = data.error;
+                    errBox.classList.remove('d-none');
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-send me-1"></i> Send to landlord';
+                }
+            } catch (err) {
+                errBox.textContent = 'Network error: ' + err.message;
+                errBox.classList.remove('d-none');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-send me-1"></i> Send to landlord';
+            }
+        });
+    }
+})();
+
+// ============================================================
+// INSPECTION SCHEDULE — landlord responds
+// ============================================================
+(function () {
+    const responseModal = document.getElementById('inspectionScheduleModal');
+    if (!responseModal) return;
+
+    responseModal.addEventListener('show.bs.modal', function (e) {
+        const btn = e.relatedTarget;
+        if (!btn) return;
+        document.getElementById('isr_conv_id').value    = btn.dataset.convId || '';
+        document.getElementById('isr_form_msg_id').value = btn.dataset.formMsgId || '';
+        document.getElementById('isr_slots').textContent = btn.dataset.slots || '';
+        document.getElementById('isrError').classList.add('d-none');
+        document.getElementById('isr_reschedule_section').classList.add('d-none');
+        document.getElementById('isr_confirm_section').classList.remove('d-none');
+        document.getElementById('isrSubmitBtn').dataset.mode = 'confirm';
+        document.getElementById('isrSubmitBtn').innerHTML = '<i class="bi bi-check-circle me-1"></i> Confirm inspection';
+    });
+
+    // Toggle access detail field
+    const accessSelect = document.getElementById('isr_access_method');
+    if (accessSelect) {
+        accessSelect.addEventListener('change', function () {
+            const wrap = document.getElementById('isr_detail_wrap');
+            wrap.classList.toggle('d-none', this.value === 'landlord_present' || this.value === '');
+        });
+    }
+
+    // Request reschedule toggle
+    const rescheduleBtn = document.getElementById('isrRequestReschedule');
+    if (rescheduleBtn) {
+        rescheduleBtn.addEventListener('click', function () {
+            const confirmSection = document.getElementById('isr_confirm_section');
+            const rescheduleSection = document.getElementById('isr_reschedule_section');
+            const submitBtn = document.getElementById('isrSubmitBtn');
+            const isReschedule = submitBtn.dataset.mode === 'reschedule';
+
+            if (isReschedule) {
+                confirmSection.classList.remove('d-none');
+                rescheduleSection.classList.add('d-none');
+                submitBtn.dataset.mode = 'confirm';
+                submitBtn.innerHTML = '<i class="bi bi-check-circle me-1"></i> Confirm inspection';
+                this.innerHTML = '<i class="bi bi-calendar-x me-1"></i> Request reschedule instead';
+            } else {
+                confirmSection.classList.add('d-none');
+                rescheduleSection.classList.remove('d-none');
+                submitBtn.dataset.mode = 'reschedule';
+                submitBtn.innerHTML = '<i class="bi bi-send me-1"></i> Send reschedule request';
+                this.innerHTML = '<i class="bi bi-arrow-left me-1"></i> Back to confirm';
+            }
+        });
+    }
+
+    // Submit
+    const responseForm = document.getElementById('inspectionResponseForm');
+    if (responseForm) {
+        responseForm.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const errBox = document.getElementById('isrError');
+            errBox.classList.add('d-none');
+            const submitBtn = document.getElementById('isrSubmitBtn');
+            const mode = submitBtn.dataset.mode || 'confirm';
+
+            const formData = new FormData(this);
+            formData.set('decision', mode);
+            if (mode === 'reschedule') {
+                const reason = document.getElementById('isr_reschedule_reason').value;
+                formData.set('access_detail', reason);
+                formData.set('slot_picked', '');
+                formData.set('access_method', 'other');
+                formData.set('consent', '0');
+            }
+
+            submitBtn.disabled = true;
+            const origText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Submitting...';
+
+            try {
+                const resp = await fetch('/rentbridge/chat/respond_inspection_schedule.php', {
+                    method: 'POST', body: formData
+                });
+                const data = await resp.json();
+                if (data.ok) {
+                    bootstrap.Modal.getInstance(responseModal).hide();
+                    location.reload();
+                } else {
+                    errBox.textContent = data.error;
+                    errBox.classList.remove('d-none');
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = origText;
+                }
+            } catch (err) {
+                errBox.textContent = 'Network error: ' + err.message;
+                errBox.classList.remove('d-none');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = origText;
+            }
+        });
+    }
+})();
+
 document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.send-tenant-form-btn').forEach(btn => {
         if (btn.dataset.bound === '1') return;
@@ -1016,6 +1619,79 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+
+<?php if ($isGroupChat && !empty($groupParticipants)): ?>
+// ============================================================
+// @MENTION AUTOCOMPLETE — group chats only
+// ============================================================
+(function () {
+    const ta = document.getElementById('chatTextarea');
+    if (!ta) return;
+
+    const participants = <?= json_encode(array_map(fn($p) => $p['preferred_name'] ?: $p['full_name'], $groupParticipants)) ?>;
+
+    let mentionStart = -1;
+    let menuEl = null;
+
+    function showMenu(query, caretPos) {
+        removeMenu();
+        const matches = participants.filter(n => n.toLowerCase().startsWith(query.toLowerCase()));
+        if (!matches.length) return;
+
+        menuEl = document.createElement('div');
+        menuEl.style.cssText = 'position:absolute; background:white; border:1px solid #ddd; border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,0.1); z-index:9999; min-width:160px; overflow:hidden;';
+        matches.forEach(name => {
+            const item = document.createElement('div');
+            item.textContent = '@' + name;
+            item.style.cssText = 'padding:8px 12px; cursor:pointer; font-size:0.9rem;';
+            item.addEventListener('mouseenter', () => item.style.background = '#F4F4EE');
+            item.addEventListener('mouseleave', () => item.style.background = '');
+            item.addEventListener('mousedown', e => {
+                e.preventDefault();
+                const val = ta.value;
+                ta.value = val.substring(0, mentionStart) + '@' + name + ' ' + val.substring(caretPos);
+                ta.selectionStart = ta.selectionEnd = mentionStart + name.length + 2;
+                removeMenu();
+                ta.focus();
+            });
+            menuEl.appendChild(item);
+        });
+
+        // Position near caret
+        const rect = ta.getBoundingClientRect();
+        menuEl.style.bottom = (window.innerHeight - rect.top + 4) + 'px';
+        menuEl.style.left = rect.left + 'px';
+        document.body.appendChild(menuEl);
+    }
+
+    function removeMenu() {
+        if (menuEl) { menuEl.remove(); menuEl = null; }
+        mentionStart = -1;
+    }
+
+    ta.addEventListener('input', function () {
+        const pos = this.selectionStart;
+        const before = this.value.substring(0, pos);
+        const atIdx = before.lastIndexOf('@');
+        if (atIdx === -1 || /\s/.test(before.substring(atIdx + 1))) {
+            removeMenu();
+            return;
+        }
+        const query = before.substring(atIdx + 1);
+        mentionStart = atIdx;
+        showMenu(query, pos);
+    });
+
+    ta.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') removeMenu();
+    });
+
+    document.addEventListener('click', e => {
+        if (!menuEl || menuEl.contains(e.target) || e.target === ta) return;
+        removeMenu();
+    });
+})();
+<?php endif; ?>
 </script>
 
 <?php

@@ -14,9 +14,14 @@ $userId = current_user_id();
 // Fetch property — must belong to this landlord
 $stmt = $pdo->prepare("
     SELECT p.*,
-           (SELECT full_name FROM agents a
-              WHERE a.user_id = p.agent_verified_by) AS verifier_name
+           a.full_name  AS agent_name,
+           a.phone      AS agent_phone,
+           a.staff_id   AS agent_staff_id,
+           a.department AS agent_department,
+           (SELECT full_name FROM agents av
+              WHERE av.user_id = p.agent_verified_by) AS verifier_name
       FROM properties p
+      LEFT JOIN agents a ON a.user_id = p.assigned_agent_id
      WHERE p.id = ?
        AND p.landlord_id = ?
      LIMIT 1
@@ -113,7 +118,7 @@ $activeNav = 'properties';
 function landlord_prop_status_info(string $status): array {
     return match ($status) {
         'pending_approval' => ['Pending review', 'warning',
-            'Admin is reviewing your listing details. You can still edit while pending. Once approved, students can browse this property.'],
+            'An agent has been assigned to verify your listing. You can still edit while pending. Once approved, students can browse this property.'],
         'available'        => ['Available', 'success',
             'Live and visible to students. They can browse and apply for tenancy.'],
         'booked'           => ['Booked', 'info',
@@ -348,32 +353,43 @@ $documents = get_property_documents($propertyId);
 </div>
 
 <?php if (!empty($property['agent_name'])): ?>
-    <div class="agent-info-block mt-2 p-2"
-         style="background:#F4F4EE; border-radius:8px; font-size:0.85rem;">
-        <strong>Assigned agent:</strong><br>
-        <i class="bi bi-person-badge"></i> <?= e($property['agent_name']) ?>
-        <?php if (!empty($property['agent_phone'])): ?>
-            · <i class="bi bi-telephone"></i> <?= e($property['agent_phone']) ?>
-        <?php endif; ?>
-        <?php
-        $agentStatusBadge = match($property['agent_status']) {
-            'pending'  => '<span class="badge bg-warning text-dark">Pending review</span>',
-            'accepted' => '<span class="badge bg-success">Approved</span>',
-            'rejected' => '<span class="badge bg-danger">Rejected</span>',
-            'timeout'  => '<span class="badge bg-secondary">Timed out</span>',
-            default    => '',
-        };
-        ?>
-        <?= $agentStatusBadge ?>
+    <?php
+    $agentStatusBadge = match($property['agent_status'] ?? '') {
+        'pending'  => '<span class="badge bg-warning text-dark">Reviewing</span>',
+        'accepted' => '<span class="badge bg-success">Approved</span>',
+        'rejected' => '<span class="badge bg-danger">Rejected</span>',
+        'timeout'  => '<span class="badge bg-secondary">Timed out</span>',
+        default    => '',
+    };
+    ?>
+    <div class="d-flex gap-3 align-items-start p-3 mt-2 border rounded-3"
+         style="background:#F4F8FF;">
+        <i class="bi bi-person-badge fs-3 text-secondary"></i>
+        <div class="flex-grow-1 small">
+            <div class="fw-semibold mb-1">
+                Assigned agent <?= $agentStatusBadge ?>
+            </div>
+            <div><?= e($property['agent_name']) ?>
+                <?php if (!empty($property['agent_staff_id'])): ?>
+                    <code class="text-secondary ms-1"><?= e($property['agent_staff_id']) ?></code>
+                <?php endif; ?>
+            </div>
+            <?php if (!empty($property['agent_department'])): ?>
+                <div class="text-secondary"><?= e($property['agent_department']) ?></div>
+            <?php endif; ?>
+            <?php if (!empty($property['agent_phone'])): ?>
+                <div class="text-secondary"><i class="bi bi-telephone"></i> <?= e($property['agent_phone']) ?></div>
+            <?php endif; ?>
+        </div>
     </div>
 <?php elseif ($property['status'] === 'pending_approval'): ?>
-    <div class="text-secondary small mt-2">
-        <i class="bi bi-hourglass-split"></i> Awaiting agent assignment
+    <div class="alert alert-warning small py-2 mt-2">
+        <i class="bi bi-hourglass-split"></i> Assigning an agent — this usually takes a moment.
     </div>
 <?php elseif ($property['status'] === 'needs_admin'): ?>
-    <div class="text-danger small mt-2">
+    <div class="alert alert-danger small py-2 mt-2">
         <i class="bi bi-exclamation-triangle"></i>
-        No agents available — admin reviewing manually
+        No agents available — admin reviewing manually.
     </div>
 <?php endif; ?>
 

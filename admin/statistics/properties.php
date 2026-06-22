@@ -147,6 +147,20 @@ $stmt = $pdo->query("
 ");
 $priceMatrix = $stmt->fetchAll();
 
+// === CHART: Population by area (listing count + avg rent per city) ===
+$stmt = $pdo->query("
+    SELECT city,
+           COUNT(*) AS listing_count,
+           ROUND(AVG(monthly_rent), 0) AS avg_rent,
+           SUM(CASE WHEN status='rented' OR status='booked' THEN 1 ELSE 0 END) AS tenancy_count
+      FROM properties
+     WHERE status IN ('available','booked','rented')
+     GROUP BY city
+     ORDER BY listing_count DESC
+     LIMIT 15
+");
+$areaStats = $stmt->fetchAll();
+
 // === MOST EXPENSIVE / AFFORDABLE LEADERBOARDS ===
 $stmt = $pdo->query("
     SELECT p.id, p.title, p.city, p.property_type, p.monthly_rent
@@ -339,6 +353,22 @@ ob_start();
         <div class="bg-white border rounded-3 p-4 h-100">
             <h6 class="text-secondary text-uppercase small mb-3">Price distribution</h6>
             <canvas id="chartPriceDist" style="max-height: 280px;"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- AREA POPULATION CHART -->
+<div class="row g-3 mb-4">
+    <div class="col-lg-7">
+        <div class="bg-white border rounded-3 p-4">
+            <h6 class="text-secondary text-uppercase small mb-3">Listings per area</h6>
+            <canvas id="chartAreaListings" style="max-height:300px;"></canvas>
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="bg-white border rounded-3 p-4">
+            <h6 class="text-secondary text-uppercase small mb-3">Average rent per area</h6>
+            <canvas id="chartAreaAvgRent" style="max-height:300px;"></canvas>
         </div>
     </div>
 </div>
@@ -629,6 +659,52 @@ new Chart(document.getElementById('chartRentByType'), {
                 ticks: { callback: value => 'RM ' + value }
             }
         }
+    }
+});
+
+// === AREA POPULATION ===
+const areaData = <?= json_encode($areaStats) ?>;
+new Chart(document.getElementById('chartAreaListings'), {
+    type: 'bar',
+    data: {
+        labels: areaData.map(r => r.city),
+        datasets: [
+            {
+                label: 'Total listings',
+                data: areaData.map(r => parseInt(r.listing_count)),
+                backgroundColor: colors.navy,
+                borderRadius: 4
+            },
+            {
+                label: 'Tenancies (rented/booked)',
+                data: areaData.map(r => parseInt(r.tenancy_count)),
+                backgroundColor: colors.emerald,
+                borderRadius: 4
+            }
+        ]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom' } },
+        scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+    }
+});
+new Chart(document.getElementById('chartAreaAvgRent'), {
+    type: 'bar',
+    data: {
+        labels: areaData.map(r => r.city),
+        datasets: [{
+            label: 'Avg rent (RM)',
+            data: areaData.map(r => parseInt(r.avg_rent)),
+            backgroundColor: colors.gold,
+            borderRadius: 4
+        }]
+    },
+    options: {
+        indexAxis: 'y',
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => 'RM ' + ctx.raw.toLocaleString() } } },
+        scales: { x: { beginAtZero: true, ticks: { callback: v => 'RM' + v } } }
     }
 });
 

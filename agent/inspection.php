@@ -78,6 +78,65 @@ $old = [
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
 
+    // ---- ABORT / CANNOT INSPECT ----
+    if (($_POST['action'] ?? '') === 'abort') {
+        $abortReason = trim($_POST['abort_reason'] ?? '');
+        if ($abortReason === '') {
+            $errors['abort'] = 'Please provide a reason for aborting the inspection.';
+        } else {
+            try {
+                $pdo->beginTransaction();
+
+                $pdo->prepare("
+                    UPDATE agent_verifications
+                       SET outcome = 'aborted',
+                           inspection_notes = ?,
+                           submitted_at = NOW()
+                     WHERE id = ?
+                ")->execute([$abortReason, $booking['verification_id']]);
+
+                $pdo->prepare("
+                    UPDATE bookings
+                       SET status = 'inspection_aborted',
+                           cancellation_reason = ?
+                     WHERE id = ?
+                ")->execute(['Inspection aborted by agent: ' . $abortReason, $bookingId]);
+
+                // Release property back to available
+                $pdo->prepare("UPDATE properties SET status = 'available' WHERE id = ?")
+                    ->execute([(int)$booking['property_id']]);
+
+                $pdo->commit();
+
+                notify(
+                    (int)$booking['student_id'],
+                    'inspection_aborted',
+                    'Inspection could not be completed',
+                    'The agent was unable to inspect "' . $booking['property_title']
+                        . '". Reason: ' . $abortReason . '. Your booking has been cancelled — you may rebook.',
+                    '/rentbridge/student/bookings.php'
+                );
+                notify(
+                    (int)$booking['landlord_id'],
+                    'inspection_aborted',
+                    'Agent could not complete inspection',
+                    'The assigned agent was unable to inspect your property "'
+                        . $booking['property_title'] . '". Reason: ' . $abortReason
+                        . '. Please contact admin if this is incorrect.',
+                    '/rentbridge/landlord/bookings.php'
+                );
+
+                set_flash('info', 'Inspection aborted. Booking has been cancelled and parties notified.');
+                header('Location: /rentbridge/agent/cases.php');
+                exit;
+
+            } catch (Throwable $e) {
+                if ($pdo->inTransaction()) $pdo->rollBack();
+                $errors['abort'] = 'Something went wrong: ' . $e->getMessage();
+            }
+        }
+    }
+
     // Collect form input
     foreach (['property_matches_listing','property_address_correct','facilities_match',
               'landlord_id_matches','ownership_doc_sighted'] as $f) {
@@ -549,6 +608,10 @@ $overdue    = $now > $deadlineTs;
                 </div>
 
                 <div class="d-flex gap-2 justify-content-end">
+                    <button type="button" class="btn btn-outline-danger me-auto"
+                            data-bs-toggle="modal" data-bs-target="#abortModal">
+                        <i class="bi bi-x-octagon me-1"></i> Cannot inspect
+                    </button>
                     <a href="/rentbridge/agent/cases.php" class="btn btn-ghost">Cancel</a>
                     <button type="submit" class="btn btn-primary"
                             onclick="return confirm('Submit inspection report? You cannot change it after submission.');">
@@ -556,6 +619,45 @@ $overdue    = $now > $deadlineTs;
                     </button>
                 </div>
             </form>
+
+            <!-- Abort modal -->
+            <div class="modal fade" id="abortModal" tabindex="-1" aria-labelledby="abortModalLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header border-0">
+                            <h5 class="modal-title text-danger" id="abortModalLabel">
+                                <i class="bi bi-x-octagon me-2"></i>Cannot complete inspection
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <form method="POST">
+                            <?= csrf_field() ?>
+                            <input type="hidden" name="booking_id" value="<?= (int)$bookingId ?>">
+                            <input type="hidden" name="action" value="abort">
+                            <div class="modal-body">
+                                <?php if (!empty($errors['abort'])): ?>
+                                    <div class="alert alert-danger small"><?= e($errors['abort']) ?></div>
+                                <?php endif; ?>
+                                <p class="small text-secondary">
+                                    Use this only if you genuinely cannot carry out the inspection —
+                                    e.g. landlord unresponsive, property inaccessible, wrong address.
+                                    The booking will be cancelled and both student and landlord notified.
+                                </p>
+                                <label class="form-label fw-semibold">Reason <span class="text-danger">*</span></label>
+                                <textarea name="abort_reason" rows="3" class="form-control" required
+                                          placeholder="e.g. Landlord did not show up. Attempted contact 3 times with no response."></textarea>
+                            </div>
+                            <div class="modal-footer border-0">
+                                <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">Go back</button>
+                                <button type="submit" class="btn btn-danger"
+                                        onclick="return confirm('This will cancel the booking and notify both parties. Are you sure?');">
+                                    <i class="bi bi-x-octagon me-1"></i> Abort inspection
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
 
         </div>
     </div>

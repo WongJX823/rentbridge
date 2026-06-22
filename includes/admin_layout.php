@@ -106,11 +106,38 @@ $pageContent   = $pageContent   ?? '';
                 <i class="bi bi-bar-chart-fill"></i>
                 <span class="sidebar-label">Statistics</span>
             </a>
+            <a href="/rentbridge/admin/transfers.php"
+               class="sidebar-link <?= $activeNav === 'transfers' ? 'active' : '' ?>">
+                <i class="bi bi-arrow-left-right"></i>
+                <span class="sidebar-label">Transfers</span>
+                <?php
+                $xferCount = (int)($pdo ?? db())->query("SELECT COUNT(*) FROM agent_transfer_requests WHERE status = 'pending_admin'")->fetchColumn();
+                if ($xferCount > 0): ?>
+                    <span class="sidebar-badge"><?= $xferCount > 9 ? '9+' : $xferCount ?></span>
+                <?php endif; ?>
+            </a>
             <a href="/rentbridge/admin/messages.php"
             class="sidebar-link <?= $activeNav === 'messages' ? 'active' : '' ?>">
                 <i class="bi bi-envelope-fill"></i>
                 <span class="sidebar-label">Messages</span>
             </a>
+
+            <!-- Help & Info -->
+            <div class="sidebar-collapsible">
+                <button class="sidebar-link sidebar-collapsible-toggle" type="button">
+                    <i class="bi bi-question-circle"></i>
+                    <span class="sidebar-label">Help &amp; Info</span>
+                    <i class="bi bi-chevron-down sidebar-chevron"></i>
+                </button>
+                <div class="sidebar-submenu">
+                    <a href="/rentbridge/about.php"        class="sidebar-link sidebar-sublink <?= $activeNav === 'about'        ? 'active' : '' ?>">About RentBridge</a>
+                    <a href="/rentbridge/how_it_works.php" class="sidebar-link sidebar-sublink <?= $activeNav === 'how_it_works' ? 'active' : '' ?>">How it works</a>
+                    <a href="/rentbridge/faq.php"          class="sidebar-link sidebar-sublink <?= $activeNav === 'faq'          ? 'active' : '' ?>">FAQ</a>
+                    <a href="/rentbridge/contact.php"      class="sidebar-link sidebar-sublink <?= $activeNav === 'contact'      ? 'active' : '' ?>">Feedback &amp; Contact</a>
+                    <a href="/rentbridge/legal.php"        class="sidebar-link sidebar-sublink <?= $activeNav === 'legal'        ? 'active' : '' ?>">Terms &amp; Conditions</a>
+                    <a href="/rentbridge/privacy.php"      class="sidebar-link sidebar-sublink <?= $activeNav === 'privacy'      ? 'active' : '' ?>">Privacy &amp; Security</a>
+                </div>
+            </div>
         </nav>
         <div class="sidebar-footer">
             <a href="/rentbridge/auth/logout.php" class="sidebar-link sidebar-logout">
@@ -119,6 +146,10 @@ $pageContent   = $pageContent   ?? '';
             </a>
         </div>
     </aside>
+    <button type="button" class="sidebar-edge-btn" id="sidebarEdgeBtn" aria-label="Toggle sidebar">
+        <i class="bi bi-chevron-left"></i>
+        <i class="bi bi-chevron-right"></i>
+    </button>
 
     <!-- MAIN AREA -->
     <main class="admin-main">
@@ -177,31 +208,29 @@ $pageContent   = $pageContent   ?? '';
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-// Sidebar collapse toggle + dynamic tooltip
+// Sidebar controls
 (function() {
-    const toggle = document.getElementById('sidebarToggle');
+    const freezeBtn = document.getElementById('sidebarToggle');
+    const edgeBtn   = document.getElementById('sidebarEdgeBtn');
     const body = document.body;
-
     function updateTooltip() {
-        if (body.classList.contains('sidebar-collapsed')) {
-            toggle.setAttribute('data-tooltip', 'Show sidebar');
-        } else {
-            toggle.setAttribute('data-tooltip', 'Hide sidebar');
-        }
+        freezeBtn.setAttribute('data-tooltip',
+            body.classList.contains('sidebar-collapsed') ? 'Show sidebar' : 'Hide sidebar');
     }
-
-    // Restore previous state
+    function toggle(freeze) {
+        body.classList.toggle('sidebar-collapsed');
+        if (freeze) {
+            localStorage.setItem('rb-admin-sidebar',
+                body.classList.contains('sidebar-collapsed') ? 'collapsed' : 'expanded');
+        }
+        updateTooltip();
+    }
     if (localStorage.getItem('rb-admin-sidebar') === 'collapsed') {
         body.classList.add('sidebar-collapsed');
     }
     updateTooltip();
-
-    toggle.addEventListener('click', function() {
-        body.classList.toggle('sidebar-collapsed');
-        localStorage.setItem('rb-admin-sidebar',
-            body.classList.contains('sidebar-collapsed') ? 'collapsed' : 'expanded');
-        updateTooltip();
-    });
+    freezeBtn.addEventListener('click', function() { toggle(true); });
+    if (edgeBtn) edgeBtn.addEventListener('click', function() { toggle(false); });
 })();
 
 // Filter drawer toggle

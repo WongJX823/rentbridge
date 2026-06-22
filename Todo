@@ -73,7 +73,22 @@ Change the legal.php back to privacy and security, terms and conditions.
     UI-sidebar
     SIdebar could be collapsed/open, keep freeze/unfreeze when 3-line-btn beside logo pressed. Sidebar submenu help and info could be collapsed/open for all time(sidebar collapsed or opened no affect), Show sidebar-menu item color change when open the matched page
 
-Future work/ Out of scope 
+Agent-FIFO Guards
+Fix FIFO query to exclude: users.status != 'active' (blocks pending/suspended agents) and agents.availability = 'off_duty'. Apply to both agent_assignment.php and includes/transfers.php.
+
+Admin-Report & Flag System
+Report buttons on booking pages (tied to a specific tenancy/incident):
+- student/booking.php: student can report agent or landlord
+- landlord/booking.php: landlord can report student or agent
+- agent/case.php + agent/inspection.php: agent can report landlord or student
+Report in chat system:
+- Right-click / long-press a specific message to report it
+- Attaches the exact message as evidence for admin
+- Catches misconduct before a booking exists (harassment, scam attempts in general inquiry chat)
+All reports aggregate in admin dashboard with count, reason, and reporter identity.
+High report count on a user triggers an alert so admin can investigate and suspend.
+
+Future work/ Out of scope
 Student only 1 sem, how? throw the question out of scope. 
 Real Map pick
 Contract stamping(mati setem)

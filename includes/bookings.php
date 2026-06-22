@@ -24,35 +24,47 @@ require_once __DIR__ . '/auth.php';
  */
 function auto_assign_agent(int $bookingId): ?int {
     $pdo = db();
-    // Find agent with lowest caseload + available
+
+    // Always use the property's assigned agent (one agent owns a property end-to-end)
     $stmt = $pdo->prepare("
-        SELECT user_id FROM agents
-         WHERE availability = 'available'
-           AND current_caseload < max_caseload
-         ORDER BY current_caseload ASC, RAND()
-         LIMIT 1
+        SELECT p.assigned_agent_id
+          FROM bookings b
+          JOIN properties p ON p.id = b.property_id
+         WHERE b.id = ? LIMIT 1
     ");
-    $stmt->execute();
+    $stmt->execute([$bookingId]);
     $agentId = $stmt->fetchColumn();
-    
+
+    if (!$agentId) {
+        // Property has no assigned agent yet — fall back to FIFO by workload
+        $stmt = $pdo->prepare("
+            SELECT a.user_id
+              FROM agents a
+              JOIN users u ON u.id = a.user_id
+              LEFT JOIN property_agent_assignments paa
+                ON paa.agent_id = a.user_id AND paa.outcome = 'pending'
+             WHERE u.primary_role = 'agent'
+             GROUP BY a.user_id
+             ORDER BY COUNT(paa.id) ASC, a.user_id ASC
+             LIMIT 1
+        ");
+        $stmt->execute();
+        $agentId = $stmt->fetchColumn();
+    }
+
     if (!$agentId) return null;
-    
+
     $pdo->beginTransaction();
     try {
-        // Assign
-        $stmt = $pdo->prepare("UPDATE bookings SET agent_id = ?, status = 'agent_assigned' WHERE id = ?");
+        $stmt = $pdo->prepare("UPDATE bookings SET agent_id = ?, status = 'pending_agent' WHERE id = ?");
         $stmt->execute([$agentId, $bookingId]);
-        
-        // Increment caseload
-        $stmt = $pdo->prepare("UPDATE agents SET current_caseload = current_caseload + 1 WHERE user_id = ?");
-        $stmt->execute([$agentId]);
-        
-        // Notify agent
-        notify((int)$agentId, 'agent_assigned', 'New case assigned',
-            'You have been assigned to inspect a new tenancy.',
-            '/rentbridge/agent/case.php?id=' . $bookingId);
-        
+
         $pdo->commit();
+
+        notify((int)$agentId, 'agent_assigned', 'New booking case assigned',
+            'A new tenancy booking has been assigned to you — please review and accept.',
+            '/rentbridge/agent/case.php?id=' . $bookingId);
+
         return (int)$agentId;
     } catch (Throwable $e) {
         $pdo->rollBack();

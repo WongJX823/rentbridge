@@ -586,3 +586,75 @@ $options->setChroot([
         return null;
     }
 }
+
+/**
+ * Lazy check — send contract expiry notifications.
+ * Call this on dashboard loads. Idempotent: skips if already notified.
+ *
+ * Rules:
+ *   • Student: 4-month early warning (all durations)
+ *   • Landlord: 2-month early warning (only for contracts ≥ 2 semesters ≈ 6 months)
+ *
+ * Uses notification types 'contract_expiring_4m' / 'contract_expiring_2m' to avoid duplicates.
+ */
+function check_contract_expiry_notifications(): void {
+    if (!function_exists('notify')) return;
+
+    $pdo = db();
+
+    // Student: within 4 months of end, not yet notified
+    $stmt = $pdo->query("
+        SELECT c.id, c.contract_code, c.student_id, c.end_date,
+               p.title AS property_title
+          FROM contracts c
+          JOIN properties p ON p.id = c.property_id
+         WHERE c.status = 'active'
+           AND c.end_date BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 4 MONTH)
+           AND NOT EXISTS (
+               SELECT 1 FROM notifications n
+                WHERE n.user_id = c.student_id
+                  AND n.type = 'contract_expiring_4m'
+                  AND n.link_url LIKE CONCAT('%/contracts/view.php?id=', c.id, '%')
+           )
+    ");
+    foreach ($stmt->fetchAll() as $c) {
+        $endDate = date('d M Y', strtotime($c['end_date']));
+        notify(
+            (int)$c['student_id'],
+            'contract_expiring_4m',
+            'Your tenancy ends in ~4 months',
+            "Your contract ({$c['contract_code']}) for \"{$c['property_title']}\" ends {$endDate}. "
+            . "Plan your next tenancy or move-out. Standard notice to landlord: 2 months before end date.",
+            "/rentbridge/contracts/view.php?id={$c['id']}"
+        );
+    }
+
+    // Landlord: within 2 months of end, only for contracts >= 6 months (≈ 2 semesters)
+    $stmt = $pdo->query("
+        SELECT c.id, c.contract_code, c.landlord_id, c.end_date,
+               DATEDIFF(c.end_date, c.start_date) AS duration_days,
+               p.title AS property_title
+          FROM contracts c
+          JOIN properties p ON p.id = c.property_id
+         WHERE c.status = 'active'
+           AND c.end_date BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 2 MONTH)
+           AND DATEDIFF(c.end_date, c.start_date) >= 180
+           AND NOT EXISTS (
+               SELECT 1 FROM notifications n
+                WHERE n.user_id = c.landlord_id
+                  AND n.type = 'contract_expiring_2m'
+                  AND n.link_url LIKE CONCAT('%/contracts/view.php?id=', c.id, '%')
+           )
+    ");
+    foreach ($stmt->fetchAll() as $c) {
+        $endDate = date('d M Y', strtotime($c['end_date']));
+        notify(
+            (int)$c['landlord_id'],
+            'contract_expiring_2m',
+            'Tenancy ending soon — plan ahead',
+            "Contract {$c['contract_code']} for \"{$c['property_title']}\" ends {$endDate}. "
+            . "The tenant was notified 4 months ago. If you plan to re-list, update your property listing.",
+            "/rentbridge/contracts/view.php?id={$c['id']}"
+        );
+    }
+}

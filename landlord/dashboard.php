@@ -1,9 +1,13 @@
 <?php
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/contracts.php';
 require_role('landlord');
 
 $pdo = db();
 $userId = current_user_id();
+
+// Check for contract expiry notifications (lazy, deduped)
+check_contract_expiry_notifications();
 
 // Landlord profile
 $stmt = $pdo->prepare("SELECT full_name, preferred_name FROM landlords WHERE user_id = ?");

@@ -6,14 +6,14 @@ $pdo = db();
 $userId = current_user_id();
 
 $tab = $_GET['tab'] ?? 'all';
-$validTabs = ['all','pending','verifying','contracts','active','completed'];
+$validTabs = ['all','pending','verifying','contracts','active','completed','properties'];
 if (!in_array($tab, $validTabs, true)) $tab = 'all';
 
 $searchQuery = trim($_GET['q'] ?? '');
 
 // Status mapping per tab
 $statusGroups = [
-    'all'        => ['pending_agent','agent_verifying','contract_pending','active','completed','verification_failed'],
+    'all'        => ['pending_agent','agent_verifying','contract_pending','active','completed','verification_failed','inspection_aborted'],
     'pending'    => ['pending_agent'],
     'verifying'  => ['agent_verifying'],
     'contracts'  => ['contract_pending'],
@@ -28,6 +28,34 @@ foreach ($statusGroups as $key => $statuses) {
     $stmt = $pdo->prepare("SELECT COUNT(*) FROM bookings WHERE agent_id = ? AND status IN ($ph)");
     $stmt->execute(array_merge([$userId], $statuses));
     $counts[$key] = (int)$stmt->fetchColumn();
+}
+
+// Count assigned properties (pending review)
+$stmt = $pdo->prepare("
+    SELECT COUNT(*) FROM property_agent_assignments paa
+    JOIN properties p ON p.id = paa.property_id
+    WHERE paa.agent_id = ? AND paa.outcome = 'pending'
+");
+$stmt->execute([$userId]);
+$counts['properties'] = (int)$stmt->fetchColumn();
+
+// Fetch assigned properties if on properties tab
+$assignedProperties = [];
+if ($tab === 'properties') {
+    $stmt = $pdo->prepare("
+        SELECT p.id, p.title, p.city, p.monthly_rent, p.agent_assigned_at,
+               p.agent_status,
+               l.full_name AS landlord_name,
+               paa.assigned_at,
+               TIMESTAMPDIFF(HOUR, paa.assigned_at, NOW()) AS hours_pending
+          FROM property_agent_assignments paa
+          JOIN properties p ON p.id = paa.property_id
+          JOIN landlords l ON l.user_id = p.landlord_id
+         WHERE paa.agent_id = ? AND paa.outcome = 'pending'
+         ORDER BY paa.assigned_at ASC
+    ");
+    $stmt->execute([$userId]);
+    $assignedProperties = $stmt->fetchAll();
 }
 
 // Build query
@@ -78,6 +106,7 @@ $pageTabs = [
     ['label'=>'Contracts',  'href'=>build_case_tab_url('contracts',  $searchQuery), 'active'=>$tab==='contracts',  'count'=>$counts['contracts']],
     ['label'=>'Active',     'href'=>build_case_tab_url('active',     $searchQuery), 'active'=>$tab==='active',     'count'=>$counts['active']],
     ['label'=>'Completed',  'href'=>build_case_tab_url('completed',  $searchQuery), 'active'=>$tab==='completed',  'count'=>$counts['completed']],
+    ['label'=>'Properties', 'href'=>build_case_tab_url('properties', ''),           'active'=>$tab==='properties', 'count'=>$counts['properties']],
 ];
 
 ob_start();
@@ -103,7 +132,8 @@ function case_status_label(string $status): array {
     return match ($status) {
         'pending_agent'       => ['⏳ Awaiting acceptance','warning'],
         'agent_verifying'     => ['🔍 Inspecting','info'],
-        'verification_failed' => ['Inspection failed','danger'],
+        'verification_failed'  => ['Inspection failed','danger'],
+        'inspection_aborted'   => ['Inspection aborted','danger'],
         'contract_pending'    => ['📝 Awaiting signatures','primary'],
         'active'              => ['Active','success'],
         'completed'           => ['Completed','secondary'],
@@ -114,7 +144,62 @@ function case_status_label(string $status): array {
 ob_start();
 ?>
 
-<?php if (empty($cases)): ?>
+<?php if ($tab === 'properties'): ?>
+    <?php if (empty($assignedProperties)): ?>
+        <div class="text-center py-5 bg-white rounded-3 border">
+            <i class="bi bi-clipboard-check" style="font-size: 3rem; color: rgba(15,44,82,0.15);"></i>
+            <h4 class="mt-3">No properties assigned</h4>
+            <p class="text-secondary small">You have no pending property listing reviews.</p>
+        </div>
+    <?php else: ?>
+        <div class="bg-white border rounded-3 overflow-hidden">
+            <table class="table mb-0 align-middle">
+                <thead style="background:#F4F4EE;">
+                    <tr>
+                        <th class="ps-3">Property</th>
+                        <th>Landlord</th>
+                        <th>Assigned</th>
+                        <th>Status</th>
+                        <th class="text-end pe-3"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($assignedProperties as $p): ?>
+                    <tr>
+                        <td class="ps-3">
+                            <strong class="small"><?= e($p['title']) ?></strong>
+                            <div class="small text-secondary">
+                                <i class="bi bi-geo-alt"></i> <?= e($p['city']) ?>
+                                · RM <?= number_format((float)$p['monthly_rent']) ?>
+                            </div>
+                        </td>
+                        <td class="small"><?= e($p['landlord_name']) ?></td>
+                        <td class="small text-secondary">
+                            <?= (int)$p['hours_pending'] ?>h ago
+                            <?php if ($p['hours_pending'] > 18): ?>
+                                <span class="badge bg-danger ms-1">Urgent</span>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <span class="badge bg-warning text-dark">⏳ Pending review</span>
+                        </td>
+                        <td class="text-end pe-3">
+                            <a href="/rentbridge/agent/property_review.php?id=<?= (int)$p['id'] ?>"
+                               class="btn btn-sm btn-primary">
+                                Review <i class="bi bi-arrow-right"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+        <p class="text-secondary small mt-3 mb-0">
+            <?= count($assignedProperties) ?> propert<?= count($assignedProperties) === 1 ? 'y' : 'ies' ?> pending review
+        </p>
+    <?php endif; ?>
+
+<?php elseif (empty($cases)): ?>
     <div class="text-center py-5 bg-white rounded-3 border">
         <i class="bi bi-clipboard" style="font-size: 3rem; color: rgba(15,44,82,0.15);"></i>
         <h4 class="mt-3">No cases here</h4>
