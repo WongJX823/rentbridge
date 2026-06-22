@@ -1,0 +1,3 @@
+[      36ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) %o @ http://localhost/rentbridge/auth/login.php:0
+[   47856ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost/rentbridge/uploads/properties/placeholder.jpg:0
+[   47891ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost/rentbridge/uploads/properties/placeholder.jpg:0

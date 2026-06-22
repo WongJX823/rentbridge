@@ -1,0 +1,3 @@
+- generic [active] [ref=e1]:
+  - text: "Warning: require_once(D:\\Xampp\\htdocs\\rentbridge/includes/db.php): Failed to open stream: No such file or directory in D:\\Xampp\\htdocs\\rentbridge\\check_pass.php on line 3"
+  - text: "Fatal error: Uncaught Error: Failed opening required 'D:\\Xampp\\htdocs\\rentbridge/includes/db.php' (include_path='D:\\Xampp\\php\\PEAR') in D:\\Xampp\\htdocs\\rentbridge\\check_pass.php:3 Stack trace: #0 {main} thrown in D:\\Xampp\\htdocs\\rentbridge\\check_pass.php on line 3"
