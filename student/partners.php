@@ -195,6 +195,10 @@ ob_start();
                                     <strong class="text-emerald">RM <?= number_format($perPerson) ?></strong>
                                 </div>
                             </div>
+                            <div style="font-size:0.75rem; color:#6c757d; margin-bottom:6px;">
+                                <i class="bi bi-calendar2-range me-1"></i>
+                                <?= (int)($post['semesters_needed'] ?? 1) ?> semester<?= ($post['semesters_needed'] ?? 1) > 1 ? 's' : '' ?>
+                            </div>
 
                             <!-- Message (truncated) -->
                             <?php if (!empty($post['message'])): ?>

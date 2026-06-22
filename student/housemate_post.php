@@ -135,11 +135,17 @@ ob_start();
             </div>
 
             <!-- Stats -->
+            <div class="d-flex gap-4 mt-3 pt-3 border-top small text-secondary flex-wrap">
             <div class="d-flex gap-4 mt-3 pt-3 border-top small text-secondary">
                 <div>
                     <i class="bi bi-people"></i>
                     Looking for <strong class="text-dark"><?= (int)$post['housemates_needed'] ?></strong>
                     more housemate<?= $post['housemates_needed'] > 1 ? 's' : '' ?>
+                </div>
+                <div>
+                    <i class="bi bi-calendar2-range"></i>
+                    <strong class="text-dark"><?= (int)($post['semesters_needed'] ?? 1) ?></strong>
+                    semester<?= ($post['semesters_needed'] ?? 1) > 1 ? 's' : '' ?>
                 </div>
                 <div>
                     <i class="bi bi-check-circle text-success"></i>
