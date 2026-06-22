@@ -42,12 +42,13 @@ if ($stmt->fetchColumn()) {
 }
 
 $errors = [];
-$old = ['message' => '', 'housemates_needed' => '1'];
+$old = ['message' => '', 'housemates_needed' => '1', 'semesters_needed' => '1'];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
     $old['message']           = trim($_POST['message'] ?? '');
     $old['housemates_needed'] = (int)($_POST['housemates_needed'] ?? 1);
+    $old['semesters_needed']  = (int)($_POST['semesters_needed'] ?? 1);
 
     if ($old['message'] === '') {
         $errors['message'] = 'Tell others why they should join you.';
@@ -55,13 +56,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($old['housemates_needed'] < 1 || $old['housemates_needed'] > 5) {
         $errors['housemates_needed'] = 'Must be between 1 and 5.';
     }
+    if ($old['semesters_needed'] < 1 || $old['semesters_needed'] > 6) {
+        $errors['semesters_needed'] = 'Must be between 1 and 6 semesters.';
+    }
 
     if (empty($errors)) {
         $stmt = $pdo->prepare("
-            INSERT INTO co_tenancy_posts (poster_id, property_id, message, housemates_needed)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO co_tenancy_posts (poster_id, property_id, message, housemates_needed, semesters_needed)
+            VALUES (?, ?, ?, ?, ?)
         ");
-        $stmt->execute([$userId, $propertyId, $old['message'], $old['housemates_needed']]);
+        $stmt->execute([$userId, $propertyId, $old['message'], $old['housemates_needed'], $old['semesters_needed']]);
 
         // Auto-enable looking_for_housing for them
         $pdo->prepare("UPDATE students SET looking_for_housing = 1 WHERE user_id = ?")->execute([$userId]);
@@ -115,6 +119,24 @@ ob_start();
                 </small>
             </div>
 
+            <div class="mb-3">
+                <label class="form-label fw-semibold">
+                    How many semesters do you plan to rent? <small class="text-danger">*</small>
+                </label>
+                <select name="semesters_needed"
+                        class="form-select <?= isset($errors['semesters_needed']) ? 'is-invalid' : '' ?>">
+                    <?php for ($i = 1; $i <= 6; $i++): ?>
+                        <option value="<?= $i ?>" <?= (int)$old['semesters_needed']===$i?'selected':'' ?>>
+                            <?= $i ?> semester<?= $i > 1 ? 's' : '' ?>
+                        </option>
+                    <?php endfor; ?>
+                </select>
+                <?php if (isset($errors['semesters_needed'])): ?>
+                    <div class="invalid-feedback"><?= e($errors['semesters_needed']) ?></div>
+                <?php endif; ?>
+                <small class="text-secondary">1 semester ≈ 6 months (UTeM academic calendar).</small>
+            </div>
+
             <div class="mb-4">
                 <label class="form-label fw-semibold">
                     Your message to potential housemates <small class="text-danger">*</small>
@@ -141,7 +163,7 @@ ob_start();
             <div class="d-flex justify-content-end gap-2">
                 <a href="/rentbridge/properties/<?= (int)$propertyId ?>" class="btn btn-outline-secondary">Cancel</a>
                 <button type="submit" class="btn btn-primary">
-                    <i class="bi bi-megaphone me-1"></i> Post to Find Partners
+                    <i class="bi bi-megaphone me-1"></i> Post to Find Housemates
                 </button>
             </div>
         </form>

@@ -22,11 +22,12 @@ if ($filterCity !== '')    $filters['city'] = $filterCity;
 if ($filterMaxRent !== '') $filters['max_rent'] = $filterMaxRent;
 
 $posts = list_co_tenancy_posts($userId, $filters);
+$myPosts = get_my_co_tenancy_posts($userId);
 
 // All cities for filter dropdown
 $cities = $pdo->query("SELECT DISTINCT city FROM properties WHERE status IN ('available','booked') ORDER BY city")->fetchAll(PDO::FETCH_COLUMN);
 
-$pageTitle = 'Find Partners';
+$pageTitle = 'Find Housemates';
 $activeNav = 'partners';
 
 ob_start();
@@ -48,6 +49,38 @@ ob_start();
             <i class="bi bi-toggle-on me-1"></i> Enable
         </a>
     </div>
+<?php endif; ?>
+
+<!-- MY OPEN POSTS -->
+<?php if (!empty($myPosts)): ?>
+<div class="mb-4">
+    <h5 class="mb-2" style="font-family:'Fraunces',serif;">My posts</h5>
+    <div class="d-flex flex-column gap-2">
+        <?php foreach ($myPosts as $mp):
+            $mpColor = match($mp['status']) {
+                'open'      => 'success',
+                'filled'    => 'primary',
+                'cancelled' => 'secondary',
+                default     => 'secondary',
+            };
+        ?>
+        <div class="bg-white border rounded-3 p-3 d-flex align-items-center gap-3">
+            <div class="flex-grow-1">
+                <strong><?= e($mp['property_title']) ?></strong>
+                <small class="text-secondary ms-2"><?= e($mp['property_city']) ?></small>
+                <span class="badge bg-<?= $mpColor ?> ms-2"><?= ucfirst($mp['status']) ?></span>
+                <?php if ($mp['pending_count'] > 0): ?>
+                    <span class="badge bg-warning text-dark ms-1"><?= $mp['pending_count'] ?> pending</span>
+                <?php endif; ?>
+            </div>
+            <a href="/rentbridge/student/manage_post.php?id=<?= (int)$mp['id'] ?>"
+               class="btn btn-sm btn-outline-primary flex-shrink-0">
+                <i class="bi bi-people me-1"></i> Manage
+            </a>
+        </div>
+        <?php endforeach; ?>
+    </div>
+</div>
 <?php endif; ?>
 
 <!-- FILTERS -->
@@ -162,6 +195,10 @@ ob_start();
                                     <strong class="text-emerald">RM <?= number_format($perPerson) ?></strong>
                                 </div>
                             </div>
+                            <div style="font-size:0.75rem; color:#6c757d; margin-bottom:6px;">
+                                <i class="bi bi-calendar2-range me-1"></i>
+                                <?= (int)($post['semesters_needed'] ?? 1) ?> semester<?= ($post['semesters_needed'] ?? 1) > 1 ? 's' : '' ?>
+                            </div>
 
                             <!-- Message (truncated) -->
                             <?php if (!empty($post['message'])): ?>
@@ -173,14 +210,14 @@ ob_start();
                                 </div>
                             <?php endif; ?>
 
-                            <!-- CTA: single button, text-based -->
+                            <!-- CTA -->
                             <div class="d-flex justify-content-between align-items-center mt-3 pt-2"
                                  style="border-top: 1px solid rgba(15,44,82,0.06);">
-                                 <button type="button"
-                                        onclick="event.preventDefault(); event.stopPropagation(); window.location='/rentbridge/chat/start.php?type=partner_inquiry&with=<?= (int)$post['poster_id'] ?>&post_id=<?= (int)$post['id'] ?>'; return false;"
-                                        class="btn btn-sm btn-outline-primary"
+                                <button type="button"
+                                        onclick="event.preventDefault(); event.stopPropagation(); window.location='/rentbridge/student/housemate_post.php?id=<?= (int)$post['id'] ?>'; return false;"
+                                        class="btn btn-sm btn-primary"
                                         style="font-size:0.75rem;">
-                                    <i class="bi bi-chat-dots"></i> Message
+                                    <i class="bi bi-person-plus"></i> Apply to join
                                 </button>
                                 <span class="small text-emerald fw-semibold">
                                     Property <i class="bi bi-arrow-right"></i>
