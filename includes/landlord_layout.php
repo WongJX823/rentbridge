@@ -28,7 +28,7 @@ $stmt->execute([$userId]);
 $me = $stmt->fetch() ?: [];
 $myName = ($me['preferred_name'] ?? '') ?: ($me['full_name'] ?? 'Landlord');
 
-$unreadChat = chat_unread_total($userId);
+$unreadChat = unread_message_count($userId);
 $stmt = $pdo->prepare("SELECT COUNT(*) FROM notifications WHERE user_id = ? AND is_read = 0");
 $stmt->execute([$userId]);
 $unreadNotif = (int)$stmt->fetchColumn();
@@ -52,6 +52,7 @@ $pendingRequests = (int)$stmt->fetchColumn();
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="/rentbridge/assets/css/style.css" rel="stylesheet">
     <link href="/rentbridge/assets/css/student.css" rel="stylesheet">
+    <?= $pageExtraHead ?? '' ?>
 </head>
 <body class="landlord-body">
 

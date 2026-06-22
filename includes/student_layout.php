@@ -31,8 +31,8 @@ $stmt->execute([$userId]);
 $me = $stmt->fetch() ?: [];
 $myName = ($me['preferred_name'] ?? '') ?: ($me['full_name'] ?? 'User');
 
-// Unread chat count
-$unreadChat = chat_unread_total($userId);
+// Unread message count — messages where read_at IS NULL sent by others
+$unreadChat = unread_message_count($userId);
 
 // Unread notifications
 $stmt = $pdo->prepare("SELECT COUNT(*) FROM notifications WHERE user_id = ? AND is_read = 0");
@@ -54,6 +54,7 @@ $totalUnread = $unreadChat + $unreadNotif;
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="/rentbridge/assets/css/style.css" rel="stylesheet">
     <link href="/rentbridge/assets/css/student.css" rel="stylesheet">
+    <?= $pageExtraHead ?? '' ?>
 </head>
 <body class="student-body">
 
@@ -220,7 +221,7 @@ $totalUnread = $unreadChat + $unreadNotif;
         <?php endif; ?>
 
         <div class="user-content">
-            <?php if (empty($pageTabs)): ?>
+            <?php if (empty($pageTabs) && ($showPageTitle ?? true)): ?>
                 <div class="user-page-header-noTabs">
                     <h1 class="user-page-title-inline"><?= e($pageTitle) ?></h1>
                 </div>

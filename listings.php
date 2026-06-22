@@ -59,6 +59,17 @@ $orderBy = match($sortBy) {
     default      => 'p.created_at DESC',
 };
 
+const PER_PAGE = 24;
+$page      = max(1, (int)($_GET['page'] ?? 1));
+$offset    = ($page - 1) * PER_PAGE;
+
+// Total count for pagination
+$countStmt = $pdo->prepare("SELECT COUNT(*) FROM properties p JOIN landlords l ON l.user_id = p.landlord_id WHERE $where");
+$countStmt->execute($params);
+$totalCount = (int)$countStmt->fetchColumn();
+$totalPages = (int)ceil($totalCount / PER_PAGE);
+$page       = min($page, max(1, $totalPages));
+
 $stmt = $pdo->prepare("
     SELECT p.*,
            l.full_name      AS landlord_name,
@@ -69,6 +80,7 @@ $stmt = $pdo->prepare("
       JOIN landlords l ON l.user_id = p.landlord_id
      WHERE $where
      ORDER BY $orderBy
+     LIMIT " . PER_PAGE . " OFFSET $offset
 ");
 $stmt->execute($params);
 $properties = $stmt->fetchAll();
@@ -87,7 +99,10 @@ ob_start();
     <div>
         <h2 class="mb-1" style="font-family:'Fraunces',serif;">Browse properties</h2>
         <p class="text-secondary mb-0 small">
-            <?= count($properties) ?> propert<?= count($properties)===1?'y':'ies' ?> available
+            <?= $totalCount ?> propert<?= $totalCount===1?'y':'ies' ?> available
+            <?php if ($totalPages > 1): ?>
+                &mdash; page <?= $page ?> of <?= $totalPages ?>
+            <?php endif; ?>
         </p>
     </div>
     <select name="sort" class="form-select form-select-sm" style="max-width:200px;"
@@ -222,6 +237,49 @@ ob_start();
     </div>
 <?php endif; ?>
 <?php render_save_button_script(); ?>
+
+<!-- PAGINATION -->
+<?php if ($totalPages > 1):
+    $baseParams = array_filter(array_diff_key($_GET, ['page' => '']));
+    $buildUrl = fn(int $p) => '?' . http_build_query(array_merge($baseParams, ['page' => $p]));
+    $window = 2;
+?>
+<nav class="mt-4 d-flex justify-content-center" aria-label="Listings pagination">
+    <ul class="pagination pagination-sm mb-0">
+        <li class="page-item <?= $page <= 1 ? 'disabled' : '' ?>">
+            <a class="page-link" href="<?= $buildUrl($page - 1) ?>">
+                <i class="bi bi-chevron-left"></i>
+            </a>
+        </li>
+
+        <?php if ($page - $window > 1): ?>
+            <li class="page-item"><a class="page-link" href="<?= $buildUrl(1) ?>">1</a></li>
+            <?php if ($page - $window > 2): ?>
+                <li class="page-item disabled"><span class="page-link">&hellip;</span></li>
+            <?php endif; ?>
+        <?php endif; ?>
+
+        <?php for ($i = max(1, $page - $window); $i <= min($totalPages, $page + $window); $i++): ?>
+            <li class="page-item <?= $i === $page ? 'active' : '' ?>">
+                <a class="page-link" href="<?= $buildUrl($i) ?>"><?= $i ?></a>
+            </li>
+        <?php endfor; ?>
+
+        <?php if ($page + $window < $totalPages): ?>
+            <?php if ($page + $window < $totalPages - 1): ?>
+                <li class="page-item disabled"><span class="page-link">&hellip;</span></li>
+            <?php endif; ?>
+            <li class="page-item"><a class="page-link" href="<?= $buildUrl($totalPages) ?>"><?= $totalPages ?></a></li>
+        <?php endif; ?>
+
+        <li class="page-item <?= $page >= $totalPages ? 'disabled' : '' ?>">
+            <a class="page-link" href="<?= $buildUrl($page + 1) ?>">
+                <i class="bi bi-chevron-right"></i>
+            </a>
+        </li>
+    </ul>
+</nav>
+<?php endif; ?>
 
 <?php
 $pageContent = ob_get_clean();

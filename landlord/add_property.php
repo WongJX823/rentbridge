@@ -48,6 +48,9 @@ $old = [
     'facilities'    => $existing['facilities']    ?? '',
     'furnishing'    => $existing['furnishing']    ?? 'partial',
     'viewing_mode'  => $existing['viewing_mode']  ?? '',
+    'maps_url'      => $existing['maps_url']      ?? '',
+    'lat'           => $existing['latitude']      ?? '',
+    'lng'           => $existing['longitude']     ?? '',
 ];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -77,6 +80,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     foreach (array_keys($old) as $f) {
         $old[$f] = trim($_POST[$f] ?? '');
+    }
+
+    // Auto-extract coordinates from maps_url if lat/lng not submitted directly
+    if (($old['lat'] === '' || $old['lng'] === '') && $old['maps_url'] !== '') {
+        require_once __DIR__ . '/../includes/pricing.php';
+        $coords = extract_coords_from_maps_url($old['maps_url']);
+        if ($coords) {
+            $old['lat'] = (string)$coords['lat'];
+            $old['lng'] = (string)$coords['lng'];
+        }
     }
 
     // Validate
@@ -172,6 +185,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                            facilities = ?,
                            furnishing = ?,
                            viewing_mode = ?,
+                           maps_url = ?,
+                           latitude = ?,
+                           longitude = ?,
                            status = ?
                      WHERE id = ?
                        AND landlord_id = ?
@@ -189,6 +205,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $old['facilities']  !== '' ? $old['facilities']  : null,
                     $old['furnishing'],
                     $old['viewing_mode'],
+                    $old['maps_url']    !== '' ? $old['maps_url']    : null,
+                    $old['lat']         !== '' ? (float)$old['lat']  : null,
+                    $old['lng']         !== '' ? (float)$old['lng']  : null,
                     $newStatus,
                     $editId,
                     $userId
@@ -201,8 +220,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     INSERT INTO properties
                         (landlord_id, title, property_type, address, city, postcode, state,
                          monthly_rent, deposit, description, facilities, furnishing,
-                         viewing_mode, status)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending_approval')
+                         viewing_mode, maps_url, latitude, longitude, status)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending_approval')
                 ");
                 $stmt->execute([
                     $userId,
@@ -217,7 +236,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $old['description'] !== '' ? $old['description'] : null,
                     $old['facilities']  !== '' ? $old['facilities']  : null,
                     $old['furnishing'],
-                    $old['viewing_mode']
+                    $old['viewing_mode'],
+                    $old['maps_url']    !== '' ? $old['maps_url']    : null,
+                    $old['lat']         !== '' ? (float)$old['lat']  : null,
+                    $old['lng']         !== '' ? (float)$old['lng']  : null,
                 ]);
                 $propertyId = (int)$pdo->lastInsertId();
             }
@@ -378,6 +400,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $pageTitle = $isEdit ? 'Edit Property' : 'List New Property';
 $activeNav = 'properties';
+$pageExtraHead = '<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>';
 
 ob_start();
 ?>
@@ -489,6 +513,27 @@ ob_start();
                     Open Google Maps, find your property, click "Share" → copy link. The pricing benchmark uses distance to UTeM.
                 </small>
                 <div id="mapsUrlStatus" class="small mt-1"></div>
+            </div>
+
+            <!-- Hidden coordinate fields -->
+            <input type="hidden" name="lat" id="propLat" value="<?= e($old['lat']) ?>">
+            <input type="hidden" name="lng" id="propLng" value="<?= e($old['lng']) ?>">
+
+            <!-- Pick-on-map widget -->
+            <div class="mt-3">
+                <label class="form-label fw-semibold">
+                    Pin location
+                    <small class="text-secondary fw-normal">— drag the marker or click to reposition</small>
+                </label>
+                <div id="pickMap" style="height:280px; border-radius:10px; border:1px solid rgba(15,44,82,0.12); overflow:hidden;"></div>
+                <small class="text-secondary" id="pickMapCoords">
+                    <?php if ($old['lat'] !== '' && $old['lng'] !== ''): ?>
+                        <i class="bi bi-geo-alt-fill text-success"></i>
+                        Pinned at <?= round((float)$old['lat'], 5) ?>, <?= round((float)$old['lng'], 5) ?>
+                    <?php else: ?>
+                        No pin set yet — paste a Google Maps link above or click on the map.
+                    <?php endif; ?>
+                </small>
             </div>
         </div>
     </div>
@@ -1243,6 +1288,77 @@ document.querySelector('form').addEventListener('submit', function(e) {
         fileInput?.focus();
     }
 });
+
+/* ===== Pick-on-map (Leaflet) ===== */
+(function() {
+    const latInput   = document.getElementById('propLat');
+    const lngInput   = document.getElementById('propLng');
+    const coordsNote = document.getElementById('pickMapCoords');
+    const mapsInput  = document.getElementById('mapsUrlInput');
+
+    // Default centre: UTeM, Durian Tunggal, Melaka
+    const DEFAULT_LAT = 2.3138, DEFAULT_LNG = 102.3192, DEFAULT_ZOOM = 15;
+
+    const initLat = parseFloat(latInput.value) || DEFAULT_LAT;
+    const initLng = parseFloat(lngInput.value) || DEFAULT_LNG;
+    const hasPin  = latInput.value !== '';
+
+    const map = L.map('pickMap').setView([initLat, initLng], DEFAULT_ZOOM);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+        maxZoom: 19,
+    }).addTo(map);
+
+    const pinIcon = L.divIcon({
+        className: '',
+        html: '<div style="width:28px;height:28px;background:#2E8B57;border:3px solid white;border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 2px 6px rgba(0,0,0,0.3);"></div>',
+        iconSize: [28, 28],
+        iconAnchor: [14, 28],
+    });
+
+    let marker = null;
+
+    function setPin(lat, lng, pan) {
+        lat = parseFloat(lat.toFixed(6));
+        lng = parseFloat(lng.toFixed(6));
+        latInput.value = lat;
+        lngInput.value = lng;
+        coordsNote.innerHTML = `<i class="bi bi-geo-alt-fill text-success"></i> Pinned at ${lat}, ${lng}`;
+        if (marker) {
+            marker.setLatLng([lat, lng]);
+        } else {
+            marker = L.marker([lat, lng], { icon: pinIcon, draggable: true }).addTo(map);
+            marker.on('dragend', function() {
+                const pos = marker.getLatLng();
+                setPin(pos.lat, pos.lng, false);
+            });
+        }
+        if (pan) map.setView([lat, lng], Math.max(map.getZoom(), 17));
+    }
+
+    if (hasPin) setPin(initLat, initLng, false);
+
+    map.on('click', function(e) { setPin(e.latlng.lat, e.latlng.lng, false); });
+
+    // Parse Google Maps URL coordinates client-side when landlord pastes a link
+    function parseCoordsFromUrl(url) {
+        let m;
+        m = url.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+        if (m) return { lat: parseFloat(m[1]), lng: parseFloat(m[2]) };
+        m = url.match(/[?&](?:q|ll)=(-?\d+\.\d+),(-?\d+\.\d+)/);
+        if (m) return { lat: parseFloat(m[1]), lng: parseFloat(m[2]) };
+        m = url.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/);
+        if (m) return { lat: parseFloat(m[1]), lng: parseFloat(m[2]) };
+        return null;
+    }
+
+    if (mapsInput) {
+        mapsInput.addEventListener('change', function() {
+            const coords = parseCoordsFromUrl(this.value);
+            if (coords) setPin(coords.lat, coords.lng, true);
+        });
+    }
+})();
 </script>
 
 <?php

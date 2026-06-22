@@ -57,38 +57,38 @@ $lastMessageId = !empty($messages) ? max(array_column($messages, 'id')) : 0;
 
 $isLocked = (int)($convo['is_locked'] ?? 0) === 1;
 
-// Quick replies — different per context
+// Quick replies — tailored per role and context
 if ($isGroupChat) {
     $quickReplies = [
         'Hi everyone!',
-        'When can we meet to discuss?',
+        'When can we all meet to discuss?',
         'Sounds good to me.',
-        'Let me check and get back.',
+        'Let me check and get back to you.',
     ];
 } else {
     $quickReplies = match ($currentRole) {
         'student' => [
-            'Hi, is this still available?',
-            'Can I view it?',
-            'What\'s included in the rent?',
+            'Hi, is this property still available?',
+            'Can I arrange a viewing?',
+            'What utilities are included in the rent?',
             'Is the deposit negotiable?',
         ],
         'landlord' => [
-            'Yes, still available.',
-            'When would you like to view?',
-            'Rent includes WiFi and water.',
+            'Yes, the property is still available.',
+            'When would you like to come for a viewing?',
+            'Please share your details so I can follow up.',
             'Let me check and get back to you.',
         ],
         'agent' => [
-            'I can arrange an inspection.',
-            'Let me schedule a viewing.',
-            'Inspection report is ready.',
-            'Please proceed to sign the contract.',
+            'I can arrange an inspection for you.',
+            'The inspection has been scheduled — please check your notifications.',
+            'The inspection report is ready. Please review it.',
+            'Everything is in order. Please proceed to sign the contract.',
         ],
         default => [
-            'Hello',
-            'Thank you',
-            'Can we discuss?',
+            'Hello!',
+            'Thank you for your message.',
+            'Can we discuss this further?',
         ],
     };
 }

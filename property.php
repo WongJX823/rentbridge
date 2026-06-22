@@ -93,8 +93,43 @@ if ((int)$prop['landlord_whatsapp'] === 1 && !empty($prop['landlord_phone'])) {
     $waUrl = "https://wa.me/{$waPhone}?text={$waMsg}";
 }
 
-$pageTitle = $prop['title'];
-$activeNav = 'browse';
+// === Similar properties (student + landlord + guest) ===
+$showSimilar = !is_logged_in() || in_array(current_role(), ['student', 'landlord']);
+$similar = [];
+if ($showSimilar) {
+    $rentLow  = $prop['monthly_rent'] * 0.7;
+    $rentHigh = $prop['monthly_rent'] * 1.3;
+    $simStmt  = db()->prepare("
+        SELECT p.*,
+               l.preferred_name AS landlord_preferred_name,
+               l.full_name      AS landlord_name,
+               (SELECT image_path FROM property_images
+                 WHERE property_id = p.id ORDER BY is_primary DESC, id LIMIT 1) AS image_path,
+               (p.city = ?) * 2 +
+               (p.property_type = ?) * 1 AS score
+          FROM properties p
+          JOIN landlords l ON l.user_id = p.landlord_id
+         WHERE p.id != ?
+           AND p.status = 'available'
+           AND p.monthly_rent BETWEEN ? AND ?
+         ORDER BY score DESC, ABS(p.monthly_rent - ?) ASC
+         LIMIT 6
+    ");
+    $simStmt->execute([
+        $prop['city'],
+        $prop['property_type'],
+        $prop['id'],
+        $rentLow,
+        $rentHigh,
+        $prop['monthly_rent'],
+    ]);
+    $similar = $simStmt->fetchAll();
+}
+
+$pageTitle    = $prop['title'];
+$activeNav    = 'browse';
+$pageExtraHead = '<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>';
 
 ob_start();
 ?>
@@ -246,6 +281,66 @@ ob_start();
                 <?php endforeach; ?>
             </div>
         <?php endif; ?>
+
+        <!-- LOCATION MAP -->
+        <h5 class="mt-4 mb-2">Location</h5>
+        <div id="propMap" style="height:300px; border-radius:10px; border:1px solid rgba(15,44,82,0.1); overflow:hidden;"></div>
+        <?php if (!empty($prop['maps_url'])): ?>
+            <a href="<?= e($prop['maps_url']) ?>" target="_blank" rel="noopener"
+               class="small text-secondary mt-1 d-inline-block">
+                <i class="bi bi-box-arrow-up-right me-1"></i>Open in Google Maps
+            </a>
+        <?php endif; ?>
+        <script>
+        (function() {
+            const LAT  = <?= !empty($prop['latitude'])  ? (float)$prop['latitude']  : 'null' ?>;
+            const LNG  = <?= !empty($prop['longitude']) ? (float)$prop['longitude'] : 'null' ?>;
+            const ADDR = <?= json_encode(trim($prop['address'] . ', ' . $prop['city'] . ', ' . $prop['state'])) ?>;
+            const TITLE = <?= json_encode($prop['title']) ?>;
+
+            const pinIcon = L.divIcon({
+                className: '',
+                html: '<div style="width:30px;height:30px;background:#2E8B57;border:3px solid white;border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 2px 8px rgba(0,0,0,0.35);"></div>',
+                iconSize: [30, 30],
+                iconAnchor: [15, 30],
+                popupAnchor: [0, -32],
+            });
+
+            function initMap(lat, lng) {
+                const map = L.map('propMap', { scrollWheelZoom: false }).setView([lat, lng], 16);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+                    maxZoom: 19,
+                }).addTo(map);
+                L.marker([lat, lng], { icon: pinIcon })
+                    .addTo(map)
+                    .bindPopup('<strong>' + TITLE + '</strong><br><small>' + ADDR + '</small>')
+                    .openPopup();
+            }
+
+            if (LAT && LNG) {
+                initMap(LAT, LNG);
+            } else {
+                // Geocode via Nominatim as fallback
+                fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(ADDR))
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data && data.length > 0) {
+                            initMap(parseFloat(data[0].lat), parseFloat(data[0].lon));
+                        } else {
+                            document.getElementById('propMap').innerHTML =
+                                '<div class="d-flex align-items-center justify-content-center h-100 text-secondary small bg-light">' +
+                                '<i class="bi bi-map me-2"></i>Map unavailable for this address</div>';
+                        }
+                    })
+                    .catch(() => {
+                        document.getElementById('propMap').innerHTML =
+                            '<div class="d-flex align-items-center justify-content-center h-100 text-secondary small bg-light">' +
+                            '<i class="bi bi-map me-2"></i>Map unavailable</div>';
+                    });
+            }
+        })();
+        </script>
     </div>
 
     <!-- RIGHT RAIL (sticky on desktop, hidden on mobile) -->
@@ -387,6 +482,41 @@ ob_start();
     </aside>
 
 </div>
+
+<!-- SIMILAR PROPERTIES -->
+<?php if ($showSimilar && !empty($similar)): ?>
+<section class="sim-section mt-5">
+    <h5 class="sim-heading">
+        <i class="bi bi-grid me-2 text-secondary"></i>Similar properties you might like
+    </h5>
+    <div class="sim-strip">
+        <?php foreach ($similar as $s): ?>
+        <a href="/rentbridge/property.php?id=<?= (int)$s['id'] ?>"
+           class="sim-card text-decoration-none text-dark">
+            <div class="sim-img">
+                <?php if (!empty($s['image_path'])): ?>
+                    <img src="/rentbridge/<?= e($s['image_path']) ?>" alt="">
+                <?php endif; ?>
+                <?php if (!empty($s['agent_verified_at'])): ?>
+                    <span class="sim-verified"><i class="bi bi-patch-check-fill"></i></span>
+                <?php endif; ?>
+            </div>
+            <div class="sim-body">
+                <div class="sim-type">
+                    <?= e(ucfirst(str_replace('_', ' ', $s['property_type']))) ?>
+                    <?php if ($s['city'] === $prop['city']): ?>
+                        <span class="sim-match-badge">Same area</span>
+                    <?php endif; ?>
+                </div>
+                <div class="sim-title"><?= e($s['title']) ?></div>
+                <div class="sim-location"><i class="bi bi-geo-alt"></i> <?= e($s['city']) ?></div>
+                <div class="sim-rent">RM <?= number_format((float)$s['monthly_rent']) ?><span>/mo</span></div>
+            </div>
+        </a>
+        <?php endforeach; ?>
+    </div>
+</section>
+<?php endif; ?>
 
 <!-- MOBILE ACTION BAR (fixed bottom, hidden on desktop) -->
 <div class="property-mobile-bar d-lg-none">
@@ -609,6 +739,91 @@ ob_start();
 @media (max-width: 991.98px) {
     body { padding-bottom: 72px; }
 }
+
+/* SIMILAR PROPERTIES STRIP */
+.sim-section { border-top: 1px solid rgba(15,44,82,0.08); padding-top: 24px; }
+.sim-heading {
+    font-family: 'Fraunces', serif;
+    font-size: 1.1rem;
+    color: #0F2C52;
+    margin-bottom: 16px;
+}
+.sim-strip {
+    display: flex;
+    gap: 16px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    scrollbar-width: thin;
+}
+.sim-card {
+    flex: 0 0 220px;
+    background: white;
+    border: 1px solid rgba(15,44,82,0.09);
+    border-radius: 10px;
+    overflow: hidden;
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+.sim-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(15,44,82,0.1);
+}
+.sim-img {
+    aspect-ratio: 4/3;
+    background: linear-gradient(135deg,#E6ECF4,#E4F2EA);
+    position: relative;
+    overflow: hidden;
+}
+.sim-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.sim-verified {
+    position: absolute; top: 8px; left: 8px;
+    background: #2E8B57; color: white;
+    font-size: 0.7rem; padding: 2px 6px;
+    border-radius: 20px;
+}
+.sim-body { padding: 10px 12px 12px; }
+.sim-type {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: #6c757d;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.sim-match-badge {
+    background: #E4F2EA;
+    color: #2E8B57;
+    font-size: 0.65rem;
+    padding: 1px 6px;
+    border-radius: 20px;
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 600;
+}
+.sim-title {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #0F2C52;
+    line-height: 1.3;
+    margin-bottom: 4px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.sim-location {
+    font-size: 0.75rem;
+    color: #6c757d;
+    margin-bottom: 6px;
+}
+.sim-rent {
+    font-family: 'Fraunces', serif;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #2E8B57;
+}
+.sim-rent span { font-family: 'Manrope', sans-serif; font-size: 0.75rem; font-weight: 400; color: #6c757d; }
 </style>
 
 <script>
