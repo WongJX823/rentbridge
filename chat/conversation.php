@@ -93,7 +93,8 @@ if ($isGroupChat) {
     };
 }
 
-$pageTitle = $isGroupChat ? 'Housemate Group Chat' : ('Chat with ' . $other['name']);
+$pageTitle     = $isGroupChat ? 'Housemate Group Chat' : ('Chat with ' . $other['name']);
+$showPageTitle = false;
 $activeNav = 'chat';
 
 ob_start();
@@ -163,8 +164,16 @@ ob_start();
                         </span>
                     </div>
                 </div>
-                <div class="text-secondary small">
-                    Listing ID:<?= (int)$property['id'] ?>
+                <div class="d-flex flex-column align-items-end gap-2 flex-shrink-0">
+                    <div class="text-secondary small">Listing ID:<?= (int)$property['id'] ?></div>
+                    <?php if (!$isGroupChat): ?>
+                    <button type="button"
+                            class="btn btn-sm btn-outline-danger"
+                            style="font-size:.75rem; padding:2px 8px;"
+                            onclick="event.stopPropagation(); event.preventDefault(); bootstrap.Modal.getOrCreateInstance(document.getElementById('reportModal')).show()">
+                        <i class="bi bi-flag me-1"></i>Report
+                    </button>
+                    <?php endif; ?>
                 </div>
             </a>
         <?php else: ?>
@@ -181,12 +190,20 @@ ob_start();
                             font-weight:600; color:#0F2C52;">
                     <?= strtoupper(substr($other['name'], 0, 1)) ?>
                 </div>
-                <div>
+                <div class="flex-grow-1">
                     <strong><?= e($other['name']) ?></strong>
                     <span class="badge bg-light text-dark ms-1">
                         <?= e(ucfirst($other['primary_role'])) ?>
                     </span>
                 </div>
+                <?php if (!$isGroupChat): ?>
+                <button type="button"
+                        class="btn btn-sm btn-outline-danger flex-shrink-0"
+                        style="font-size:.75rem; padding:2px 8px;"
+                        onclick="bootstrap.Modal.getOrCreateInstance(document.getElementById('reportModal')).show()">
+                    <i class="bi bi-flag me-1"></i>Report
+                </button>
+                <?php endif; ?>
             </div>
         <?php endif; ?>
     </div>
@@ -658,6 +675,11 @@ if (
                                     <span class="badge bg-success">
                                         <i class="bi bi-check2-circle"></i> Form submitted
                                     </span>
+                                <?php elseif ($isReceiver && current_role() === 'student'): ?>
+                                    <a href="/rentbridge/student/tenant_form.php?form_id=<?= (int)$msg['id'] ?>&conv_id=<?= (int)$msg['conversation_id'] ?>&property_id=<?= (int)($meta['property_id'] ?? 0) ?>"
+                                       class="btn btn-warning btn-sm">
+                                        <i class="bi bi-pencil-square me-1"></i> Fill in tenant details
+                                    </a>
                                 <?php elseif ($isReceiver): ?>
                                     <button type="button" class="btn btn-warning btn-sm fill-tenant-form-btn"
                                             data-bs-toggle="modal" data-bs-target="#tenantInfoModal"
@@ -669,7 +691,7 @@ if (
                                         <i class="bi bi-pencil-square me-1"></i> Fill in tenant details
                                     </button>
                                 <?php else: ?>
-                                    <span class="badge bg-secondary">Awaiting landlord</span>
+                                    <span class="badge bg-secondary">Awaiting student</span>
                                 <?php endif; ?>
                             </div>
                         </div>
@@ -755,71 +777,66 @@ if (
     <!-- INPUT -->
     <?php if (!$isLocked): ?>
         <!-- Plus-menu popover (role-specific actions) -->
-        <div class="chat-plus-menu d-none" id="chatPlusMenu"
-             style="position:absolute; bottom:70px; left:16px; z-index:200;
-                    background:white; border:1px solid rgba(15,44,82,0.12);
-                    border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.12);
-                    min-width:220px; overflow:hidden;">
-            <?php
-            // Photo/image upload
-            ?>
-            <label class="chat-plus-item d-flex gap-2 align-items-center px-3 py-2"
-                   style="cursor:pointer;" for="chatImageInput">
-                <i class="bi bi-image text-secondary"></i>
-                <span class="small">Send photo</span>
-                <input type="file" id="chatImageInput" name="chat_image"
-                       accept="image/*" class="d-none">
-            </label>
-            <?php
-            // Document upload (all roles)
-            ?>
-            <label class="chat-plus-item d-flex gap-2 align-items-center px-3 py-2"
-                   style="cursor:pointer;" for="chatDocInput">
-                <i class="bi bi-file-earmark text-secondary"></i>
-                <span class="small">Send document</span>
-                <input type="file" id="chatDocInput" name="chat_doc"
-                       accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" class="d-none">
-            </label>
-            <?php if ($currentRole === 'agent' && $showInspectionScheduleBtn): ?>
-            <button type="button"
-                    class="chat-plus-item d-flex gap-2 align-items-center px-3 py-2 w-100 border-0 bg-transparent text-start"
-                    data-bs-toggle="modal" data-bs-target="#sendInspectionScheduleModal"
-                    data-conv-id="<?= (int)($convData['id'] ?? 0) ?>"
-                    data-prop-id="<?= (int)($inspectionPropId ?? 0) ?>"
-                    onclick="document.getElementById('chatPlusMenu').classList.add('d-none')">
-                <i class="bi bi-calendar-plus text-info"></i>
-                <span class="small">Propose inspection time</span>
-            </button>
-            <?php endif; ?>
-            <?php if ($currentRole === 'agent' && $showAgentSendFormBtn): ?>
-            <button type="button"
-                    class="chat-plus-item d-flex gap-2 align-items-center px-3 py-2 w-100 border-0 bg-transparent text-start"
-                    id="agentSendFormBtnPlus"
-                    data-conv-id="<?= (int)($convData['id'] ?? 0) ?>"
-                    data-property-id="<?= (int)$propId ?>"
-                    data-student-id="<?= (int)$otherId ?>"
-                    onclick="document.getElementById('chatPlusMenu').classList.add('d-none')">
-                <i class="bi bi-clipboard-data text-success"></i>
-                <span class="small">Send tenant info form</span>
-            </button>
-            <?php endif; ?>
-            <?php if ($currentRole === 'landlord' && $showContractPrepBtn): ?>
-            <button type="button"
-                    class="chat-plus-item d-flex gap-2 align-items-center px-3 py-2 w-100 border-0 bg-transparent text-start"
-                    id="contractPrepBtnPlus"
-                    data-conv-id="<?= (int)($convData['id'] ?? 0) ?>"
-                    data-property-id="<?= (int)$propId ?>"
-                    data-student-id="<?= (int)$otherId ?>"
-                    onclick="document.getElementById('chatPlusMenu').classList.add('d-none')">
-                <i class="bi bi-file-earmark-text text-warning"></i>
-                <span class="small">Request contract prep</span>
-            </button>
-            <?php endif; ?>
-        </div>
-
         <form class="chat-input d-flex gap-2 align-items-center position-relative" id="chatForm">
             <?= csrf_field() ?>
             <input type="hidden" name="conversation_id" value="<?= (int)$conversationId ?>">
+
+            <!-- Plus-menu popover — anchored to the form (position-relative) -->
+            <div class="chat-plus-menu d-none" id="chatPlusMenu"
+                 style="position:absolute; bottom:calc(100% + 8px); left:0; z-index:200;
+                        background:white; border:1px solid rgba(15,44,82,0.12);
+                        border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.12);
+                        min-width:220px; overflow:hidden;">
+                <label class="chat-plus-item d-flex gap-2 align-items-center px-3 py-2"
+                       style="cursor:pointer;" for="chatImageInput">
+                    <i class="bi bi-image text-secondary"></i>
+                    <span class="small">Send photo</span>
+                    <input type="file" id="chatImageInput" name="chat_image"
+                           accept="image/*" class="d-none">
+                </label>
+                <label class="chat-plus-item d-flex gap-2 align-items-center px-3 py-2"
+                       style="cursor:pointer;" for="chatDocInput">
+                    <i class="bi bi-file-earmark text-secondary"></i>
+                    <span class="small">Send document</span>
+                    <input type="file" id="chatDocInput" name="chat_doc"
+                           accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" class="d-none">
+                </label>
+                <?php if ($currentRole === 'agent' && $showInspectionScheduleBtn): ?>
+                <button type="button"
+                        class="chat-plus-item d-flex gap-2 align-items-center px-3 py-2 w-100 border-0 bg-transparent text-start"
+                        data-bs-toggle="modal" data-bs-target="#sendInspectionScheduleModal"
+                        data-conv-id="<?= (int)($convData['id'] ?? 0) ?>"
+                        data-prop-id="<?= (int)($inspectionPropId ?? 0) ?>"
+                        onclick="document.getElementById('chatPlusMenu').classList.add('d-none')">
+                    <i class="bi bi-calendar-plus text-info"></i>
+                    <span class="small">Propose inspection time</span>
+                </button>
+                <?php endif; ?>
+                <?php if ($currentRole === 'agent' && $showAgentSendFormBtn): ?>
+                <button type="button"
+                        class="chat-plus-item d-flex gap-2 align-items-center px-3 py-2 w-100 border-0 bg-transparent text-start"
+                        id="agentSendFormBtnPlus"
+                        data-conv-id="<?= (int)($convData['id'] ?? 0) ?>"
+                        data-property-id="<?= (int)$propId ?>"
+                        data-student-id="<?= (int)$otherId ?>"
+                        onclick="document.getElementById('chatPlusMenu').classList.add('d-none')">
+                    <i class="bi bi-clipboard-data text-success"></i>
+                    <span class="small">Send tenant info form</span>
+                </button>
+                <?php endif; ?>
+                <?php if ($currentRole === 'landlord' && $showContractPrepBtn): ?>
+                <button type="button"
+                        class="chat-plus-item d-flex gap-2 align-items-center px-3 py-2 w-100 border-0 bg-transparent text-start"
+                        id="contractPrepBtnPlus"
+                        data-conv-id="<?= (int)($convData['id'] ?? 0) ?>"
+                        data-property-id="<?= (int)$propId ?>"
+                        data-student-id="<?= (int)$otherId ?>"
+                        onclick="document.getElementById('chatPlusMenu').classList.add('d-none')">
+                    <i class="bi bi-file-earmark-text text-warning"></i>
+                    <span class="small">Request contract prep</span>
+                </button>
+                <?php endif; ?>
+            </div>
             <button type="button" id="chatPlusBtn"
                     class="btn btn-outline-secondary p-0 d-flex align-items-center justify-content-center"
                     style="width:36px; height:36px; border-radius:50%; flex-shrink:0; border-color:rgba(15,44,82,0.2);"
@@ -1693,6 +1710,73 @@ document.addEventListener('DOMContentLoaded', function() {
 })();
 <?php endif; ?>
 </script>
+
+<?php if (!$isGroupChat && $otherUserId > 0): ?>
+<!-- RIGHT-CLICK CONTEXT MENU on other party's messages -->
+<div id="msgContextMenu" class="d-none"
+     style="position:fixed; z-index:9999; background:white; border:1px solid rgba(0,0,0,0.1);
+            border-radius:10px; box-shadow:0 4px 16px rgba(0,0,0,0.12); min-width:164px; overflow:hidden;">
+    <button type="button"
+            id="msgCtxReportBtn"
+            class="btn btn-link w-100 text-start text-danger px-3 py-2 d-flex align-items-center gap-2"
+            style="font-size:.875rem; text-decoration:none;">
+        <i class="bi bi-flag"></i> Report message
+    </button>
+</div>
+
+<?php
+require_once __DIR__ . '/../includes/reports.php';
+$reportSubjects = [['id' => $otherUserId, 'name' => $other['name'], 'role' => $other['primary_role']]];
+render_report_modal($reportSubjects, 'message', 0);
+?>
+
+<script>
+(function () {
+    const menu = document.getElementById('msgContextMenu');
+    let activeMessageId = 0;
+
+    function showCtxMenu(x, y) {
+        menu.classList.remove('d-none');
+        const mw = 164, mh = 52;
+        menu.style.left = Math.min(x, window.innerWidth  - mw - 8) + 'px';
+        menu.style.top  = Math.min(y, window.innerHeight - mh - 8) + 'px';
+    }
+
+    document.querySelectorAll('.chat-message.theirs[data-msg-id]').forEach(function (bubble) {
+        bubble.addEventListener('contextmenu', function (e) {
+            e.preventDefault();
+            activeMessageId = parseInt(bubble.dataset.msgId, 10) || 0;
+            showCtxMenu(e.clientX, e.clientY);
+        });
+
+        let pressTimer;
+        bubble.addEventListener('touchstart', function (e) {
+            pressTimer = setTimeout(function () {
+                const t = e.changedTouches[0];
+                activeMessageId = parseInt(bubble.dataset.msgId, 10) || 0;
+                showCtxMenu(t.clientX, t.clientY);
+            }, 600);
+        }, { passive: true });
+        bubble.addEventListener('touchend',  function () { clearTimeout(pressTimer); });
+        bubble.addEventListener('touchmove', function () { clearTimeout(pressTimer); });
+    });
+
+    document.addEventListener('click', function (e) {
+        if (!menu.contains(e.target)) menu.classList.add('d-none');
+    });
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') menu.classList.add('d-none');
+    });
+
+    document.getElementById('msgCtxReportBtn').addEventListener('click', function () {
+        menu.classList.add('d-none');
+        const ctxInput = document.querySelector('#reportModal [name="context_id"]');
+        if (ctxInput) ctxInput.value = activeMessageId;
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('reportModal')).show();
+    });
+})();
+</script>
+<?php endif; ?>
 
 <?php
 $pageContent = ob_get_clean();

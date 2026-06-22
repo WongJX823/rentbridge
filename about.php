@@ -1,8 +1,9 @@
 <?php
 require_once __DIR__ . '/includes/auth.php';
 
-$pageTitle = 'About RentBridge';
-$activeNav = 'about';
+$pageTitle     = 'About RentBridge';
+$activeNav     = 'about';
+$showPageTitle = false;
 
 ob_start();
 ?>

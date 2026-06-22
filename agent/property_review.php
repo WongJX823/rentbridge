@@ -113,8 +113,9 @@ $stmt = $pdo->prepare("SELECT * FROM property_documents WHERE property_id = ? OR
 $stmt->execute([$propertyId]);
 $docs = $stmt->fetchAll();
 
-$pageTitle = 'Property Review';
-$activeNav = 'review';
+$pageTitle     = 'Property Review';
+$activeNav     = 'review';
+$showPageTitle = false;
 
 ob_start();
 ?>

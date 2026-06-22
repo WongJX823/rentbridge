@@ -224,7 +224,7 @@ $urgentCases = (int)$stmt->fetchColumn();
         <?php endif; ?>
 
         <div class="user-content">
-            <?php if (empty($pageTabs)): ?>
+            <?php if (empty($pageTabs) && ($showPageTitle ?? true)): ?>
                 <div class="user-page-header-noTabs">
                     <h1 class="user-page-title-inline"><?= e($pageTitle) ?></h1>
                 </div>

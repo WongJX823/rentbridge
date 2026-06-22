@@ -524,6 +524,30 @@ ob_start();
 </div>
 <?php endif; ?>
 
+<!-- REPORT ISSUE -->
+<div class="text-center pt-2 pb-4">
+    <button type="button"
+            class="btn btn-link btn-sm text-secondary text-decoration-none p-0"
+            data-bs-toggle="modal" data-bs-target="#reportModal">
+        <i class="bi bi-flag me-1"></i> Report an issue with this tenancy
+    </button>
+</div>
+
 <?php
 $pageContent = ob_get_clean();
+
+require_once __DIR__ . '/../includes/reports.php';
+$reportSubjects = [];
+if (!empty($tenancy['student_id']))
+    $reportSubjects[] = ['id' => (int)$tenancy['student_id'], 'name' => $tenancy['student_name'], 'role' => 'student'];
+if (!empty($tenancy['agent_id']))
+    $reportSubjects[] = ['id' => (int)$tenancy['agent_id'], 'name' => $tenancy['agent_name'], 'role' => 'agent'];
+
+if (!empty($reportSubjects)):
+    // Append modal to pageContent so it's inside the layout
+    ob_start();
+    render_report_modal($reportSubjects, 'booking', (int)$tenancy['id']);
+    $pageContent .= ob_get_clean();
+endif;
+
 require __DIR__ . '/../includes/landlord_layout.php';

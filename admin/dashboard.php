@@ -18,8 +18,10 @@ $counts = [
 $attention = [
     'pending_agents'      => (int)$pdo->query("SELECT COUNT(*) FROM users WHERE primary_role = 'agent' AND status = 'pending'")->fetchColumn(),
     'pending_properties'  => (int)$pdo->query("SELECT COUNT(*) FROM properties WHERE status = 'pending_approval'")->fetchColumn(),
-    'stuck_bookings'      => (int)$pdo->query("SELECT COUNT(*) FROM bookings WHERE status = 'pending_agent' AND agent_id IS NULL")->fetchColumn(),
+    'needs_admin_props'   => (int)$pdo->query("SELECT COUNT(*) FROM properties WHERE status = 'needs_admin'")->fetchColumn(),
+    'aborted_inspections' => (int)$pdo->query("SELECT COUNT(*) FROM bookings WHERE status = 'inspection_aborted'")->fetchColumn(),
     'pending_transfers'   => (int)$pdo->query("SELECT COUNT(*) FROM agent_transfer_requests WHERE status = 'pending_admin'")->fetchColumn(),
+    'pending_reports'     => (int)$pdo->query("SELECT COUNT(*) FROM reports WHERE status = 'pending'")->fetchColumn(),
 ];
 $totalAttention = array_sum($attention);
 
@@ -38,19 +40,41 @@ ob_start();
         <i class="bi bi-exclamation-triangle-fill fs-4"></i>
         <div class="flex-grow-1">
             <strong><?= $totalAttention ?> item<?= $totalAttention === 1 ? '' : 's' ?> need your attention</strong>
-            <div class="small">
+            <div class="small d-flex flex-wrap gap-2 mt-1">
                 <?php if ($attention['pending_agents'] > 0): ?>
-                    <?= $attention['pending_agents'] ?> agent<?= $attention['pending_agents'] === 1 ? '' : 's' ?> awaiting approval ·
+                    <a href="/rentbridge/admin/agents.php?tab=pending" class="badge bg-warning text-dark text-decoration-none">
+                        <i class="bi bi-person-badge me-1"></i>
+                        <?= $attention['pending_agents'] ?> agent<?= $attention['pending_agents'] === 1 ? '' : 's' ?> awaiting approval
+                    </a>
                 <?php endif; ?>
                 <?php if ($attention['pending_properties'] > 0): ?>
-                    <?= $attention['pending_properties'] ?> propert<?= $attention['pending_properties'] === 1 ? 'y' : 'ies' ?> pending review ·
+                    <a href="/rentbridge/admin/properties.php?status=pending_approval" class="badge bg-warning text-dark text-decoration-none">
+                        <i class="bi bi-house me-1"></i>
+                        <?= $attention['pending_properties'] ?> propert<?= $attention['pending_properties'] === 1 ? 'y' : 'ies' ?> pending review
+                    </a>
                 <?php endif; ?>
-                <?php if ($attention['stuck_bookings'] > 0): ?>
-                    <?= $attention['stuck_bookings'] ?> booking<?= $attention['stuck_bookings'] === 1 ? '' : 's' ?> stuck without agent ·
+                <?php if ($attention['needs_admin_props'] > 0): ?>
+                    <a href="/rentbridge/admin/properties.php?status=needs_admin" class="badge bg-danger text-white text-decoration-none">
+                        <i class="bi bi-exclamation-circle me-1"></i>
+                        <?= $attention['needs_admin_props'] ?> propert<?= $attention['needs_admin_props'] === 1 ? 'y' : 'ies' ?> — no agents available
+                    </a>
+                <?php endif; ?>
+                <?php if ($attention['aborted_inspections'] > 0): ?>
+                    <a href="/rentbridge/admin/bookings.php?status=inspection_aborted" class="badge bg-danger text-white text-decoration-none">
+                        <i class="bi bi-x-octagon me-1"></i>
+                        <?= $attention['aborted_inspections'] ?> inspection<?= $attention['aborted_inspections'] === 1 ? '' : 's' ?> aborted — needs resolution
+                    </a>
                 <?php endif; ?>
                 <?php if ($attention['pending_transfers'] > 0): ?>
-                    <a href="/rentbridge/admin/transfers.php" class="text-warning fw-semibold">
+                    <a href="/rentbridge/admin/transfers.php?filter=pending_admin" class="badge bg-warning text-dark text-decoration-none">
+                        <i class="bi bi-arrow-left-right me-1"></i>
                         <?= $attention['pending_transfers'] ?> case transfer<?= $attention['pending_transfers'] === 1 ? '' : 's' ?> awaiting review
+                    </a>
+                <?php endif; ?>
+                <?php if ($attention['pending_reports'] > 0): ?>
+                    <a href="/rentbridge/admin/reports.php?filter_status=pending" class="badge bg-danger text-white text-decoration-none">
+                        <i class="bi bi-flag-fill me-1"></i>
+                        <?= $attention['pending_reports'] ?> flag report<?= $attention['pending_reports'] === 1 ? '' : 's' ?> unreviewed
                     </a>
                 <?php endif; ?>
             </div>

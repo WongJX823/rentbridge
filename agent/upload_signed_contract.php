@@ -126,8 +126,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$pageTitle = 'Upload Signed Contract';
-$activeNav = 'cases';
+$pageTitle     = 'Upload Signed Contract';
+$activeNav     = 'cases';
+$showPageTitle = false;
 
 ob_start();
 ?>

@@ -1,8 +1,9 @@
 <?php
 require_once __DIR__ . '/includes/auth.php';
 
-$pageTitle   = 'Terms & Conditions';
-$activeNav   = 'legal';
+$pageTitle     = 'Terms & Conditions';
+$activeNav     = 'legal';
+$showPageTitle = false;
 $lastUpdated = 'June 2026';
 
 ob_start();

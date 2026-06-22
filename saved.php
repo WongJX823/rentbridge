@@ -8,8 +8,9 @@ require_login();
 $userId = current_user_id();
 $saved = list_saved_properties($userId);
 
-$pageTitle = 'Saved Properties';
-$activeNav = 'saved';
+$pageTitle     = 'Saved Properties';
+$activeNav     = 'saved';
+$showPageTitle = false;
 
 ob_start();
 ?>
@@ -40,7 +41,7 @@ ob_start();
 <?php else: ?>
     <div class="row g-3">
         <?php foreach ($saved as $prop): ?>
-            <div class="col-lg-4 col-md-6">
+            <div class="col-md-6 col-lg-4 col-xl-3">
                 <div class="bg-white border rounded-3 overflow-hidden h-100"
                      style="transition: transform 0.15s, box-shadow 0.15s;"
                      onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(0,0,0,0.08)';"

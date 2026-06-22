@@ -338,10 +338,34 @@ $months  = max(1, (int)round(($endTs - $startTs) / (30.44 * 86400)));
                 </div>
                 <?php endif; ?>
 
+                <!-- REPORT ISSUE -->
+                <div class="col-12">
+                    <div class="text-center pt-2 pb-4">
+                        <button type="button"
+                                class="btn btn-link btn-sm text-secondary text-decoration-none p-0"
+                                data-bs-toggle="modal" data-bs-target="#reportModal">
+                            <i class="bi bi-flag me-1"></i> Report an issue with this booking
+                        </button>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>
 </div>
+
+<?php
+require_once __DIR__ . '/../includes/reports.php';
+$reportSubjects = [];
+if (!empty($booking['landlord_id']))
+    $reportSubjects[] = ['id' => (int)$booking['landlord_id'], 'name' => $booking['landlord_name'], 'role' => 'landlord'];
+if (!empty($booking['agent_id']))
+    $reportSubjects[] = ['id' => (int)$booking['agent_id'], 'name' => $booking['agent_name'], 'role' => 'agent'];
+
+if (!empty($reportSubjects)):
+    render_report_modal($reportSubjects, 'booking', (int)$booking['id']);
+endif;
+?>
 
 </body>
 </html>

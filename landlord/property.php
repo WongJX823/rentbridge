@@ -112,8 +112,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$pageTitle = 'Property #' . $propertyId;
-$activeNav = 'properties';
+$pageTitle     = 'Property #' . $propertyId;
+$activeNav     = 'properties';
+$showPageTitle = false;
 
 function landlord_prop_status_info(string $status): array {
     return match ($status) {

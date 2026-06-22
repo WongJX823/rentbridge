@@ -98,8 +98,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $isEditMode = true;
 }
 
-$pageTitle = 'My Profile';
-$activeNav = 'profile';
+$pageTitle     = 'My Profile';
+$activeNav     = 'profile';
+$showPageTitle = false;
 
 ob_start();
 ?>

@@ -14,19 +14,6 @@ $stmt = $pdo->prepare('SELECT * FROM students WHERE user_id = ?');
 $stmt->execute([$userId]);
 $me = $stmt->fetch();
 
-// Pending contracts (need signing)
-$stmt = $pdo->prepare("
-    SELECT c.id, c.contract_code, p.title AS property_title
-      FROM contracts c
-      JOIN properties p ON p.id = c.property_id
-     WHERE c.student_id = ?
-       AND c.status = 'pending_signatures'
-       AND c.student_signed_at IS NULL
-     ORDER BY c.created_at DESC
-");
-$stmt->execute([$userId]);
-$pendingContracts = $stmt->fetchAll();
-
 // Recent properties (top 6, available)
 $stmt = $pdo->prepare("
     SELECT p.id, p.title, p.city, p.monthly_rent, p.property_type,
@@ -43,7 +30,8 @@ $recentProperties = $stmt->fetchAll();
 // Total available properties
 $totalAvailable = (int)$pdo->query("SELECT COUNT(*) FROM properties WHERE status = 'available'")->fetchColumn();
 
-$pageTitle = 'Browse properties';
+$pageTitle     = 'Dashboard';
+$showPageTitle = false;
 $activeNav = 'dashboard';
 
 ob_start();
@@ -58,24 +46,6 @@ ob_start();
         <?= $totalAvailable ?> propert<?= $totalAvailable === 1 ? 'y' : 'ies' ?> available near UTeM.
     </p>
 </div>
-
-<!-- PENDING CONTRACT ALERT -->
-<?php foreach ($pendingContracts as $pc): ?>
-    <div class="alert d-flex align-items-center gap-3 mb-3"
-         style="background:#FFF4D6; border-color:#D4A017; color:#7C5E0A;">
-        <i class="bi bi-pen-fill fs-4"></i>
-        <div class="flex-grow-1">
-            <strong>Contract ready for your signature</strong>
-            <div class="small">
-                <?= e($pc['contract_code']) ?> — <?= e($pc['property_title']) ?>
-            </div>
-        </div>
-        <a href="/rentbridge/contracts/view.php?id=<?= (int)$pc['id'] ?>"
-           class="btn btn-sm btn-success">
-            Review &amp; sign <i class="bi bi-arrow-right ms-1"></i>
-        </a>
-    </div>
-<?php endforeach; ?>
 
 <!-- QUICK ACTIONS -->
 <div class="row g-3 mb-4">
@@ -116,7 +86,7 @@ ob_start();
 <h5 class="mb-3" style="font-family: 'Fraunces', serif;">Recent listings</h5>
 <div class="row g-3 mb-4">
     <?php foreach ($recentProperties as $p): ?>
-        <div class="col-md-4">
+        <div class="col-md-6 col-lg-4 col-xl-3">
                 <a href="/rentbridge/property.php?id=<?= (int)$p['id'] ?>"
                class="d-block text-decoration-none text-dark">
                 <div class="bg-white border rounded-3 overflow-hidden h-100"

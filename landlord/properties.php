@@ -145,7 +145,7 @@ ob_start();
         <?php foreach ($properties as $p):
             [$statusLabel, $statusColor] = landlord_status_badge($p['status']);
         ?>
-            <div class="col-md-6 col-lg-4">
+            <div class="col-md-6 col-lg-3">
                 <a href="/rentbridge/landlord/property.php?id=<?= (int)$p['id'] ?>"
                    class="d-block text-decoration-none text-dark">
                     <div class="bg-white border rounded-3 overflow-hidden h-100"

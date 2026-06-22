@@ -13,12 +13,12 @@ check_and_reassign_timeouts();
 $stmt = $pdo->prepare("
     SELECT atn.id AS notif_id, atn.transfer_request_id,
            p.title AS property_title, p.city,
-           u.full_name AS requesting_agent_name,
+           a.full_name AS requesting_agent_name,
            atr.reason
       FROM agent_transfer_notifications atn
       JOIN agent_transfer_requests atr ON atr.id = atn.transfer_request_id
       JOIN properties p ON p.id = atr.property_id
-      JOIN users u ON u.id = atr.requesting_agent_id
+      JOIN agents a ON a.user_id = atr.requesting_agent_id
      WHERE atn.agent_id = ? AND atn.outcome = 'pending' AND atr.status = 'finding_agent'
      ORDER BY atn.notified_at ASC
 ");

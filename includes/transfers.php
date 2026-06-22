@@ -29,6 +29,8 @@ function dispatch_transfer_batch(int $transferId): bool {
           LEFT JOIN property_agent_assignments paa
             ON paa.agent_id = a.user_id AND paa.outcome = 'pending'
          WHERE u.primary_role = 'agent'
+           AND u.status = 'active'
+           AND a.availability != 'off_duty'
          GROUP BY a.user_id
          ORDER BY COUNT(paa.id) ASC, a.user_id ASC
     ");

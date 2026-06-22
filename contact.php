@@ -2,8 +2,9 @@
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/mailer.php';
 
-$pageTitle = 'Contact Us';
-$activeNav = 'contact';
+$pageTitle     = 'Contact Us';
+$activeNav     = 'contact';
+$showPageTitle = false;
 
 $errors = [];
 $old = [

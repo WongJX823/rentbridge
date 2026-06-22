@@ -101,6 +101,17 @@ $pageContent   = $pageContent   ?? '';
                 <span class="sidebar-label">Tenancies</span>
             </a>
             
+            <a href="/rentbridge/admin/reports.php"
+               class="sidebar-link <?= $activeNav === 'flagreports' ? 'active' : '' ?>">
+                <i class="bi bi-flag-fill"></i>
+                <span class="sidebar-label">Flag Reports</span>
+                <?php
+                $flagCount = (int)($pdo ?? db())->query("SELECT COUNT(*) FROM reports WHERE status = 'pending'")->fetchColumn();
+                if ($flagCount > 0): ?>
+                    <span class="sidebar-badge"><?= $flagCount > 9 ? '9+' : $flagCount ?></span>
+                <?php endif; ?>
+            </a>
+
             <a href="/rentbridge/admin/statistics/summary.php"
                class="sidebar-link <?= $activeNav === 'reports' ? 'active' : '' ?>">
                 <i class="bi bi-bar-chart-fill"></i>
@@ -129,7 +140,7 @@ $pageContent   = $pageContent   ?? '';
                     <span class="sidebar-label">Help &amp; Info</span>
                     <i class="bi bi-chevron-down sidebar-chevron"></i>
                 </button>
-                <div class="sidebar-submenu">
+                <div class="sidebar-submenu" style="display:none;">
                     <a href="/rentbridge/about.php"        class="sidebar-link sidebar-sublink <?= $activeNav === 'about'        ? 'active' : '' ?>">About RentBridge</a>
                     <a href="/rentbridge/how_it_works.php" class="sidebar-link sidebar-sublink <?= $activeNav === 'how_it_works' ? 'active' : '' ?>">How it works</a>
                     <a href="/rentbridge/faq.php"          class="sidebar-link sidebar-sublink <?= $activeNav === 'faq'          ? 'active' : '' ?>">FAQ</a>
@@ -231,6 +242,25 @@ $pageContent   = $pageContent   ?? '';
     updateTooltip();
     freezeBtn.addEventListener('click', function() { toggle(true); });
     if (edgeBtn) edgeBtn.addEventListener('click', function() { toggle(false); });
+})();
+
+// Sidebar collapsible (Help & Info)
+(function() {
+    document.querySelectorAll('.sidebar-collapsible-toggle').forEach(function(btn) {
+        var submenu = btn.nextElementSibling;
+        if (!submenu) return;
+        // Restore saved state
+        if (localStorage.getItem('rb-admin-help-open') === '1') {
+            submenu.style.display = 'block';
+            btn.classList.add('open');
+        }
+        btn.addEventListener('click', function() {
+            var isOpen = submenu.style.display === 'block';
+            submenu.style.display = isOpen ? 'none' : 'block';
+            btn.classList.toggle('open', !isOpen);
+            localStorage.setItem('rb-admin-help-open', isOpen ? '0' : '1');
+        });
+    });
 })();
 
 // Filter drawer toggle

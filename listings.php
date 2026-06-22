@@ -76,8 +76,9 @@ $properties = $stmt->fetchAll();
 // Cities for filter
 $cities = $pdo->query("SELECT DISTINCT city FROM properties WHERE status='available' ORDER BY city")->fetchAll(PDO::FETCH_COLUMN);
 
-$pageTitle = 'Browse Properties';
-$activeNav = 'browse';
+$pageTitle     = 'Browse Properties';
+$activeNav     = 'browse';
+$showPageTitle = false;
 
 ob_start();
 ?>

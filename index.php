@@ -201,16 +201,20 @@ ob_start();
 
 /* CTA strips */
 .rb-cta-strip {
-    background: var(--rb-cream);
-    border: 1px solid var(--rb-line);
+    background: linear-gradient(135deg, #1a6e3e, #2E8B57);
     border-radius: 16px;
     padding: 48px;
     text-align: center;
     margin-bottom: 16px;
+    color: white;
 }
 .rb-cta-strip h2 {
     font-family: 'Fraunces', serif;
     margin-bottom: 12px;
+    color: white;
+}
+.rb-cta-strip p {
+    color: rgba(255,255,255,0.82) !important;
 }
 .rb-landlord-strip {
     background: linear-gradient(135deg, #0F2C52, #1a4a7a);
@@ -289,7 +293,7 @@ ob_start();
 <?php if (!empty($featured)): ?>
 <div class="row g-3 mb-5">
     <?php foreach ($featured as $p): ?>
-    <div class="col-md-4">
+    <div class="col-md-6 col-lg-4 col-xl-3">
         <a href="/rentbridge/property.php?id=<?= (int)$p['id'] ?>" class="rb-listing-card">
             <div class="rb-listing-img">
                 <?php if (!empty($p['image_path']) && !str_contains($p['image_path'], 'placeholder')): ?>
@@ -375,21 +379,22 @@ ob_start();
     <div class="col-lg-7">
         <!-- Find housemates CTA -->
         <div class="rb-cta-strip h-100 d-flex flex-column justify-content-center">
-            <div style="width:52px; height:52px; border-radius:14px; background:#E4F2EA;
-                        color:var(--rb-emerald); display:flex; align-items:center;
+            <div style="width:52px; height:52px; border-radius:14px;
+                        background:rgba(255,255,255,0.18);
+                        color:white; display:flex; align-items:center;
                         justify-content:center; font-size:1.5rem; margin:0 auto 16px;">
                 <i class="bi bi-people-fill"></i>
             </div>
             <h2 style="font-size:1.3rem;">Looking for housemates?</h2>
-            <p class="text-secondary mb-4" style="max-width:380px; margin:0 auto 24px;">
+            <p class="mb-4" style="max-width:380px; margin:0 auto 24px;">
                 Found a place but need people to split the rent?
                 Post a co-tenancy ad and connect with other UTeM students.
             </p>
             <div class="d-flex gap-2 justify-content-center flex-wrap">
-                <a href="/rentbridge/auth/register_student.php" class="btn btn-success">
+                <a href="/rentbridge/auth/register_student.php" class="btn btn-light fw-semibold">
                     <i class="bi bi-megaphone me-1"></i> Find housemates
                 </a>
-                <a href="/rentbridge/listings.php" class="btn btn-outline-secondary">
+                <a href="/rentbridge/listings.php" class="btn btn-outline-light">
                     Browse listings first
                 </a>
             </div>

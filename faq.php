@@ -1,8 +1,9 @@
 <?php
 require_once __DIR__ . '/includes/auth.php';
 
-$pageTitle = 'Frequently Asked Questions';
-$activeNav = 'faq';
+$pageTitle     = 'Frequently Asked Questions';
+$activeNav     = 'faq';
+$showPageTitle = false;
 
 $faqs = [
     [
@@ -20,6 +21,12 @@ $faqs = [
              'a' => 'Yes! Use the "Find Housemates" feature to discover other students looking for the same property. The primary tenant (you) creates the booking; additional co-tenants are added via a chat form sent by the agent before contract generation. Only the primary tenant needs a RentBridge account.'],
             ['q' => 'What happens after I apply for a property?',
              'a' => 'The landlord receives your application and reviews it. If accepted, a UTeM agent is auto-assigned to inspect the property within 5 days. Once inspection passes, the agent generates a tenancy contract for all parties to sign offline. The agent then uploads the signed contract back to the system.'],
+            ['q' => 'How does the Browse page work — why are properties split across pages?',
+             'a' => 'The Browse page shows 24 properties per page to keep loading fast. Use the page numbers at the bottom to go forward or back. All your active filters (city, type, rent range, furnishing) carry through to the next page automatically.'],
+            ['q' => 'What are the "Similar properties" shown on a property detail page?',
+             'a' => 'Below the main details of any listing you\'ll find a horizontal strip of up to 6 similar properties. They are scored by same city and same property type, then sorted by how close the monthly rent is to the one you\'re viewing. This helps you quickly compare alternatives without going back to the Browse page.'],
+            ['q' => 'How do I report a landlord or agent for misconduct?',
+             'a' => 'Open any of your Booking pages and scroll to the bottom. Click "Report an issue with this booking" to open the report form. Select who you are reporting (landlord or agent), choose a reason, add details if you wish, and submit. You can also report a specific chat message by right-clicking it (or long-pressing on mobile) and choosing "Report message". All reports are confidential and reviewed by admin.'],
         ],
     ],
     [
@@ -37,6 +44,8 @@ $faqs = [
              'a' => 'When adding a property, RentBridge shows a market benchmark suggestion based on similar listings in the same area, with adjustments for amenities and distance to UTeM campus. This helps you price competitively without undercharging.'],
             ['q' => 'How does WhatsApp contact work?',
              'a' => 'You can opt-in to allow students to contact you via WhatsApp from your Profile settings. When enabled, a "WhatsApp me" button appears on your property pages. Your phone number is never shown publicly without this opt-in.'],
+            ['q' => 'How do I report a student or agent for misconduct?',
+             'a' => 'Open any of your Tenancy pages and scroll to the bottom. Click "Report an issue with this tenancy" to open the report form. Select who you are reporting (student or agent), choose a reason, add details, and submit. You can also right-click (or long-press on mobile) any message in chat to report that specific message. Reports are confidential — only admin can see them.'],
         ],
     ],
     [
@@ -50,6 +59,21 @@ $faqs = [
              'a' => 'Yes. Every contract has a unique reference code (e.g. RB-2026-00012). Anyone can verify it at <code>/verify.php</code> on this site. The page shows public details: property, period, rent, tenants — but not private information like IC numbers.'],
             ['q' => 'What if a tenant wants to move out early?',
              'a' => 'Per the standard agreement, either party can terminate with one month\'s written notice after the initial term. Early termination during the first year may result in security deposit forfeiture.'],
+        ],
+    ],
+    [
+        'category' => 'Trust & safety',
+        'items' => [
+            ['q' => 'How does the report system work?',
+             'a' => 'Any party in a tenancy (student, landlord, or agent) can submit a report against another party directly from their Booking page. In chat, right-clicking (or long-pressing on mobile) any message from the other person shows a "Report message" option — the exact message is attached as evidence. All reports are sent to admin for review.'],
+            ['q' => 'What happens after I submit a report?',
+             'a' => 'Admin reviews the report and updates its status to Reviewed, Actioned, or Dismissed. If a user accumulates 3 or more reports within 30 days, admin is automatically alerted to investigate. Your identity as the reporter is never shown to the reported person.'],
+            ['q' => 'Will the person I report know I reported them?',
+             'a' => 'No. Reports are confidential. The reported person cannot see who submitted the report, the reason, or any details. Only admin can view the full report.'],
+            ['q' => 'What counts as a reportable offence?',
+             'a' => 'You can report: harassment or threatening behaviour, scam or fraudulent listings, fake or misleading information, professional misconduct, and financial fraud. Use the "Other" category for anything that doesn\'t fit. False or frivolous reports may be dismissed and may result in action against the reporter.'],
+            ['q' => 'How are agents assigned to properties and cases?',
+             'a' => 'RentBridge uses a fair-queue (FIFO) system — the agent with the fewest pending assignments gets the next one. Agents who are off-duty or whose accounts are inactive are automatically skipped. This ensures no single agent is overloaded and that only active agents receive work.'],
         ],
     ],
     [

@@ -1,8 +1,9 @@
 <?php
 require_once __DIR__ . '/includes/auth.php';
 
-$pageTitle    = 'Privacy & Security';
-$activeNav    = 'privacy';
+$pageTitle     = 'Privacy & Security';
+$activeNav     = 'privacy';
+$showPageTitle = false;
 $lastUpdated  = 'June 2026';
 
 ob_start();

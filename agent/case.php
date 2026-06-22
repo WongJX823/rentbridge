@@ -495,5 +495,27 @@ foreach ($coTenants as $ct) {
     </div>
 </div>
 
+<!-- REPORT ISSUE -->
+<div class="container pb-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-9 text-center">
+            <button type="button"
+                    class="btn btn-link btn-sm text-secondary text-decoration-none p-0"
+                    data-bs-toggle="modal" data-bs-target="#reportModal">
+                <i class="bi bi-flag me-1"></i> Report an issue with this case
+            </button>
+        </div>
+    </div>
+</div>
+
+<?php
+require_once __DIR__ . '/../includes/reports.php';
+$reportSubjects = [
+    ['id' => (int)$case['student_id'],  'name' => $case['student_name'],  'role' => 'student'],
+    ['id' => (int)$case['landlord_id'], 'name' => $case['landlord_name'], 'role' => 'landlord'],
+];
+render_report_modal($reportSubjects, 'booking', (int)$case['id']);
+?>
+
 </body>
 </html>

@@ -447,7 +447,7 @@ ob_start();
         </div>
 
         <div class="row g-3">
-            <div class="col-md-5">
+            <div class="col-md-6">
                 <label class="form-label fw-semibold">
                     City / area <small class="text-danger">*</small>
                 </label>
@@ -471,12 +471,12 @@ ob_start();
                     <div class="invalid-feedback"><?= e($errors['postcode']) ?></div>
                 <?php endif; ?>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <label class="form-label fw-semibold">State</label>
                 <input type="text" name="state" class="form-control"
                        value="<?= e($old['state']) ?>" placeholder="Melaka">
             </div>
-            <div class="mt-3">
+            <div class="col-12">
                 <label class="form-label fw-semibold">
                     Google Maps link
                     <small class="text-secondary fw-normal">— helps pricing accuracy</small>
@@ -941,7 +941,7 @@ ob_start();
 
      <?php for ($i = 0; $i < 3; $i++): ?>
         <div class="row g-2 mb-3 align-items-end pb-3 border-bottom">
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <label class="form-label small fw-semibold">Document type</label>
                 <select name="document_types[]" class="form-select form-select-sm">
                     <option value="">— Select type —</option>
@@ -950,7 +950,7 @@ ob_start();
                     <option value="other">Other</option>
                 </select>
             </div>
-            <div class="col-md-5">
+            <div class="col-md-6">
                 <label class="form-label small fw-semibold">File</label>
                 <input type="file" name="document_files[]"
                        class="form-control form-control-sm"

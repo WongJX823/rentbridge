@@ -140,10 +140,8 @@ elseif ($type === 'partner_inquiry') {
     $msgCount = (int)$stmt->fetchColumn();
 
     if ($msgCount === 0) {
-        $propertyUrl = 'http://' . $_SERVER['HTTP_HOST'] . '/rentbridge/property.php?id=' . (int)$post['property_id'];
         $opener = "Hi! I'm interested in joining your co-tenancy for \""
-                . $post['property_title'] . "\".\n\n"
-                . "Property: " . $propertyUrl;
+                . $post['property_title'] . "\".";
 
         $stmt = db()->prepare("
             INSERT INTO messages (conversation_id, sender_id, body, sent_at)

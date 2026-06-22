@@ -664,5 +664,26 @@ $overdue    = $now > $deadlineTs;
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- REPORT ISSUE -->
+<div class="container pb-4">
+    <div class="text-center">
+        <button type="button"
+                class="btn btn-link btn-sm text-secondary text-decoration-none p-0"
+                data-bs-toggle="modal" data-bs-target="#reportModal">
+            <i class="bi bi-flag me-1"></i> Report an issue with this inspection
+        </button>
+    </div>
+</div>
+
+<?php
+require_once __DIR__ . '/../includes/reports.php';
+$reportSubjects = [
+    ['id' => (int)$booking['student_id'],  'name' => $booking['student_name'],  'role' => 'student'],
+    ['id' => (int)$booking['landlord_id'], 'name' => $booking['landlord_name'], 'role' => 'landlord'],
+];
+render_report_modal($reportSubjects, 'booking', (int)$booking['id']);
+?>
+
 </body>
 </html>

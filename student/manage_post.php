@@ -119,10 +119,14 @@ ob_start();
     </div>
 
     <!-- Stats row -->
-    <div class="d-flex gap-4 small">
+    <div class="d-flex gap-4 small flex-wrap">
         <div>
             <span class="text-secondary">Looking for</span>
             <strong class="ms-1"><?= (int)$post['housemates_needed'] ?> more</strong>
+        </div>
+        <div>
+            <span class="text-secondary">Duration</span>
+            <strong class="ms-1"><?= (int)($post['semesters_needed'] ?? 1) ?> semester<?= ($post['semesters_needed'] ?? 1) > 1 ? 's' : '' ?></strong>
         </div>
         <div>
             <span class="text-secondary">Accepted</span>

@@ -17,11 +17,11 @@ if ($transferId <= 0) {
 // Load transfer + verify this agent was notified
 $stmt = $pdo->prepare("
     SELECT atr.*, p.title AS property_title, p.city, p.monthly_rent,
-           u.full_name AS requesting_agent_name,
+           a.full_name AS requesting_agent_name,
            atn.outcome AS my_outcome, atn.id AS notif_id
       FROM agent_transfer_requests atr
       JOIN properties p ON p.id = atr.property_id
-      JOIN users u ON u.id = atr.requesting_agent_id
+      JOIN agents a ON a.user_id = atr.requesting_agent_id
       JOIN agent_transfer_notifications atn
         ON atn.transfer_request_id = atr.id AND atn.agent_id = ?
      WHERE atr.id = ?

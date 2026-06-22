@@ -75,16 +75,16 @@ $ph = implode(',', array_fill(0, count($statusGroups[$filter]), '?'));
 $stmt = $pdo->prepare("
     SELECT atr.*,
            p.title AS property_title, p.city,
-           u.full_name AS requesting_agent_name,
-           ua.full_name AS new_agent_name,
+           a.full_name AS requesting_agent_name,
+           na.full_name AS new_agent_name,
            (SELECT COUNT(*) FROM agent_transfer_notifications atn2
              WHERE atn2.transfer_request_id = atr.id) AS total_notified,
            (SELECT COUNT(*) FROM agent_transfer_notifications atn3
              WHERE atn3.transfer_request_id = atr.id AND atn3.outcome = 'pending') AS pending_responses
       FROM agent_transfer_requests atr
       JOIN properties p ON p.id = atr.property_id
-      JOIN users u ON u.id = atr.requesting_agent_id
-      LEFT JOIN users ua ON ua.id = atr.new_agent_id
+      JOIN agents a ON a.user_id = atr.requesting_agent_id
+      LEFT JOIN agents na ON na.user_id = atr.new_agent_id
      WHERE atr.status IN ($ph)
      ORDER BY atr.created_at DESC
 ");
