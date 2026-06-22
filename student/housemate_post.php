@@ -136,6 +136,7 @@ ob_start();
 
             <!-- Stats -->
             <div class="d-flex gap-4 mt-3 pt-3 border-top small text-secondary flex-wrap">
+            <div class="d-flex gap-4 mt-3 pt-3 border-top small text-secondary">
                 <div>
                     <i class="bi bi-people"></i>
                     Looking for <strong class="text-dark"><?= (int)$post['housemates_needed'] ?></strong>
