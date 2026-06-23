@@ -898,13 +898,8 @@ CREATE TABLE `reports` (
   PRIMARY KEY (`id`),
   KEY `idx_reporter` (`reporter_id`),
   KEY `idx_reported` (`reported_user_id`),
-  KEY `idx_status` (`status`),
-  CONSTRAINT `fk_report_reporter` FOREIGN KEY (`reporter_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `fk_report_reported` FOREIGN KEY (`reported_user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `fk_report_reviewer` FOREIGN KEY (`reviewed_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
+  KEY `idx_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-
 --
 -- Indexes for dumped tables
 --
@@ -1536,7 +1531,15 @@ ALTER TABLE `agent_transfer_requests`
   ADD CONSTRAINT `atr_ibfk_3` FOREIGN KEY (`admin_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   ADD CONSTRAINT `atr_ibfk_4` FOREIGN KEY (`new_agent_id`) REFERENCES `users` (`id`) ON DELETE SET NULL;
 
-COMMIT;
+  --
+-- Indexes for table `reports`
+--
+ALTER TABLE `reports`
+  ADD CONSTRAINT `fk_report_reporter` FOREIGN KEY (`reporter_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_report_reported` FOREIGN KEY (`reported_user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_report_reviewer` FOREIGN KEY (`reviewed_by`) REFERENCES `users` (`id`) ON DELETE SET NULL;
+  
+  COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
