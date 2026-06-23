@@ -1,0 +1,19 @@
+{
+  "name": "rentbridge-e2e",
+  "version": "1.0.0",
+  "description": "Playwright E2E tests for RentBridge",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:flow1": "playwright test tests/flow1-landlord-property.spec.js",
+    "test:flow2": "playwright test tests/flow2-student-esign.spec.js",
+    "test:flow3": "playwright test tests/flow3-3tenants-wetsign.spec.js",
+    "test:flow4": "playwright test tests/flow4-housemate-post.spec.js",
+    "test:flow5": "playwright test tests/flow5-agent-inspection.spec.js",
+    "test:flow6": "playwright test tests/flow6-admin.spec.js",
+    "test:report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.45.0"
+  }
+}
