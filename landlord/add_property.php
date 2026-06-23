@@ -34,6 +34,11 @@ if ($isEdit) {
     }
 }
 
+const MELAKA_CITIES = [
+    'Ayer Keroh', 'Bukit Beruang', 'Durian Tunggal', 'Melaka Tengah',
+    'Cheng', 'Batu Berendam', 'Bertam', 'Alor Gajah', 'Krubong', 'Masjid Tanah',
+];
+
 $errors = [];
 $old = [
     'title'         => $existing['title']         ?? '',
@@ -41,7 +46,7 @@ $old = [
     'address'       => $existing['address']       ?? '',
     'city'          => $existing['city']          ?? '',
     'postcode'      => $existing['postcode']      ?? '',
-    'state'         => $existing['state']         ?? 'Melaka',
+    'state'         => 'Melaka',
     'monthly_rent'  => $existing['monthly_rent']  ?? '',
     'deposit'       => $existing['deposit']       ?? '',
     'description'   => $existing['description']   ?? '',
@@ -78,11 +83,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     foreach (array_keys($old) as $f) {
         $old[$f] = trim($_POST[$f] ?? '');
     }
+    $old['state'] = 'Melaka';
 
     // Validate
     if ($old['title'] === '')        $errors['title'] = 'Title is required.';
     if ($old['address'] === '')      $errors['address'] = 'Address is required.';
-    if ($old['city'] === '')         $errors['city'] = 'City is required.';
+    if (!in_array($old['city'], MELAKA_CITIES, true)) $errors['city'] = 'Please select a valid area.';
     if ($old['postcode'] === '')     $errors['postcode'] = 'Postcode is required.';
     if (!is_numeric($old['monthly_rent']) || (float)$old['monthly_rent'] <= 0) {
         $errors['monthly_rent'] = 'Enter a valid monthly rent.';
@@ -451,10 +457,16 @@ ob_start();
                 <label class="form-label fw-semibold">
                     City / area <small class="text-danger">*</small>
                 </label>
-                <input type="text" name="city"
-                       class="form-control <?= isset($errors['city']) ? 'is-invalid' : '' ?>"
-                       value="<?= e($old['city']) ?>"
-                       placeholder="Ayer Keroh" required>
+                <select name="city"
+                        class="form-select <?= isset($errors['city']) ? 'is-invalid' : '' ?>"
+                        required>
+                    <option value="">— Select area —</option>
+                    <?php foreach (MELAKA_CITIES as $c): ?>
+                        <option value="<?= e($c) ?>" <?= $old['city'] === $c ? 'selected' : '' ?>>
+                            <?= e($c) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
                 <?php if (isset($errors['city'])): ?>
                     <div class="invalid-feedback"><?= e($errors['city']) ?></div>
                 <?php endif; ?>
@@ -474,7 +486,7 @@ ob_start();
             <div class="col-md-3">
                 <label class="form-label fw-semibold">State</label>
                 <input type="text" name="state" class="form-control"
-                       value="<?= e($old['state']) ?>" placeholder="Melaka">
+                       value="Melaka" readonly>
             </div>
             <div class="col-12">
                 <label class="form-label fw-semibold">

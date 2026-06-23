@@ -412,7 +412,7 @@ foreach ($coTenants as $ct) {
     <p class="small text-secondary mb-3">
         After all parties have signed the printed contract, scan or photograph
         the signed pages, combine into a single PDF, and upload here.
-    </p>z
+    </p>
 
     <form method="POST" action="/rentbridge/agent/upload_signed_contract.php"
           enctype="multipart/form-data">
@@ -446,6 +446,55 @@ foreach ($coTenants as $ct) {
             <i class="bi bi-file-earmark-pdf me-1"></i> Download signed copy
         </a>
     </div>
+<?php endif; ?>
+
+<?php
+// E-sign mixed path: all turns done but one or more parties chose manual signing
+$mixedSigningPending = $contract
+    && $contract['status'] !== 'active'
+    && !empty($contract['student_signed_at'])
+    && !empty($contract['landlord_signed_at'])
+    && !empty($contract['agent_signed_at'])
+    && ($contract['student_sign_method'] === 'manual' || $contract['landlord_sign_method'] === 'manual')
+    && empty($contract['generated_pdf_path']);
+if ($mixedSigningPending): ?>
+<hr class="my-3">
+<div class="alert alert-warning d-flex gap-3 align-items-start mb-3">
+    <i class="bi bi-file-earmark-person fs-4 mt-1"></i>
+    <div>
+        <strong>Physical signature collection required</strong>
+        <div class="small mt-1">
+            <?php
+            $manualParties = [];
+            if ($contract['student_sign_method'] === 'manual') $manualParties[] = 'Tenant';
+            if ($contract['landlord_sign_method'] === 'manual') $manualParties[] = 'Landlord';
+            echo implode(' and ', $manualParties);
+            ?> chose to sign a physical copy.
+            Print the contract, collect their handwritten signatures, then upload the merged PDF below.
+        </div>
+    </div>
+</div>
+<h6 class="text-secondary text-uppercase small mb-2">Upload merged signed contract</h6>
+<form method="POST" action="/rentbridge/agent/upload_signed_contract.php" enctype="multipart/form-data">
+    <?= csrf_field() ?>
+    <input type="hidden" name="booking_id" value="<?= (int)$case['id'] ?>">
+    <div class="mb-3">
+        <input type="file" name="signed_pdf" class="form-control" accept="application/pdf" required>
+        <small class="text-secondary">PDF only, max 20MB</small>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <button type="submit" class="btn btn-success"
+                onclick="return confirm('Upload merged signed contract? This will activate the tenancy.');">
+            <i class="bi bi-upload me-1"></i> Upload &amp; activate tenancy
+        </button>
+        <?php if (!empty($contract['contract_pdf_path'])): ?>
+        <a href="/rentbridge/<?= e($contract['contract_pdf_path']) ?>" target="_blank"
+           class="btn btn-outline-secondary">
+            <i class="bi bi-download me-1"></i> Download digital draft
+        </a>
+        <?php endif; ?>
+    </div>
+</form>
 <?php endif; ?>
 </div>
 <?php endif; ?>

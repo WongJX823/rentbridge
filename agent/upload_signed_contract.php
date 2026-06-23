@@ -12,7 +12,7 @@ if ($bookingId <= 0) {
 
 // Verify agent owns this case
 $stmt = $pdo->prepare("
-    SELECT b.*, p.title AS property_title, p.id AS property_id
+    SELECT b.*, p.title AS property_title, p.id AS property_id, p.monthly_rent
       FROM bookings b
       JOIN properties p ON p.id = b.property_id
      WHERE b.id = ? AND b.agent_id = ?
@@ -79,6 +79,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                      WHERE id = ?
                 ");
                 $stmt->execute([$destRel, $agentId, $bookingId]);
+
+                // Activate the contract record too (covers the e-sign mixed-signing path)
+                $pdo->prepare("
+                    UPDATE contracts
+                       SET status = 'active',
+                           signed_pdf_path = ?,
+                           signed_uploaded_at = NOW(),
+                           signed_uploaded_by = ?,
+                           activated_at = NOW()
+                     WHERE booking_id = ? AND status = 'pending_signatures'
+                ")->execute([$destRel, $agentId, $bookingId]);
+
+                // Create commission record (1 month base rent, 70% UTeM / 30% agent)
+                $contractIdRow = $pdo->prepare("SELECT id FROM contracts WHERE booking_id = ? LIMIT 1");
+                $contractIdRow->execute([$bookingId]);
+                $contractId = (int)$contractIdRow->fetchColumn();
+
+                if ($contractId > 0) {
+                    $dupCheck = $pdo->prepare("SELECT id FROM agent_commissions WHERE contract_id = ? LIMIT 1");
+                    $dupCheck->execute([$contractId]);
+                    if (!$dupCheck->fetchColumn()) {
+                        $baseRent      = (float)$booking['monthly_rent'];
+                        $commissionAmt = $baseRent;
+                        $sstAmt        = round($commissionAmt * 0.06, 2);
+                        $totalPayable  = round($commissionAmt + $sstAmt, 2);
+                        $pdo->prepare("
+                            INSERT INTO agent_commissions
+                                (contract_id, agent_id, base_rent, commission_pct, commission_amt,
+                                 sst_pct, sst_amt, total_payable, status, earned_at)
+                            VALUES (?, ?, ?, 100.00, ?, 6.00, ?, ?, 'earned', NOW())
+                        ")->execute([$contractId, $agentId, $baseRent, $commissionAmt, $sstAmt, $totalPayable]);
+                    }
+                }
 
                 // Mark property as rented
                 $stmt = $pdo->prepare("UPDATE properties SET status = 'rented' WHERE id = ?");
