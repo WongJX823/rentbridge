@@ -37,6 +37,8 @@ $stmt = $pdo->prepare("
            c.landlord_signed_at,
            c.agent_signed_at,
            c.contract_pdf_path,
+           c.generated_pdf_path,
+           c.landlord_sign_method,
            c.created_at     AS contract_created_at,
            v.id             AS verification_id,
            v.outcome        AS verification_outcome,
@@ -477,17 +479,50 @@ ob_start();
         </div>
     </div>
 
+    <?php
+        $landlordTurn = empty($tenancy['landlord_signed_at'])
+                     && $tenancy['contract_status'] === 'pending_signatures'
+                     && !empty($tenancy['student_signed_at']); // student must sign first
+        $landlordChoseManual = ($tenancy['landlord_sign_method'] ?? '') === 'manual';
+    ?>
+    <?php if ($landlordTurn && !$landlordChoseManual): ?>
+        <div class="alert alert-warning mb-3">
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <i class="bi bi-pen-fill"></i>
+                <strong>Your signature is needed</strong>
+            </div>
+            <p class="small mb-3">The tenant has signed. Choose how you'd like to sign:</p>
+            <div class="d-flex gap-2 flex-wrap">
+                <a href="/rentbridge/contracts/sign.php?id=<?= (int)$tenancy['contract_id'] ?>"
+                   class="btn btn-success btn-sm">
+                    <i class="bi bi-pencil-square me-1"></i> E-sign online
+                </a>
+                <a href="/rentbridge/contracts/download.php?id=<?= (int)$tenancy['contract_id'] ?>"
+                   class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-download me-1"></i> Download &amp; sign manually
+                </a>
+            </div>
+        </div>
+    <?php elseif ($landlordTurn && $landlordChoseManual): ?>
+        <div class="alert alert-info mb-3">
+            <i class="bi bi-hourglass-split me-1"></i>
+            <strong>Manual sign chosen.</strong>
+            Your agent will mark you as signed once they receive your physical signature.
+            <a href="/rentbridge/contracts/download.php?id=<?= (int)$tenancy['contract_id'] ?>"
+               class="btn btn-outline-secondary btn-sm ms-2">
+                <i class="bi bi-download me-1"></i> Re-download
+            </a>
+        </div>
+    <?php elseif (empty($tenancy['landlord_signed_at']) && $tenancy['contract_status'] === 'pending_signatures' && empty($tenancy['student_signed_at'])): ?>
+        <div class="alert alert-light border mb-3 small">
+            <i class="bi bi-hourglass-split me-1"></i> Waiting for tenant to sign first.
+        </div>
+    <?php endif; ?>
     <div class="d-flex gap-2 flex-wrap">
         <a href="/rentbridge/contracts/view.php?id=<?= (int)$tenancy['contract_id'] ?>"
            class="btn btn-sm btn-primary">
             View contract <i class="bi bi-arrow-right ms-1"></i>
         </a>
-        <?php if (empty($tenancy['landlord_signed_at']) && $tenancy['contract_status'] === 'pending_signatures'): ?>
-            <a href="/rentbridge/contracts/sign.php?id=<?= (int)$tenancy['contract_id'] ?>"
-               class="btn btn-sm btn-success">
-                <i class="bi bi-pen-fill me-1"></i> Sign your part
-            </a>
-        <?php endif; ?>
     </div>
 </div>
 <?php endif; ?>

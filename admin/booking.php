@@ -49,6 +49,11 @@ if (!$tenancy) {
     die('Tenancy not found.');
 }
 
+// Fetch contract for this booking (if any)
+$stmt = $pdo->prepare("SELECT * FROM contracts WHERE booking_id = ? LIMIT 1");
+$stmt->execute([$bookingId]);
+$contract = $stmt->fetch() ?: null;
+
 // Fetch ALL tenants (primary + co_tenants)
 $stmt = $pdo->prepare("
     SELECT id, is_primary, full_name, ic_number, phone, email, sign_order, status, signed_at
@@ -308,23 +313,54 @@ ob_start();
 </div>
 <?php endif; ?>
 
-<!-- CONTRACT CARD (print-upload model) -->
+<!-- CONTRACT CARD -->
 <div class="bg-white border rounded-3 p-4 mb-4">
     <h5 class="mb-3"><i class="bi bi-file-earmark-text me-2"></i>Contract</h5>
 
-    <?php if (empty($tenancy['signed_contract_path']) && $tenancy['status'] !== 'contract_pending'): ?>
+    <?php if (!$contract): ?>
         <p class="text-secondary mb-0">
             Contract not yet generated.
             <small>(Will be available once tenant info is submitted.)</small>
         </p>
 
-    <?php elseif (empty($tenancy['signed_contract_path']) && $tenancy['status'] === 'contract_pending'): ?>
-        <div class="alert alert-warning mb-0">
-            <i class="bi bi-hourglass-split me-1"></i>
-            <strong>Awaiting signatures.</strong>
-            Contract has been generated. Parties need to wet-sign offline,
-            then the agent uploads the signed PDF.
+    <?php elseif ($contract['status'] === 'pending_signatures'): ?>
+        <div class="mb-3">
+            <span class="badge bg-warning text-dark me-2">Awaiting signatures</span>
+            <code class="small"><?= e($contract['contract_code']) ?></code>
         </div>
+        <div class="row g-3 mb-3">
+            <?php
+            $adminSigRows = [
+                'Tenant'   => ['signed_at' => $contract['student_signed_at'],  'method' => $contract['student_sign_method']],
+                'Landlord' => ['signed_at' => $contract['landlord_signed_at'], 'method' => $contract['landlord_sign_method']],
+                'Agent'    => ['signed_at' => $contract['agent_signed_at'],    'method' => null],
+            ];
+            foreach ($adminSigRows as $label => $info):
+            ?>
+            <div class="col-md-4">
+                <small class="text-secondary d-block"><?= $label ?></small>
+                <?php if (!empty($info['signed_at'])): ?>
+                    <span class="text-success small">
+                        <i class="bi bi-check-circle-fill"></i>
+                        <?= $info['method'] === 'manual' ? 'Manual' : 'E-signed' ?>
+                        <?= e(date('d M Y', strtotime($info['signed_at']))) ?>
+                    </span>
+                <?php elseif ($info['method'] === 'manual'): ?>
+                    <span class="text-warning small"><i class="bi bi-pencil me-1"></i>Manual — awaiting physical</span>
+                <?php elseif ($info['method'] === 'esign'): ?>
+                    <span class="text-secondary small"><i class="bi bi-circle me-1"></i>E-sign pending</span>
+                <?php else: ?>
+                    <span class="text-secondary small"><i class="bi bi-circle me-1"></i>Not yet chosen</span>
+                <?php endif; ?>
+            </div>
+            <?php endforeach; ?>
+        </div>
+        <?php if (!empty($contract['generated_pdf_path'])): ?>
+        <a href="/rentbridge/<?= e($contract['generated_pdf_path']) ?>" target="_blank"
+           class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-file-earmark-pdf me-1"></i> View unsigned PDF
+        </a>
+        <?php endif; ?>
 
     <?php else: ?>
         <!-- Signed contract on file -->

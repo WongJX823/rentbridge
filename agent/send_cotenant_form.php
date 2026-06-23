@@ -58,9 +58,9 @@ $stmt->execute([
 notify(
     (int)$booking['student_id'],
     'cotenant_form_request',
-    'Agent requested co-tenant details',
-    'Please open the chat to fill in co-tenant info for "' . $booking['property_title'] . '".',
-    '/rentbridge/chat.php?id=' . $convoId
+    'Co-tenant details needed',
+    'Fill in the co-tenant info for "' . $booking['property_title'] . '" — open the chat to complete the form.',
+    '/rentbridge/chat/conversation.php?id=' . $convoId
 );
 
 set_flash('success', 'Co-tenant form sent to student via chat.');

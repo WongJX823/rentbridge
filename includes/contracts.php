@@ -237,19 +237,21 @@ function apply_signature(int $contractId, int $userId, string $dataUrl): array {
     // Update DB
     $ip = $_SERVER['REMOTE_ADDR'] ?? null;
 
-    $sigCol  = $role . '_signature';
-    $timeCol = $role . '_signed_at';
-    $ipCol   = $role . '_sign_ip';
+    $sigCol    = $role . '_signature';
+    $timeCol   = $role . '_signed_at';
+    $ipCol     = $role . '_sign_ip';
+    $methodCol = in_array($role, ['student', 'landlord'], true) ? $role . '_sign_method' : null;
 
     try {
         $pdo->beginTransaction();
 
-        $stmt = $pdo->prepare("
-            UPDATE contracts
-               SET $sigCol = ?, $timeCol = NOW(), $ipCol = ?
-             WHERE id = ?
-        ");
-        $stmt->execute([$sigPath, $ip, $contractId]);
+        if ($methodCol) {
+            $stmt = $pdo->prepare("UPDATE contracts SET $sigCol = ?, $timeCol = NOW(), $ipCol = ?, $methodCol = 'esign' WHERE id = ?");
+            $stmt->execute([$sigPath, $ip, $contractId]);
+        } else {
+            $stmt = $pdo->prepare("UPDATE contracts SET $sigCol = ?, $timeCol = NOW(), $ipCol = ? WHERE id = ?");
+            $stmt->execute([$sigPath, $ip, $contractId]);
+        }
 
         // Refresh contract to check final state
         $stmt = $pdo->prepare('SELECT * FROM contracts WHERE id = ? LIMIT 1');
@@ -295,15 +297,15 @@ function apply_signature(int $contractId, int $userId, string $dataUrl): array {
             }
             // (Module 9.3 will also auto-generate the PDF here.)
         } else {
-            // Notify the NEXT signer
+            // Notify the NEXT signer with a direct link to the sign page
             $next = contract_next_signer($contract);
             $nextUserId = (int)$contract[$next . '_id'];
             notify(
                 $nextUserId,
                 'contract_your_turn',
-                'It is your turn to sign',
-                'Contract ' . $contract['contract_code'] . ' is ready for your signature.',
-                '/rentbridge/contracts/view.php?id=' . $contractId
+                'Your turn to e-sign the contract',
+                'Contract ' . $contract['contract_code'] . ' — the previous party has signed. Click to e-sign now.',
+                '/rentbridge/contracts/sign.php?id=' . $contractId
             );
         }
 
@@ -346,26 +348,14 @@ function generate_contract_pdf(int $contractId): ?string {
                p.furnishing,
                p.facilities,
                s.full_name   AS student_name,
-               s.matric_no   AS student_matric,
                s.phone       AS student_phone,
-               us.email      AS student_email,
                l.full_name   AS landlord_name,
                l.ic_no       AS landlord_ic,
-               l.phone       AS landlord_phone,
-               ul.email      AS landlord_email,
-               a.full_name   AS agent_name,
-               a.staff_id    AS agent_staff_id,
-               a.department  AS agent_department,
-               a.phone       AS agent_phone,
-               ua.email      AS agent_email
+               l.phone       AS landlord_phone
           FROM contracts c
           JOIN properties p ON p.id = c.property_id
           JOIN students   s ON s.user_id = c.student_id
-          JOIN users      us ON us.id = c.student_id
           JOIN landlords  l ON l.user_id = c.landlord_id
-          JOIN users      ul ON ul.id = c.landlord_id
-          JOIN agents     a ON a.user_id = c.agent_id
-          JOIN users      ua ON ua.id = c.agent_id
          WHERE c.id = ?
          LIMIT 1
     ");
@@ -373,11 +363,26 @@ function generate_contract_pdf(int $contractId): ?string {
     $c = $stmt->fetch();
     if (!$c) return null;
 
+    // Fetch co-tenants (primary first, then additional)
+    $ctStmt = $pdo->prepare("
+        SELECT full_name, ic_number, phone, is_primary
+          FROM co_tenants
+         WHERE booking_id = ? AND status != 'removed'
+         ORDER BY is_primary DESC, sign_order ASC, id ASC
+    ");
+    $ctStmt->execute([$c['booking_id']]);
+    $coTenants = $ctStmt->fetchAll();
+    // Primary tenant IC (submitted via co-tenant form)
+    $primaryIc = '';
+    foreach ($coTenants as $ct) {
+        if ((int)$ct['is_primary'] === 1) { $primaryIc = $ct['ic_number']; break; }
+    }
+    $additionalCoTenants = array_filter($coTenants, fn($ct) => !(int)$ct['is_primary']);
+
     // Build absolute paths to signature images (dompdf needs absolute paths)
     $base = __DIR__ . '/../';
     $sigStudent  = !empty($c['student_signature'])  ? realpath($base . $c['student_signature'])  : null;
-$sigLandlord = !empty($c['landlord_signature']) ? realpath($base . $c['landlord_signature']) : null;
-$sigAgent    = !empty($c['agent_signature'])    ? realpath($base . $c['agent_signature'])    : null;
+    $sigLandlord = !empty($c['landlord_signature']) ? realpath($base . $c['landlord_signature']) : null;
 
     // Helper for safe HTML escape
     $h = fn(?string $v): string => htmlspecialchars($v ?? '', ENT_QUOTES, 'UTF-8');
@@ -407,7 +412,7 @@ $sigAgent    = !empty($c['agent_signature'])    ? realpath($base . $c['agent_sig
             .accent  { color: #2E8B57; font-weight: bold; }
             table  { width: 100%; border-collapse: collapse; margin-top: 4px; }
             table td { padding: 6px 8px; border: 1px solid #E5E1D8; vertical-align: top; }
-            .party { width: 33%; }
+            .party { width: 50%; }
             .terms-list { white-space: pre-wrap; }
             .sig-box   { border: 1px solid #E5E1D8; padding: 12px; text-align: center; }
             .sig-img   { max-height: 70px; max-width: 200px; }
@@ -419,7 +424,7 @@ $sigAgent    = !empty($c['agent_signature'])    ? realpath($base . $c['agent_sig
     <body>
 
     <div class="center">
-        <h3 class="muted">Tripartite Tenancy Agreement</h3>
+        <h3 class="muted">Tenancy Agreement</h3>
         <h1>RentBridge Contract</h1>
         <div class="small">
             Contract code: <strong><?= $h($c['contract_code']) ?></strong>
@@ -438,22 +443,19 @@ $sigAgent    = !empty($c['agent_signature'])    ? realpath($base . $c['agent_sig
                 <h3>1. Landlord</h3>
                 <strong><?= $h($c['landlord_name']) ?></strong><br>
                 IC: <?= $h($c['landlord_ic']) ?><br>
-                <?= $h($c['landlord_email']) ?><br>
-                <?= $h($c['landlord_phone']) ?>
+                Tel: <?= $h($c['landlord_phone']) ?>
             </td>
             <td class="party">
                 <h3>2. Tenant</h3>
                 <strong><?= $h($c['student_name']) ?></strong><br>
-                Matric: <?= $h($c['student_matric']) ?><br>
-                <?= $h($c['student_email']) ?><br>
-                <?= $h($c['student_phone']) ?>
-            </td>
-            <td class="party">
-                <h3>3. Witness Agent</h3>
-                <strong><?= $h($c['agent_name']) ?></strong><br>
-                UTeM Staff ID: <?= $h($c['agent_staff_id']) ?><br>
-                <?= $h($c['agent_department']) ?><br>
-                <?= $h($c['agent_email']) ?>
+                IC: <?= $h($primaryIc ?: '—') ?><br>
+                Tel: <?= $h($c['student_phone']) ?>
+                <?php foreach ($additionalCoTenants as $idx => $ct): ?>
+                    <br><br>
+                    <strong><?= $h($ct['full_name']) ?></strong> <span class="muted">(co-tenant <?= $idx + 2 ?>)</span><br>
+                    IC: <?= $h($ct['ic_number']) ?><br>
+                    <?php if (!empty($ct['phone'])): ?>Tel: <?= $h($ct['phone']) ?><?php endif; ?>
+                <?php endforeach; ?>
             </td>
         </tr>
     </table>
@@ -505,32 +507,20 @@ $sigAgent    = !empty($c['agent_signature'])    ? realpath($base . $c['agent_sig
                     <div class="muted small">(not signed)</div>
                 <?php endif; ?>
                 <div class="sig-meta">
-                    <?= !empty($c['landlord_signed_at']) ? $h(date('d M Y, H:i', strtotime($c['landlord_signed_at']))) : '—' ?><br>
-                    IP: <?= $h($c['landlord_sign_ip'] ?? '—') ?>
+                    <?= $h($c['landlord_name']) ?><br>
+                    <?= !empty($c['landlord_signed_at']) ? $h(date('d M Y, H:i', strtotime($c['landlord_signed_at']))) : '—' ?>
                 </div>
             </td>
             <td class="sig-box party">
                 <h3>Tenant</h3>
                 <?php if ($sigStudent && file_exists($sigStudent)): ?>
-                    <img class="sig-img" src="file://<?= str_replace('\\', '/', $sigStudent) ?>" alt="">                
-                    <?php else: ?>
-                    <div class="muted small">(not signed)</div>
-                <?php endif; ?>
-                <div class="sig-meta">
-                    <?= !empty($c['student_signed_at']) ? $h(date('d M Y, H:i', strtotime($c['student_signed_at']))) : '—' ?><br>
-                    IP: <?= $h($c['student_sign_ip'] ?? '—') ?>
-                </div>
-            </td>
-            <td class="sig-box party">
-                <h3>Witness Agent</h3>
-                <?php if ($sigAgent && file_exists($sigAgent)): ?>
-                    <img class="sig-img" src="file://<?= str_replace('\\', '/', $sigAgent) ?>" alt="">
+                    <img class="sig-img" src="file://<?= str_replace('\\', '/', $sigStudent) ?>" alt="">
                 <?php else: ?>
                     <div class="muted small">(not signed)</div>
                 <?php endif; ?>
                 <div class="sig-meta">
-                    <?= !empty($c['agent_signed_at']) ? $h(date('d M Y, H:i', strtotime($c['agent_signed_at']))) : '—' ?><br>
-                    IP: <?= $h($c['agent_sign_ip'] ?? '—') ?>
+                    <?= $h($c['student_name']) ?><br>
+                    <?= !empty($c['student_signed_at']) ? $h(date('d M Y, H:i', strtotime($c['student_signed_at']))) : '—' ?>
                 </div>
             </td>
         </tr>

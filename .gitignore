@@ -1,0 +1,14 @@
+# Playwright MCP session output (logs + page snapshots)
+.playwright-mcp/
+
+# Playwright test output
+playwright-report/
+test-results/
+
+# Step screenshots from manual testing sessions
+step*.png
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp

@@ -1,6 +1,9 @@
 -- Migration: create reports table for Admin Report & Flag System
 -- Run once against dbrb_2026
 
+-- Ensure users.id has a PRIMARY KEY (required for FK references to work)
+ALTER TABLE `users` MODIFY `id` INT(11) NOT NULL AUTO_INCREMENT, ADD PRIMARY KEY (`id`);
+
 CREATE TABLE IF NOT EXISTS reports (
     id               INT AUTO_INCREMENT PRIMARY KEY,
     reporter_id      INT NOT NULL,

@@ -400,27 +400,24 @@ try {
     $stmt = $pdo->prepare("UPDATE bookings SET status = 'contract_pending' WHERE id = ?");
     $stmt->execute([$bookingId]);
 
-    // Notify all parties
+    // Notify all parties with e-sign link
     notify(
         (int)$booking['student_id'],
         'contract_generated',
-        'Tenancy contract generated',
-        'Agent has generated contract ' . $contractCode . '. The agent will send it to you for signing.',
-        '/rentbridge/student/booking.php?id=' . $bookingId
+        'Contract ready — your signature is needed',
+        'Contract ' . $contractCode . ' is ready. You sign first — click to e-sign on the website.',
+        '/rentbridge/contracts/sign.php?id=' . $contractId
     );
     notify(
         (int)$booking['landlord_id'],
         'contract_generated',
-        'Tenancy contract generated',
-        'Agent has generated contract ' . $contractCode . '. You will receive it from the agent for signing.',
+        'Contract ready — signature required',
+        'Contract ' . $contractCode . ' has been generated. Once the tenant signs, you will be prompted to e-sign on the website.',
         '/rentbridge/landlord/booking.php?id=' . $bookingId
     );
 
-    // Stream the PDF to the agent for download
-    header('Content-Type: application/pdf');
-    header('Content-Disposition: attachment; filename="' . $contractCode . '.pdf"');
-    header('Content-Length: ' . filesize($absolutePath));
-    readfile($absolutePath);
+    set_flash('success', 'Contract ' . $contractCode . ' generated. Parties have been notified to sign. Download it here only if someone is signing manually.');
+    header('Location: /rentbridge/agent/case.php?id=' . $bookingId);
     exit;
 
 } catch (Throwable $e) {

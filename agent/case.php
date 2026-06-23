@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/bookings.php';
+require_once __DIR__ . '/../includes/contracts.php';
 require_role('agent');
 
 $caseId = (int)($_GET['id'] ?? $_POST['booking_id'] ?? 0);
@@ -92,7 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'Your UTeM agent is on the case!',
                     current_user_display_name() . ' will inspect "' . $case['property_title']
                         . '" within 5 days. The contract will be issued after inspection passes.',
-                    '/rentbridge/student/bookings.php'
+                    '/rentbridge/student/booking.php?id=' . $caseId
                 );
 
                 // Notify landlord
@@ -103,7 +104,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     current_user_display_name() . ' (UTeM staff) will inspect your property "'
                         . $case['property_title']
                         . '" within 5 days. Please arrange access (key handover or in-person meet).',
-                    '/rentbridge/landlord/bookings.php'
+                    '/rentbridge/landlord/booking.php?id=' . $caseId
                 );
 
                 set_flash('success', 'Case accepted. Please inspect the property within 5 days.');
@@ -344,6 +345,11 @@ foreach ($coTenants as $ct) {
         break;
     }
 }
+
+// Determine manual sign parties (chose manual but not yet marked as signed)
+$anyManualPending = $contract
+    && (($contract['student_sign_method']  === 'manual' && empty($contract['student_signed_at']))
+     || ($contract['landlord_sign_method'] === 'manual' && empty($contract['landlord_signed_at'])));
 ?>
 
 <?php if (in_array($case['status'], ['agent_verifying','agent_verified','contract_pending','active'], true)): ?>
@@ -364,8 +370,7 @@ foreach ($coTenants as $ct) {
         </div>
     <?php elseif (empty($contract) || empty($contract['generated_pdf_path'])): ?>
         <p class="small text-secondary mb-3">
-            Generate the contract PDF. You'll download it and send to all parties
-            (landlord + tenants) for handwritten signing via WhatsApp/email.
+            Generate the contract PDF. It will be sent to the tenant and landlord for e-signing on the website. You sign last as witness.
         </p>
         <a href="/rentbridge/agent/generate_contract.php?booking_id=<?= (int)$case['id'] ?>"
            class="btn btn-success">
@@ -385,25 +390,91 @@ foreach ($coTenants as $ct) {
                 <small class="text-secondary">Status</small>
                 <div>
                     <?php if ($contract['status'] === 'active'): ?>
-                        <span class="badge bg-success">Active (signed)</span>
+                        <span class="badge bg-success">Active (all signed)</span>
+                    <?php elseif (!empty($contract['student_signed_at']) && !empty($contract['landlord_signed_at']) && empty($contract['agent_signed_at'])): ?>
+                        <span class="badge bg-primary">Your turn to sign</span>
                     <?php else: ?>
-                        <span class="badge bg-warning text-dark">Awaiting signed upload</span>
+                        <span class="badge bg-warning text-dark">Awaiting signatures</span>
                     <?php endif; ?>
-                    
                 </div>
             </div>
         </div>
 
+        <?php if ($anyManualPending): ?>
+        <div class="alert alert-warning d-flex gap-2 align-items-start mb-3">
+            <i class="bi bi-download fs-5 mt-1"></i>
+            <div>
+                <strong>Manual sign requested</strong> — download the contract PDF and give it to the party signing manually.
+                <a href="/rentbridge/agent/generate_contract.php?booking_id=<?= (int)$case['id'] ?>"
+                   class="btn btn-warning btn-sm ms-2">
+                    <i class="bi bi-download me-1"></i> Download PDF
+                </a>
+            </div>
+        </div>
+        <?php endif; ?>
+
+        <!-- Signature progress with manual/esign badges and mark buttons -->
+        <?php
+        $sigParties = [
+            'student'  => ['label' => 'Tenant',   'signed_at' => $contract['student_signed_at'],  'method' => $contract['student_sign_method']],
+            'landlord' => ['label' => 'Landlord',  'signed_at' => $contract['landlord_signed_at'], 'method' => $contract['landlord_sign_method']],
+        ];
+        $nextSigner = contract_next_signer($contract);
+        ?>
+        <div class="row g-2 mb-3">
+        <?php foreach ($sigParties as $partyRole => $party): ?>
+            <div class="col-4">
+                <small class="text-secondary d-block"><?= e($party['label']) ?></small>
+                <?php if (!empty($party['signed_at'])): ?>
+                    <span class="text-success small">
+                        <i class="bi bi-check-circle-fill"></i>
+                        <?= $party['method'] === 'manual' ? 'Manual' : 'E-signed' ?>
+                        <?= e(date('d M', strtotime($party['signed_at']))) ?>
+                    </span>
+                <?php elseif ($party['method'] === 'manual'): ?>
+                    <span class="text-warning small"><i class="bi bi-pencil me-1"></i>Manual — awaiting</span>
+                    <?php if ($nextSigner === $partyRole): ?>
+                    <form method="POST" action="/rentbridge/agent/mark_manual_sign.php" class="d-inline ms-1">
+                        <?= csrf_field() ?>
+                        <input type="hidden" name="contract_id" value="<?= (int)$contract['id'] ?>">
+                        <input type="hidden" name="role" value="<?= $partyRole ?>">
+                        <button type="submit" class="btn btn-warning btn-sm py-0 px-1"
+                                onclick="return confirm('Mark <?= e($party['label']) ?> as manually signed?');">
+                            <i class="bi bi-check2"></i> Mark signed
+                        </button>
+                    </form>
+                    <?php endif; ?>
+                <?php elseif ($party['method'] === 'esign'): ?>
+                    <span class="text-secondary small"><i class="bi bi-circle"></i> E-sign pending</span>
+                <?php else: ?>
+                    <span class="text-secondary small"><i class="bi bi-circle"></i> Awaiting choice</span>
+                <?php endif; ?>
+            </div>
+        <?php endforeach; ?>
+            <div class="col-4">
+                <small class="text-secondary d-block">You (Witness)</small>
+                <?php if (!empty($contract['agent_signed_at'])): ?>
+                    <span class="text-success small"><i class="bi bi-check-circle-fill"></i> E-signed <?= e(date('d M', strtotime($contract['agent_signed_at']))) ?></span>
+                <?php else: ?>
+                    <span class="text-secondary small"><i class="bi bi-circle"></i> Pending</span>
+                <?php endif; ?>
+            </div>
+        </div>
+
         <div class="d-flex gap-2 flex-wrap">
+            <?php if (!$anyManualPending): ?>
             <a href="/rentbridge/agent/generate_contract.php?booking_id=<?= (int)$case['id'] ?>"
-               target="_blank" class="btn btn-primary">
+               target="_blank" class="btn btn-outline-secondary btn-sm">
                 <i class="bi bi-download me-1"></i> Download PDF
             </a>
+            <?php endif; ?>
+            <?php if (!empty($contract['student_signed_at']) && !empty($contract['landlord_signed_at']) && empty($contract['agent_signed_at'])): ?>
+                <a href="/rentbridge/contracts/sign.php?id=<?= (int)$contract['id'] ?>"
+                   class="btn btn-success">
+                    <i class="bi bi-pen-fill me-1"></i> Sign as witness
+                </a>
+            <?php endif; ?>
         </div>
-        <small class="text-secondary d-block mt-2">
-            Send via WhatsApp/email to landlord + all tenants for signing.
-            Upload signed copy back (coming next turn).
-        </small>
     <?php endif; ?>
     <?php if (!empty($contract['generated_pdf_path']) && empty($contract['signed_pdf_path']) && $contract['status'] !== 'active'): ?>
     <!-- Upload signed copy section -->

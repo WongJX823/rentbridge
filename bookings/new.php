@@ -149,7 +149,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'booking_request',
                 'New booking request',
                 'A student has requested to book "' . $prop['title'] . '".',
-                '/rentbridge/landlord/bookings.php?id=' . $bookingId
+                '/rentbridge/landlord/booking.php?id=' . $bookingId
             );
 
             set_flash('success', 'Booking request sent! The landlord will review and respond shortly.');

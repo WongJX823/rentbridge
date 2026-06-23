@@ -28,14 +28,16 @@ $stmt = $pdo->prepare("
            a.department     AS agent_department,
            a.phone          AS agent_phone,
            ua.email         AS agent_email,
-           ct.id                 AS contract_id,
-           ct.contract_code      AS contract_code,
-           ct.status             AS contract_status,
-           ct.contract_pdf_path  AS contract_pdf,
-           ct.student_signed_at  AS c_student_signed,
-           ct.landlord_signed_at AS c_landlord_signed,
-           ct.agent_signed_at    AS c_agent_signed,
-           ct.activated_at       AS c_activated_at,
+           ct.id                    AS contract_id,
+           ct.contract_code         AS contract_code,
+           ct.status                AS contract_status,
+           ct.contract_pdf_path     AS contract_pdf,
+           ct.generated_pdf_path    AS contract_generated_pdf,
+           ct.student_signed_at     AS c_student_signed,
+           ct.landlord_signed_at    AS c_landlord_signed,
+           ct.agent_signed_at       AS c_agent_signed,
+           ct.activated_at          AS c_activated_at,
+           ct.student_sign_method   AS c_student_method,
            (SELECT image_path FROM property_images
              WHERE property_id = p.id
              ORDER BY is_primary DESC, id ASC LIMIT 1) AS image_path
@@ -249,6 +251,7 @@ $months  = max(1, (int)round(($endTs - $startTs) / (30.44 * 86400)));
                     $myTurn = !empty($booking['contract_id'])
                               && $contractStatus === 'pending_signatures'
                               && empty($booking['c_student_signed']);
+                    $choseManual = ($booking['c_student_method'] ?? '') === 'manual';
                 ?>
                 <div class="col-12">
                     <div class="bg-white border rounded-3 p-4">
@@ -263,16 +266,32 @@ $months  = max(1, (int)round(($endTs - $startTs) / (30.44 * 86400)));
                         </div>
 
                         <!-- Your-turn alert -->
-                        <?php if ($myTurn): ?>
-                            <div class="alert alert-warning d-flex align-items-center gap-3 mb-3">
-                                <i class="bi bi-pen-fill fs-4"></i>
-                                <div class="flex-grow-1">
+                        <?php if ($myTurn && !$choseManual): ?>
+                            <div class="alert alert-warning mb-3">
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <i class="bi bi-pen-fill"></i>
                                     <strong>Your signature is needed</strong>
-                                    <div class="small">You sign first, then your landlord, then the witness agent.</div>
                                 </div>
-                                <a href="/rentbridge/contracts/sign.php?id=<?= (int)$booking['contract_id'] ?>"
-                                   class="btn btn-success">
-                                    Sign now <i class="bi bi-arrow-right ms-1"></i>
+                                <p class="small mb-3">You sign first, then your landlord, then the witness agent. Choose how you'd like to sign:</p>
+                                <div class="d-flex gap-2 flex-wrap">
+                                    <a href="/rentbridge/contracts/sign.php?id=<?= (int)$booking['contract_id'] ?>"
+                                       class="btn btn-success btn-sm">
+                                        <i class="bi bi-pencil-square me-1"></i> E-sign online
+                                    </a>
+                                    <a href="/rentbridge/contracts/download.php?id=<?= (int)$booking['contract_id'] ?>"
+                                       class="btn btn-outline-secondary btn-sm">
+                                        <i class="bi bi-download me-1"></i> Download &amp; sign manually
+                                    </a>
+                                </div>
+                            </div>
+                        <?php elseif ($myTurn && $choseManual): ?>
+                            <div class="alert alert-info mb-3">
+                                <i class="bi bi-hourglass-split me-1"></i>
+                                <strong>Manual sign chosen.</strong>
+                                You downloaded the contract to sign physically. Your agent will mark you as signed once they receive your signature.
+                                <a href="/rentbridge/contracts/download.php?id=<?= (int)$booking['contract_id'] ?>"
+                                   class="btn btn-outline-secondary btn-sm ms-2">
+                                    <i class="bi bi-download me-1"></i> Re-download
                                 </a>
                             </div>
                         <?php endif; ?>
