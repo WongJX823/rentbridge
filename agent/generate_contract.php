@@ -123,6 +123,13 @@ $startDate  = date('jS \\d\\a\\y \\o\\f F Y', strtotime($booking['start_date']))
 $startShort = date('d/m/Y', strtotime($booking['start_date']));
 $endShort   = date('d/m/Y', strtotime($booking['end_date']));
 $today      = date('jS \\d\\a\\y \\o\\f F Y');
+$termWeeks  = (int)round((strtotime($booking['end_date']) - strtotime($booking['start_date'])) / (7 * 86400));
+$termLabel  = match($booking['duration_type']) {
+    'semester_4'   => '14 weeks (1 semester)',
+    'academic_8'   => '8 months (academic year)',
+    'full_year_12' => '12 months (full year)',
+    default        => $termWeeks . ' weeks',
+};
 $monthlyRent = number_format((float)$booking['monthly_rent'], 2);
 $securityDeposit = number_format((float)$booking['deposit'], 2);
 $utilityDeposit  = number_format((float)$booking['deposit'] * 0.3, 2); // typically ~30% of security
@@ -302,7 +309,7 @@ table.parties td { padding: 8pt; vertical-align: top; }
 </div>
 
 <div class="schedule-item">
-    <strong>5. Term:</strong> 12 months (or as agreed)
+    <strong>5. Term:</strong> {$termLabel}
 </div>
 
 <div class="schedule-item">

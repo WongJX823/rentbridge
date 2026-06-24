@@ -1,4 +1,4 @@
--- phpMyAdmin SQL Dump
+﻿-- phpMyAdmin SQL Dump
 -- version 5.2.1
 -- https://www.phpmyadmin.net/
 --
@@ -42,7 +42,7 @@ DROP TABLE IF EXISTS `property_agent_assignments`;
 DROP TABLE IF EXISTS `property_documents`;
 DROP TABLE IF EXISTS `property_images`;
 DROP TABLE IF EXISTS `saved_properties`;
-DROP TABLE IF EXISTS `bookings`;
+DROP TABLE IF EXISTS `tenancies`;
 DROP TABLE IF EXISTS `properties`;
 DROP TABLE IF EXISTS `messages`;
 DROP TABLE IF EXISTS `conversation_participants`;
@@ -123,7 +123,7 @@ CREATE TABLE `agent_commissions` (
 
 CREATE TABLE `agent_verifications` (
   `id` int(11) NOT NULL,
-  `booking_id` int(11) NOT NULL,
+  `tenancy_id` int(11) NOT NULL,
   `agent_id` int(11) NOT NULL,
   `started_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `submitted_at` timestamp NULL DEFAULT NULL,
@@ -158,10 +158,10 @@ CREATE TABLE `agent_verification_photos` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `bookings`
+-- Table structure for table `tenancies`
 --
 
-CREATE TABLE `bookings` (
+CREATE TABLE `tenancies` (
   `id` int(11) NOT NULL,
   `student_id` int(11) NOT NULL,
   `property_id` int(11) NOT NULL,
@@ -225,7 +225,7 @@ INSERT INTO `contact_messages` (`id`, `name`, `email`, `subject`, `message`, `us
 CREATE TABLE `contracts` (
   `id` int(11) NOT NULL,
   `contract_code` varchar(20) NOT NULL COMMENT 'e.g. RB-2026-00001',
-  `booking_id` int(11) NOT NULL,
+  `tenancy_id` int(11) NOT NULL,
   `student_id` int(11) NOT NULL,
   `landlord_id` int(11) NOT NULL,
   `agent_id` int(11) NOT NULL,
@@ -269,8 +269,8 @@ CREATE TABLE `conversations` (
   `user_a` int(11) NOT NULL COMMENT 'Always lower user_id',
   `user_b` int(11) DEFAULT NULL,
   `property_id` int(11) DEFAULT NULL,
-  `booking_id` int(11) DEFAULT NULL,
-  `context_type` enum('property_inquiry','booking','friend','agent_case','other','contract_prep','housemate_group') NOT NULL DEFAULT 'other',
+  `tenancy_id` int(11) DEFAULT NULL,
+  `context_type` enum('property_inquiry','tenancy','friend','agent_case','other','contract_prep','housemate_group') NOT NULL DEFAULT 'other',
   `last_message_at` timestamp NULL DEFAULT NULL,
   `last_message_preview` varchar(120) DEFAULT NULL,
   `last_sender_id` int(11) DEFAULT NULL,
@@ -283,11 +283,11 @@ CREATE TABLE `conversations` (
 -- Dumping data for table `conversations`
 --
 
-INSERT INTO `conversations` (`id`, `user_a`, `user_b`, `property_id`, `booking_id`, `context_type`, `last_message_at`, `last_message_preview`, `last_sender_id`, `is_locked`, `locked_reason`, `created_at`) VALUES
+INSERT INTO `conversations` (`id`, `user_a`, `user_b`, `property_id`, `tenancy_id`, `context_type`, `last_message_at`, `last_message_preview`, `last_sender_id`, `is_locked`, `locked_reason`, `created_at`) VALUES
 (1, 3, 10, NULL, NULL, 'property_inquiry', '2026-06-09 01:30:00', 'Sure, let me arrange a viewing this Saturday.', 10, 0, NULL, '2026-06-08 10:00:00'),
 (2, 4, 12, NULL, NULL, 'property_inquiry', '2026-06-09 06:30:00', 'Yes the room is still available!', 12, 0, NULL, '2026-06-09 06:00:00'),
-(3, 2, 10, NULL, NULL, 'booking', '2026-06-13 08:12:57', 'What\'s included in the rent?', 2, 0, NULL, '2026-04-15 03:00:00'),
-(4, 9, 12, NULL, NULL, 'booking', '2026-05-27 07:00:00', 'Contract sent for signing.', 12, 0, NULL, '2026-05-20 04:00:00'),
+(3, 2, 10, NULL, NULL, 'tenancy', '2026-06-13 08:12:57', 'What\'s included in the rent?', 2, 0, NULL, '2026-04-15 03:00:00'),
+(4, 9, 12, NULL, NULL, 'tenancy', '2026-05-27 07:00:00', 'Contract sent for signing.', 12, 0, NULL, '2026-05-20 04:00:00'),
 (5, 6, 13, NULL, NULL, 'property_inquiry', '2026-05-30 02:00:00', 'I am sorry about the mold issue, I will fix it.', 13, 0, NULL, '2026-05-28 09:00:00'),
 (6, 16, 27, NULL, NULL, 'agent_case', '2026-06-16 10:09:18', 'Can I view it?', 27, 0, NULL, '2026-06-14 06:46:01'),
 (7, 3, 27, 1, NULL, '', NULL, NULL, NULL, 0, NULL, '2026-06-18 03:35:10');
@@ -355,7 +355,7 @@ INSERT INTO `co_tenancy_posts` (`id`, `poster_id`, `property_id`, `title`, `mess
 
 CREATE TABLE `co_tenants` (
   `id` int(11) NOT NULL,
-  `booking_id` int(11) NOT NULL,
+  `tenancy_id` int(11) NOT NULL,
   `student_id` int(11) DEFAULT NULL COMMENT 'RentBridge user_id if linked (leader only typically)',
   `is_primary` tinyint(1) NOT NULL DEFAULT 0 COMMENT '1 = leader who applied, 0 = additional co-tenant',
   `full_name` varchar(150) NOT NULL,
@@ -463,18 +463,18 @@ INSERT INTO `messages` (`id`, `conversation_id`, `sender_id`, `body`, `message_t
 (4, 1, 10, 'Sure, let me arrange a viewing this Saturday.', 'text', NULL, '2026-06-09 01:30:00', NULL),
 (5, 2, 4, 'Hi, is the Quiet Bedroom still available?', 'text', NULL, '2026-06-09 06:00:00', '2026-06-09 06:15:00'),
 (6, 2, 12, 'Yes the room is still available!', 'text', NULL, '2026-06-09 06:30:00', NULL),
-(7, 3, 2, 'Hi Ahmad, thank you for accepting my booking.', 'text', NULL, '2026-04-15 03:00:00', '2026-04-15 04:00:00'),
+(7, 3, 2, 'Hi Ahmad, thank you for accepting my tenancy.', 'text', NULL, '2026-04-15 03:00:00', '2026-04-15 04:00:00'),
 (8, 3, 10, 'My pleasure Jia Xi! See you on May 1st.', 'text', NULL, '2026-04-15 06:00:00', '2026-04-15 06:30:00'),
 (9, 3, 2, 'Could I move in a day earlier? My old place ends April 30.', 'text', NULL, '2026-04-21 08:00:00', '2026-04-21 08:30:00'),
 (10, 3, 10, 'Welcome aboard, looking forward to seeing you.', 'text', NULL, '2026-04-21 09:00:00', '2026-04-22 01:00:00'),
 (11, 4, 9, 'Hi Priya, my two friends will join me for the whole unit.', 'text', NULL, '2026-05-20 04:00:00', '2026-05-20 05:00:00'),
-(12, 4, 12, 'No problem. Please list their names in the booking note.', 'text', NULL, '2026-05-20 06:00:00', '2026-05-20 07:00:00'),
+(12, 4, 12, 'No problem. Please list their names in the tenancy note.', 'text', NULL, '2026-05-20 06:00:00', '2026-05-20 07:00:00'),
 (13, 4, 9, 'Done! Tan Wei Zhe and Lim Mei Ling.', 'text', NULL, '2026-05-22 01:00:00', '2026-05-22 02:00:00'),
 (14, 4, 12, 'Contract sent for signing.', 'text', NULL, '2026-05-27 07:00:00', '2026-05-27 08:00:00'),
-(15, 5, 6, 'Hi, the agent said the property has mold and the booking was cancelled?', 'text', NULL, '2026-05-28 09:30:00', '2026-05-29 01:00:00'),
+(15, 5, 6, 'Hi, the agent said the property has mold and the tenancy was cancelled?', 'text', NULL, '2026-05-28 09:30:00', '2026-05-29 01:00:00'),
 (16, 5, 13, 'I am sorry about the mold issue, I will fix it.', 'text', NULL, '2026-05-30 02:00:00', NULL),
 (17, 3, 2, 'What\'s included in the rent?', 'text', NULL, '2026-06-13 08:12:57', '2026-06-13 08:18:59'),
-(18, 6, 16, '📋 Co-tenant details requested\nPlease fill in the names and IC numbers of everyone who will rent this property with you.', 'co_tenant_form', '{\"booking_id\":17,\"property_title\":\"Beruang Garden View Room\"}', '2026-06-14 06:46:01', '2026-06-16 10:06:06'),
+(18, 6, 16, '📋 Co-tenant details requested\nPlease fill in the names and IC numbers of everyone who will rent this property with you.', 'co_tenant_form', '{\"tenancy_id\":17,\"property_title\":\"Beruang Garden View Room\"}', '2026-06-14 06:46:01', '2026-06-16 10:06:06'),
 (19, 6, 27, 'Can I view it?', 'text', NULL, '2026-06-16 10:09:18', NULL),
 (20, 7, 27, 'Hi! I\'m interested in joining your co-tenancy for \"Unfurnished room near UTeM\".\n\nProperty: http://localhost/rentbridge/property.php?id=1', 'text', NULL, '2026-06-18 03:35:10', NULL);
 
@@ -520,7 +520,7 @@ CREATE TABLE `move_in_photos` (
 CREATE TABLE `notifications` (
   `id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
-  `type` varchar(50) NOT NULL COMMENT 'e.g. booking_request, contract_ready',
+  `type` varchar(50) NOT NULL COMMENT 'e.g. tenancy_request, contract_ready',
   `title` varchar(150) NOT NULL,
   `message` text NOT NULL,
   `link_url` varchar(255) DEFAULT NULL,
@@ -533,16 +533,16 @@ CREATE TABLE `notifications` (
 --
 
 INSERT INTO `notifications` (`id`, `user_id`, `type`, `title`, `message`, `link_url`, `is_read`, `created_at`) VALUES
-(1, 3, 'booking_pending', 'Your booking is awaiting landlord response', 'Booking #3 for \"Cozy Single Room Near UTeM Main Gate\" is awaiting landlord response.', '/rentbridge/student/booking.php?id=3', 0, '2026-06-09 01:01:00'),
-(2, 10, 'booking_request', 'New tenancy application', 'Lim Mei Ling submitted booking #3 for \"Cozy Single Room Near UTeM Main Gate\".', '/rentbridge/landlord/booking.php?id=3', 0, '2026-06-09 01:01:00'),
-(3, 15, 'agent_assigned', 'New inspection case assigned', 'Booking #5 needs property inspection within 5 days.', '/rentbridge/agent/inspection.php?booking_id=5', 0, '2026-06-10 06:01:00'),
-(4, 2, 'contract_active', 'Tenancy active!', 'Your contract RB-2026-00001 is now active.', '/rentbridge/student/booking.php?id=1', 1, '2026-04-22 06:01:00'),
-(5, 10, 'contract_active', 'Tenancy active!', 'Contract RB-2026-00001 has been signed by all parties.', '/rentbridge/landlord/booking.php?id=1', 1, '2026-04-22 06:01:00'),
-(6, 1, 'admin_alert', 'Booking needs manual review', 'Booking #4 has been pending agent assignment for more than 24 hours.', '/rentbridge/admin/booking.php?id=4', 0, '2026-06-09 07:00:00'),
-(7, 6, 'booking_cancelled', 'Tenancy cancelled', 'Tenancy #6 cancelled due to failed inspection.', '/rentbridge/student/bookings.php', 1, '2026-05-31 09:00:00'),
+(1, 3, 'tenancy_pending', 'Your tenancy is awaiting landlord response', 'Tenancy #3 for \"Cozy Single Room Near UTeM Main Gate\" is awaiting landlord response.', '/rentbridge/student/tenancy.php?id=3', 0, '2026-06-09 01:01:00'),
+(2, 10, 'tenancy_request', 'New tenancy application', 'Lim Mei Ling submitted tenancy #3 for \"Cozy Single Room Near UTeM Main Gate\".', '/rentbridge/landlord/tenancy.php?id=3', 0, '2026-06-09 01:01:00'),
+(3, 15, 'agent_assigned', 'New inspection case assigned', 'Tenancy #5 needs property inspection within 5 days.', '/rentbridge/agent/inspection.php?tenancy_id=5', 0, '2026-06-10 06:01:00'),
+(4, 2, 'contract_active', 'Tenancy active!', 'Your contract RB-2026-00001 is now active.', '/rentbridge/student/tenancy.php?id=1', 1, '2026-04-22 06:01:00'),
+(5, 10, 'contract_active', 'Tenancy active!', 'Contract RB-2026-00001 has been signed by all parties.', '/rentbridge/landlord/tenancy.php?id=1', 1, '2026-04-22 06:01:00'),
+(6, 1, 'admin_alert', 'Tenancy needs manual review', 'Tenancy #4 has been pending agent assignment for more than 24 hours.', '/rentbridge/admin/tenancy.php?id=4', 0, '2026-06-09 07:00:00'),
+(7, 6, 'tenancy_cancelled', 'Tenancy cancelled', 'Tenancy #6 cancelled due to failed inspection.', '/rentbridge/student/tenancies.php', 1, '2026-05-31 09:00:00'),
 (8, 11, 'property_pending', 'Property awaiting review', 'Your property \"Studio Apartment in Taman Indah\" is awaiting admin approval.', '/rentbridge/landlord/properties.php', 0, '2026-06-08 02:31:00'),
 (9, 1, 'admin_alert', 'New property awaiting review', 'Wong Soo Lan submitted \"Studio Apartment in Taman Indah\" for approval.', '/rentbridge/admin/property.php?id=3', 0, '2026-06-08 02:31:00'),
-(10, 9, 'contract_active', 'Tenancy active!', 'Your contract RB-2026-00002 is now active.', '/rentbridge/student/booking.php?id=2', 1, '2026-05-28 09:01:00'),
+(10, 9, 'contract_active', 'Tenancy active!', 'Your contract RB-2026-00002 is now active.', '/rentbridge/student/tenancy.php?id=2', 1, '2026-05-28 09:01:00'),
 (11, 27, 'cotenant_form_request', 'Agent requested co-tenant details', 'Please open the chat to fill in co-tenant info for \"Beruang Garden View Room\".', '/rentbridge/chat.php?id=6', 0, '2026-06-14 06:46:01'),
 (12, 15, 'property_assignment', 'New property assigned for review', 'You\'ve been assigned to review property #25', '/rentbridge/agent/property_review.php?id=25', 0, '2026-06-18 03:25:47');
 
@@ -569,7 +569,7 @@ CREATE TABLE `properties` (
   `description` text DEFAULT NULL,
   `facilities` text DEFAULT NULL,
   `furnishing` enum('none','partial','full') NOT NULL DEFAULT 'partial',
-  `status` enum('pending_approval','available','booked','rented','hidden','rejected') NOT NULL DEFAULT 'pending_approval',
+  `status` enum('pending_approval','available','reserved','rented','hidden','rejected') NOT NULL DEFAULT 'pending_approval',
   `assigned_agent_id` int(11) DEFAULT NULL,
   `agent_assigned_at` timestamp NULL DEFAULT NULL,
   `agent_status` enum('pending','inspecting','accepted','rejected','timeout') DEFAULT NULL,
@@ -887,7 +887,7 @@ CREATE TABLE `reports` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `reporter_id` int(11) NOT NULL,
   `reported_user_id` int(11) NOT NULL,
-  `context_type` enum('booking','message','general') NOT NULL DEFAULT 'general',
+  `context_type` enum('tenancy','message','general') NOT NULL DEFAULT 'general',
   `context_id` int(11) DEFAULT NULL,
   `reason` enum('harassment','scam','fake_information','misconduct','fraud','other') NOT NULL,
   `details` text DEFAULT NULL,
@@ -926,7 +926,7 @@ ALTER TABLE `agent_commissions`
 --
 ALTER TABLE `agent_verifications`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `booking_id` (`booking_id`),
+  ADD UNIQUE KEY `tenancy_id` (`tenancy_id`),
   ADD KEY `agent_id` (`agent_id`),
   ADD KEY `idx_outcome` (`outcome`),
   ADD KEY `idx_deadline` (`deadline_at`);
@@ -939,9 +939,9 @@ ALTER TABLE `agent_verification_photos`
   ADD KEY `idx_verification` (`verification_id`);
 
 --
--- Indexes for table `bookings`
+-- Indexes for table `tenancies`
 --
-ALTER TABLE `bookings`
+ALTER TABLE `tenancies`
   ADD PRIMARY KEY (`id`),
   ADD KEY `cancelled_by` (`cancelled_by`),
   ADD KEY `idx_student_status` (`student_id`,`status`),
@@ -966,23 +966,23 @@ ALTER TABLE `contact_messages`
 ALTER TABLE `contracts`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `contract_code` (`contract_code`),
-  ADD UNIQUE KEY `booking_id` (`booking_id`),
+  ADD UNIQUE KEY `tenancy_id` (`tenancy_id`),
   ADD KEY `student_id` (`student_id`),
   ADD KEY `landlord_id` (`landlord_id`),
   ADD KEY `agent_id` (`agent_id`),
   ADD KEY `property_id` (`property_id`),
   ADD KEY `idx_status` (`status`),
   ADD KEY `idx_contract_code` (`contract_code`),
-  ADD KEY `idx_booking` (`booking_id`);
+  ADD KEY `idx_tenancy` (`tenancy_id`);
 
 --
 -- Indexes for table `conversations`
 --
 ALTER TABLE `conversations`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `uniq_pair_context` (`user_a`,`user_b`,`property_id`,`booking_id`),
+  ADD UNIQUE KEY `uniq_pair_context` (`user_a`,`user_b`,`property_id`,`tenancy_id`),
   ADD KEY `property_id` (`property_id`),
-  ADD KEY `booking_id` (`booking_id`),
+  ADD KEY `tenancy_id` (`tenancy_id`),
   ADD KEY `idx_user_a` (`user_a`,`last_message_at`),
   ADD KEY `idx_user_b` (`user_b`,`last_message_at`);
 
@@ -1017,7 +1017,7 @@ ALTER TABLE `co_tenancy_posts`
 ALTER TABLE `co_tenants`
   ADD PRIMARY KEY (`id`),
   ADD KEY `added_by` (`added_by`),
-  ADD KEY `idx_booking` (`booking_id`),
+  ADD KEY `idx_tenancy` (`tenancy_id`),
   ADD KEY `idx_student` (`student_id`),
   ADD KEY `idx_status` (`status`);
 
@@ -1172,9 +1172,9 @@ ALTER TABLE `agent_verification_photos`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `bookings`
+-- AUTO_INCREMENT for table `tenancies`
 --
-ALTER TABLE `bookings`
+ALTER TABLE `tenancies`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
 
 --
@@ -1318,7 +1318,7 @@ ALTER TABLE `agent_commissions`
 -- Constraints for table `agent_verifications`
 --
 ALTER TABLE `agent_verifications`
-  ADD CONSTRAINT `agent_verifications_ibfk_1` FOREIGN KEY (`booking_id`) REFERENCES `bookings` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `agent_verifications_ibfk_1` FOREIGN KEY (`tenancy_id`) REFERENCES `tenancies` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `agent_verifications_ibfk_2` FOREIGN KEY (`agent_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 
 --
@@ -1328,14 +1328,14 @@ ALTER TABLE `agent_verification_photos`
   ADD CONSTRAINT `agent_verification_photos_ibfk_1` FOREIGN KEY (`verification_id`) REFERENCES `agent_verifications` (`id`) ON DELETE CASCADE;
 
 --
--- Constraints for table `bookings`
+-- Constraints for table `tenancies`
 --
-ALTER TABLE `bookings`
-  ADD CONSTRAINT `bookings_ibfk_1` FOREIGN KEY (`student_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `bookings_ibfk_2` FOREIGN KEY (`property_id`) REFERENCES `properties` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `bookings_ibfk_3` FOREIGN KEY (`landlord_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `bookings_ibfk_4` FOREIGN KEY (`agent_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
-  ADD CONSTRAINT `bookings_ibfk_5` FOREIGN KEY (`cancelled_by`) REFERENCES `users` (`id`) ON DELETE SET NULL;
+ALTER TABLE `tenancies`
+  ADD CONSTRAINT `tenancies_ibfk_1` FOREIGN KEY (`student_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `tenancies_ibfk_2` FOREIGN KEY (`property_id`) REFERENCES `properties` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `tenancies_ibfk_3` FOREIGN KEY (`landlord_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `tenancies_ibfk_4` FOREIGN KEY (`agent_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `tenancies_ibfk_5` FOREIGN KEY (`cancelled_by`) REFERENCES `users` (`id`) ON DELETE SET NULL;
 
 --
 -- Constraints for table `contact_messages`
@@ -1348,7 +1348,7 @@ ALTER TABLE `contact_messages`
 -- Constraints for table `contracts`
 --
 ALTER TABLE `contracts`
-  ADD CONSTRAINT `contracts_ibfk_1` FOREIGN KEY (`booking_id`) REFERENCES `bookings` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `contracts_ibfk_1` FOREIGN KEY (`tenancy_id`) REFERENCES `tenancies` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `contracts_ibfk_2` FOREIGN KEY (`student_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `contracts_ibfk_3` FOREIGN KEY (`landlord_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `contracts_ibfk_4` FOREIGN KEY (`agent_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
@@ -1361,7 +1361,7 @@ ALTER TABLE `conversations`
   ADD CONSTRAINT `conversations_ibfk_1` FOREIGN KEY (`user_a`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `conversations_ibfk_2` FOREIGN KEY (`user_b`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `conversations_ibfk_3` FOREIGN KEY (`property_id`) REFERENCES `properties` (`id`) ON DELETE SET NULL,
-  ADD CONSTRAINT `conversations_ibfk_4` FOREIGN KEY (`booking_id`) REFERENCES `bookings` (`id`) ON DELETE SET NULL;
+  ADD CONSTRAINT `conversations_ibfk_4` FOREIGN KEY (`tenancy_id`) REFERENCES `tenancies` (`id`) ON DELETE SET NULL;
 
 --
 -- Constraints for table `conversation_participants`
@@ -1388,7 +1388,7 @@ ALTER TABLE `co_tenancy_posts`
 -- Constraints for table `co_tenants`
 --
 ALTER TABLE `co_tenants`
-  ADD CONSTRAINT `co_tenants_ibfk_1` FOREIGN KEY (`booking_id`) REFERENCES `bookings` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `co_tenants_ibfk_1` FOREIGN KEY (`tenancy_id`) REFERENCES `tenancies` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `co_tenants_ibfk_2` FOREIGN KEY (`student_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   ADD CONSTRAINT `co_tenants_ibfk_3` FOREIGN KEY (`added_by`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 

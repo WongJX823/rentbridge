@@ -62,7 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         switch ($old['duration_type']) {
             case 'semester_4':
-                $endTs = strtotime('+4 months', $startTs);
+                $endTs = strtotime('+98 days', $startTs); // 14 weeks
                 break;
             case 'academic_8':
                 $endTs = strtotime('+8 months', $startTs);
@@ -245,18 +245,19 @@ $today = date('Y-m-d');
                         <div class="row g-3">
                             <?php
                             $options = [
-                                'semester_4'   => ['1 Semester',     '4 months',  4],
-                                'academic_8'   => ['Academic Year',  '8 months',  8],
-                                'full_year_12' => ['Full Year',      '12 months', 12],
-                                'custom'       => ['Custom range',   'You pick',  null],
+                                'semester_4'   => ['1 Semester',     '14 weeks',  'days',   98],
+                                'academic_8'   => ['Academic Year',  '8 months',  'months',  8],
+                                'full_year_12' => ['Full Year',      '12 months', 'months', 12],
+                                'custom'       => ['Custom range',   'You pick',  null,    null],
                             ];
-                            foreach ($options as $key => [$label, $sub, $months]):
+                            foreach ($options as $key => [$label, $sub, $unit, $value]):
                             ?>
                             <div class="col-md-6">
                                 <label class="duration-card <?= $old['duration_type'] === $key ? 'selected' : '' ?>">
                                     <input type="radio" name="duration_type" value="<?= $key ?>"
                                            <?= $old['duration_type'] === $key ? 'checked' : '' ?>
-                                           data-months="<?= $months ?? '' ?>">
+                                           <?= $unit === 'months' ? 'data-months="'.$value.'"' : '' ?>
+                                           <?= $unit === 'days'   ? 'data-days="'.$value.'"'   : '' ?>>
                                     <div class="duration-card__label"><?= e($label) ?></div>
                                     <div class="duration-card__sub"><?= e($sub) ?></div>
                                 </label>
@@ -336,13 +337,19 @@ $today = date('Y-m-d');
         r.setMonth(r.getMonth() + n);
         return r;
     }
+    function addDays(d, n) {
+        const r = new Date(d);
+        r.setDate(r.getDate() + n);
+        return r;
+    }
 
     function update() {
         const startVal = startInput.value;
         const selected = document.querySelector('input[name="duration_type"]:checked');
         if (!selected) return;
 
-        const months  = selected.dataset.months ? parseInt(selected.dataset.months) : null;
+        const months   = selected.dataset.months ? parseInt(selected.dataset.months) : null;
+        const days     = selected.dataset.days   ? parseInt(selected.dataset.days)   : null;
         const isCustom = selected.value === 'custom';
 
         customWrap.style.display = isCustom ? 'block' : 'none';
@@ -351,18 +358,21 @@ $today = date('Y-m-d');
 
         const startDate = new Date(startVal);
         let endDate;
-        let totalMonths;
+        let totalCost;
 
         if (isCustom) {
             if (!endInput.value) { summary.style.display = 'none'; return; }
             endDate = new Date(endInput.value);
             if (endDate <= startDate) { summary.style.display = 'none'; return; }
-            totalMonths = (endDate.getFullYear() - startDate.getFullYear()) * 12
-                        + (endDate.getMonth() - startDate.getMonth());
-            if (totalMonths < 1) totalMonths = 1;
+            const diffMonths = (endDate.getFullYear() - startDate.getFullYear()) * 12
+                             + (endDate.getMonth() - startDate.getMonth());
+            totalCost = rent * Math.max(1, diffMonths);
+        } else if (days !== null) {
+            endDate   = addDays(startDate, days);
+            totalCost = rent * (days / 30.44); // prorate by actual days
         } else {
-            endDate = addMonths(startDate, months);
-            totalMonths = months;
+            endDate   = addMonths(startDate, months);
+            totalCost = rent * months;
         }
 
         const cards = document.querySelectorAll('.duration-card');
@@ -371,7 +381,7 @@ $today = date('Y-m-d');
 
         sumStart.textContent = fmt(startDate);
         sumEnd.textContent   = fmt(endDate);
-        sumTotal.textContent = 'RM ' + (rent * totalMonths).toLocaleString('en-MY');
+        sumTotal.textContent = 'RM ' + Math.round(totalCost).toLocaleString('en-MY');
         summary.style.display = 'block';
     }
 
