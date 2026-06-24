@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Agent layout wrapper — sticky sidebar + sticky tab bar.
  */
@@ -28,7 +28,7 @@ $totalUnread = $unreadChat + $unreadNotif;
 
 // Urgent case count — for sidebar badge
 $stmt = $pdo->prepare("
-    SELECT COUNT(*) FROM bookings
+    SELECT COUNT(*) FROM tenancies
      WHERE agent_id = ?
        AND status IN ('pending_agent','agent_verifying')
 ");

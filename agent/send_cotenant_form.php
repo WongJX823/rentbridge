@@ -1,11 +1,11 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/chat.php';
 require_role('agent');
 
-$bookingId = (int)($_POST['booking_id'] ?? 0);
-if ($bookingId <= 0) {
-    die('Invalid booking.');
+$tenancyId = (int)($_POST['tenancy_id'] ?? 0);
+if ($tenancyId <= 0) {
+    die('Invalid tenancy.');
 }
 
 verify_csrf();
@@ -13,34 +13,34 @@ verify_csrf();
 $pdo = db();
 $userId = current_user_id();
 
-// Verify agent is assigned to this booking
+// Verify agent is assigned to this tenancy
 $stmt = $pdo->prepare("
     SELECT b.id, b.student_id, b.agent_id, b.property_id,
            p.title AS property_title
-      FROM bookings b
+      FROM tenancies b
       JOIN properties p ON p.id = b.property_id
      WHERE b.id = ? AND b.agent_id = ? LIMIT 1
 ");
-$stmt->execute([$bookingId, $userId]);
-$booking = $stmt->fetch();
+$stmt->execute([$tenancyId, $userId]);
+$tenancy = $stmt->fetch();
 
-if (!$booking) {
-    die('Booking not found or you are not the assigned agent.');
+if (!$tenancy) {
+    die('Tenancy not found or you are not the assigned agent.');
 }
 
 // Find or create conversation between agent and student
 $convoId = find_or_create_conversation(
     $userId,
-    (int)$booking['student_id'],
+    (int)$tenancy['student_id'],
     'agent_case',
     null,
-    $bookingId
+    $tenancyId
 );
 
 // Send the special message
 $metadata = json_encode([
-    'booking_id'     => $bookingId,
-    'property_title' => $booking['property_title'],
+    'tenancy_id'     => $tenancyId,
+    'property_title' => $tenancy['property_title'],
 ]);
 
 $stmt = $pdo->prepare("
@@ -56,13 +56,13 @@ $stmt->execute([
 
 // Notify student
 notify(
-    (int)$booking['student_id'],
+    (int)$tenancy['student_id'],
     'cotenant_form_request',
     'Agent requested co-tenant details',
-    'Please open the chat to fill in co-tenant info for "' . $booking['property_title'] . '".',
+    'Please open the chat to fill in co-tenant info for "' . $tenancy['property_title'] . '".',
     '/rentbridge/chat.php?id=' . $convoId
 );
 
 set_flash('success', 'Co-tenant form sent to student via chat.');
-header('Location: /rentbridge/agent/case.php?id=' . $bookingId);
+header('Location: /rentbridge/agent/case.php?id=' . $tenancyId);
 exit;

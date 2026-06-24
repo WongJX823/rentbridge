@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../../includes/auth.php';
 require_role('admin');
 
@@ -11,7 +11,7 @@ if (($_GET['export'] ?? '') === 'pricing') {
                MIN(monthly_rent) AS min_rent,
                MAX(monthly_rent) AS max_rent
           FROM properties
-         WHERE status IN ('available','booked','rented')
+         WHERE status IN ('available','reserved','rented')
          GROUP BY city, property_type
          ORDER BY city ASC, property_type ASC
     ");
@@ -55,8 +55,8 @@ $rangeDate = match ($range) {
 $totalStudents   = (int)$pdo->query("SELECT COUNT(*) FROM users WHERE primary_role='student' AND status='active'")->fetchColumn();
 $totalLandlords  = (int)$pdo->query("SELECT COUNT(*) FROM users WHERE primary_role='landlord' AND status='active'")->fetchColumn();
 $totalProperties = (int)$pdo->query("SELECT COUNT(*) FROM properties")->fetchColumn();
-$totalTenancies  = (int)$pdo->query("SELECT COUNT(*) FROM bookings")->fetchColumn();
-$activeTenancies = (int)$pdo->query("SELECT COUNT(*) FROM bookings WHERE status='active'")->fetchColumn();
+$totalTenancies  = (int)$pdo->query("SELECT COUNT(*) FROM tenancies")->fetchColumn();
+$activeTenancies = (int)$pdo->query("SELECT COUNT(*) FROM tenancies WHERE status='active'")->fetchColumn();
 $totalRevenue    = (float)$pdo->query("SELECT COALESCE(SUM(total_payable),0) FROM agent_commissions WHERE status IN ('earned','released','paid')")->fetchColumn();
 
 // === CHART 1: New users joined per month ===
@@ -85,7 +85,7 @@ $propStatus = $stmt->fetchAll();
 $stmt = $pdo->query("
     SELECT city, COUNT(*) AS cnt
       FROM properties
-     WHERE status IN ('available','booked','rented')
+     WHERE status IN ('available','reserved','rented')
      GROUP BY city
      ORDER BY cnt DESC
      LIMIT 10
@@ -98,7 +98,7 @@ $stmt = $pdo->prepare("
            COUNT(*) AS total,
            SUM(CASE WHEN status='active' THEN 1 ELSE 0 END) AS active,
            SUM(CASE WHEN status='completed' THEN 1 ELSE 0 END) AS completed
-      FROM bookings
+      FROM tenancies
      WHERE created_at >= ?
      GROUP BY month
      ORDER BY month ASC
@@ -115,7 +115,7 @@ $stmt = $pdo->query("
            MIN(monthly_rent) AS min_rent,
            MAX(monthly_rent) AS max_rent
       FROM properties
-     WHERE status IN ('available','booked','rented')
+     WHERE status IN ('available','reserved','rented')
      GROUP BY city, property_type
      ORDER BY city ASC, property_type ASC
 ");
@@ -428,7 +428,7 @@ const propStatusData = <?= json_encode($propStatus) ?>;
 const statusLabels = {
     'pending_approval': 'Pending',
     'available': 'Available',
-    'booked': 'Booked',
+    'reserved': 'Reserved',
     'rented': 'Rented',
     'hidden': 'Hidden',
     'rejected': 'Rejected'
@@ -436,7 +436,7 @@ const statusLabels = {
 const statusColors = {
     'pending_approval': colors.gold,
     'available': colors.emerald,
-    'booked': colors.info,
+    'reserved': colors.info,
     'rented': colors.navy,
     'hidden': colors.grey,
     'rejected': colors.danger

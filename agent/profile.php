@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../includes/auth.php';
 require_role('agent');
 
@@ -27,7 +27,7 @@ $stmt = $pdo->prepare("
         SUM(status = 'active')           AS active_cases,
         SUM(status = 'completed')        AS completed_cases,
         SUM(status = 'pending_agent')    AS pending_cases
-      FROM bookings
+      FROM tenancies
      WHERE agent_id = ?
 ");
 $stmt->execute([$userId]);

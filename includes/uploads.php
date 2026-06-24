@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * File upload helpers
  * Centralizes validation + safe filename generation.
@@ -213,9 +213,9 @@ function can_view_property_documents(int $propertyId, int $userId, string $role)
     }
 
     if ($role === 'agent') {
-        // Agent can view if they're currently assigned to a booking on this property
+        // Agent can view if they're currently assigned to a tenancy on this property
         $stmt = $pdo->prepare("
-            SELECT 1 FROM bookings
+            SELECT 1 FROM tenancies
              WHERE property_id = ?
                AND agent_id = ?
                AND status IN ('agent_assigned','agent_verifying','agent_verified','contract_pending','active')

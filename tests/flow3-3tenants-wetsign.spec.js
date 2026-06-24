@@ -1,8 +1,8 @@
-/**
+﻿/**
  * FLOW 3 — 3-tenant group, agent uploads physically signed PDF (wet sign)
  * UC-08 to UC-11
  * Actors: Student 1, Landlord, Agent, (public verify)
- * Covers: 3-person booking → contract generated → wet-sign PDF uploaded → verify URL
+ * Covers: 3-person tenancy → contract generated → wet-sign PDF uploaded → verify URL
  *
  * Pre-condition: Second approved Whole Unit property pre-seeded.
  * test_document.pdf used as stand-in for the scanned wet-signed PDF.
@@ -17,7 +17,7 @@ const CO_TENANTS = [
   { name: 'Priya Nair',   ic: '021308-07-9876', phone: '013-9876543', email: 's3@test.com', address: 'No. 15, Jalan Harmoni, Selangor' },
 ];
 
-let bookingId;
+let tenancyId;
 let contractRef;
 
 test.describe('Flow 3A–B — 3-student tenancy initiated', () => {
@@ -28,7 +28,7 @@ test.describe('Flow 3A–B — 3-student tenancy initiated', () => {
     await page.goto('/listings.php');
     await page.waitForLoadState('networkidle');
 
-    // Pick second property (skip first if already booked)
+    // Pick second property (skip first if already reserved)
     const listings = page.locator('a[href*="property.php"], .property-card a').nth(1);
     if (await listings.count()) {
       await listings.click();
@@ -114,14 +114,14 @@ test.describe('Flow 3C — Landlord fills Tenant Info Form (3 tenants)', () => {
     await submitBtn.click();
     await page.waitForLoadState('networkidle');
 
-    await expect(page.locator('.alert-success, text=Booking, text=berjaya')).toBeVisible().catch(() => {});
+    await expect(page.locator('.alert-success, text=Tenancy, text=berjaya')).toBeVisible().catch(() => {});
   });
 
 });
 
 test.describe('Flow 3D — Agent uploads wet-signed PDF', () => {
 
-  test('UC-10: agent generates contract then uploads signed PDF; booking becomes active', async ({ page }) => {
+  test('UC-10: agent generates contract then uploads signed PDF; tenancy becomes active', async ({ page }) => {
     await login(page, 'agent');
 
     await page.goto('/agent/dashboard.php');
@@ -133,10 +133,10 @@ test.describe('Flow 3D — Agent uploads wet-signed PDF', () => {
     await caseLink.click();
     await page.waitForLoadState('networkidle');
 
-    // Capture booking ID
+    // Capture tenancy ID
     const url = page.url();
     const bm = url.match(/id=(\d+)/);
-    if (bm) bookingId = bm[1];
+    if (bm) tenancyId = bm[1];
 
     // Generate contract
     const genBtn = page.locator('a[href*="generate_contract"], a:has-text("Generate Contract"), button:has-text("Generate Contract")').first();

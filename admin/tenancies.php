@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../includes/auth.php';
 require_role('admin');
 
@@ -26,14 +26,14 @@ $statusGroups = [
 $counts = ['all' => 0];
 foreach ($statusGroups as $key => $statuses) {
     $ph = implode(',', array_fill(0, count($statuses), '?'));
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM bookings WHERE status IN ($ph)");
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM tenancies WHERE status IN ($ph)");
     $stmt->execute($statuses);
     $counts[$key] = (int)$stmt->fetchColumn();
     $counts['all'] += $counts[$key];
 }
 // Stuck: pending_agent with no agent_id
 $counts['stuck'] = (int)$pdo->query(
-    "SELECT COUNT(*) FROM bookings WHERE status = 'pending_agent' AND agent_id IS NULL"
+    "SELECT COUNT(*) FROM tenancies WHERE status = 'pending_agent' AND agent_id IS NULL"
 )->fetchColumn();
 
 // --- BUILD QUERY ---
@@ -65,14 +65,14 @@ $stmt = $pdo->prepare("
            a.full_name AS agent_name,
            (SELECT GROUP_CONCAT(ct.full_name SEPARATOR ', ')
               FROM co_tenants ct
-             WHERE ct.booking_id = b.id 
+             WHERE ct.tenancy_id = b.id 
                AND ct.status != 'removed'
              ORDER BY ct.sign_order ASC) AS all_tenant_names,
            (SELECT COUNT(*)
               FROM co_tenants ct
-             WHERE ct.booking_id = b.id 
+             WHERE ct.tenancy_id = b.id 
                AND ct.status != 'removed') AS tenant_count
-      FROM bookings b
+      FROM tenancies b
       JOIN properties p ON p.id = b.property_id
       JOIN students s ON s.user_id = b.student_id
       JOIN landlords l ON l.user_id = b.landlord_id
@@ -81,26 +81,26 @@ $stmt = $pdo->prepare("
      ORDER BY b.created_at DESC
 ");
 $stmt->execute($params);
-$bookings = $stmt->fetchAll();
+$tenancies = $stmt->fetchAll();
 
 // --- LAYOUT SETUP ---
-$pageTitle = 'Bookings';
-$activeNav = 'bookings';
+$pageTitle = 'Tenancies';
+$activeNav = 'tenancies';
 
-function build_booking_tab_url(string $tab, string $q): string {
+function build_tenancy_tab_url(string $tab, string $q): string {
     $params = ['tab' => $tab];
     if ($q !== '') $params['q'] = $q;
     return '?' . http_build_query($params);
 }
 
 $pageTabs = [
-    ['label' => 'All',        'href' => build_booking_tab_url('all',        $searchQuery), 'active' => $tab==='all',        'count' => $counts['all']],
-    ['label' => 'Pending',    'href' => build_booking_tab_url('pending',    $searchQuery), 'active' => $tab==='pending',    'count' => $counts['pending']],
-    ['label' => 'Inspecting', 'href' => build_booking_tab_url('inspecting', $searchQuery), 'active' => $tab==='inspecting', 'count' => $counts['inspecting']],
-    ['label' => 'Active',     'href' => build_booking_tab_url('active',     $searchQuery), 'active' => $tab==='active',     'count' => $counts['active']],
-    ['label' => 'Completed',  'href' => build_booking_tab_url('completed',  $searchQuery), 'active' => $tab==='completed',  'count' => $counts['completed']],
-    ['label' => 'Cancelled',  'href' => build_booking_tab_url('cancelled',  $searchQuery), 'active' => $tab==='cancelled',  'count' => $counts['cancelled']],
-    ['label' => 'Stuck',      'href' => build_booking_tab_url('stuck',      $searchQuery), 'active' => $tab==='stuck',      'count' => $counts['stuck']],
+    ['label' => 'All',        'href' => build_tenancy_tab_url('all',        $searchQuery), 'active' => $tab==='all',        'count' => $counts['all']],
+    ['label' => 'Pending',    'href' => build_tenancy_tab_url('pending',    $searchQuery), 'active' => $tab==='pending',    'count' => $counts['pending']],
+    ['label' => 'Inspecting', 'href' => build_tenancy_tab_url('inspecting', $searchQuery), 'active' => $tab==='inspecting', 'count' => $counts['inspecting']],
+    ['label' => 'Active',     'href' => build_tenancy_tab_url('active',     $searchQuery), 'active' => $tab==='active',     'count' => $counts['active']],
+    ['label' => 'Completed',  'href' => build_tenancy_tab_url('completed',  $searchQuery), 'active' => $tab==='completed',  'count' => $counts['completed']],
+    ['label' => 'Cancelled',  'href' => build_tenancy_tab_url('cancelled',  $searchQuery), 'active' => $tab==='cancelled',  'count' => $counts['cancelled']],
+    ['label' => 'Stuck',      'href' => build_tenancy_tab_url('stuck',      $searchQuery), 'active' => $tab==='stuck',      'count' => $counts['stuck']],
 ];
 
 // Filter drawer
@@ -123,7 +123,7 @@ ob_start();
 <?php
 $filterContent = ob_get_clean();
 
-function booking_status_label_admin(string $status, ?string $signedPath = null): array {
+function tenancy_status_label_admin(string $status, ?string $signedPath = null): array {
     // If contract is signed, override 'active' display
     if ($signedPath !== null && $status === 'active') {
         return ['✓ Signed & Active', 'success'];
@@ -149,12 +149,12 @@ function booking_status_label_admin(string $status, ?string $signedPath = null):
 ob_start();
 ?>
 
-<?php if (empty($bookings)): ?>
+<?php if (empty($tenancies)): ?>
     <div class="text-center py-5 bg-white rounded-3 border">
         <i class="bi bi-clipboard" style="font-size: 3rem; color: rgba(15,44,82,0.15);"></i>
-        <h4 class="mt-3">No bookings found</h4>
+        <h4 class="mt-3">No tenancies found</h4>
         <p class="text-secondary small">
-            <?= $searchQuery ? 'Try a different search.' : 'No bookings in this tab.' ?>
+            <?= $searchQuery ? 'Try a different search.' : 'No tenancies in this tab.' ?>
         </p>
     </div>
 <?php else: ?>
@@ -172,8 +172,8 @@ ob_start();
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ($bookings as $b):
-                    [$label, $color] = booking_status_label_admin($b['status'], $b['signed_contract_path'] ?? null);
+                <?php foreach ($tenancies as $b):
+                    [$label, $color] = tenancy_status_label_admin($b['status'], $b['signed_contract_path'] ?? null);
                 ?>
                     <tr>
                         <td class="ps-3">
@@ -220,7 +220,7 @@ ob_start();
                         </td>
                         <td><span class="badge bg-<?= $color ?>"><?= e($label) ?></span></td>
                         <td class="text-end pe-3">
-                            <a href="/rentbridge/admin/booking.php?id=<?= (int)$b['id'] ?>"
+                            <a href="/rentbridge/admin/tenancy.php?id=<?= (int)$b['id'] ?>"
                                class="btn btn-sm btn-outline-dark">
                                 View <i class="bi bi-arrow-right ms-1"></i>
                             </a>
@@ -232,7 +232,7 @@ ob_start();
     </div>
 
     <p class="text-secondary small mt-3 mb-0">
-        Showing <?= count($bookings) ?> <?= count($bookings) === 1 ? 'booking' : 'bookings' ?>
+        Showing <?= count($tenancies) ?> <?= count($tenancies) === 1 ? 'tenancy' : 'tenancies' ?>
         <?php if ($searchQuery): ?> (filtered)<?php endif; ?>
     </p>
 <?php endif; ?>

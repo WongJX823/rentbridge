@@ -1,4 +1,4 @@
--- Housemate application system + group chat support
+﻿-- Housemate application system + group chat support
 -- Run against dbrb_2026
 
 -- Applications table
@@ -36,6 +36,6 @@ ALTER TABLE conversations MODIFY user_b INT NULL;
 -- Add housemate_group to context_type enum
 ALTER TABLE conversations
     MODIFY context_type ENUM(
-        'property_inquiry','booking','friend','agent_case',
+        'property_inquiry','tenancy','friend','agent_case',
         'other','contract_prep','housemate_group'
     ) NOT NULL DEFAULT 'other';

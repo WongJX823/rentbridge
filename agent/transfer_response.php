@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/transfers.php';
 require_role('agent');
@@ -72,16 +72,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Fetch active bookings for context
+// Fetch active tenancies for context
 $stmt = $pdo->prepare("
     SELECT b.id, b.status, s.full_name AS student_name
-      FROM bookings b
+      FROM tenancies b
       JOIN students s ON s.user_id = b.student_id
      WHERE b.property_id = ? AND b.agent_id = ?
        AND b.status IN ('pending_agent','agent_assigned','agent_verifying','agent_verified','contract_pending','active')
 ");
 $stmt->execute([$transfer['property_id'], $transfer['requesting_agent_id']]);
-$bookings = $stmt->fetchAll();
+$tenancies = $stmt->fetchAll();
 
 $pageTitle = 'Transfer Offer';
 $activeNav = 'cases';
@@ -114,14 +114,14 @@ ob_start();
         </div>
     </div>
 
-    <?php if (!empty($bookings)): ?>
+    <?php if (!empty($tenancies)): ?>
     <div class="col-md-6">
         <div class="bg-white border rounded-3 p-4 h-100">
             <h6 class="text-secondary text-uppercase small mb-2">
-                Active bookings you will inherit (<?= count($bookings) ?>)
+                Active tenancies you will inherit (<?= count($tenancies) ?>)
             </h6>
             <ul class="list-unstyled mb-0 small">
-                <?php foreach ($bookings as $b): ?>
+                <?php foreach ($tenancies as $b): ?>
                     <li class="mb-1">
                         <code>#<?= (int)$b['id'] ?></code>
                         <?= e($b['student_name']) ?>
@@ -155,7 +155,7 @@ ob_start();
             <h6 class="text-secondary text-uppercase small mb-3">Your response</h6>
             <div class="alert alert-info small border-0" style="background:var(--rb-cream);">
                 <i class="bi bi-info-circle"></i>
-                Accepting means you take full responsibility for this property and all its bookings
+                Accepting means you take full responsibility for this property and all its tenancies
                 from this point on. The first agent to accept in this batch wins the case.
             </div>
             <form method="POST" class="d-flex gap-2">

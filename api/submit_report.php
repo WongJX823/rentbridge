@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/reports.php';
 
@@ -19,7 +19,7 @@ $reason         = trim($_POST['reason'] ?? '');
 $details        = trim(substr($_POST['details'] ?? '', 0, 2000));
 
 $allowedReasons = ['harassment', 'scam', 'fake_information', 'misconduct', 'fraud', 'other'];
-$allowedCtx     = ['booking', 'message', 'general'];
+$allowedCtx     = ['tenancy', 'message', 'general'];
 
 if ($reportedUserId <= 0) {
     echo json_encode(['ok' => false, 'error' => 'No user selected.']);

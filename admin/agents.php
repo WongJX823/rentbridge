@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../includes/auth.php';
 require_role('admin');
 
@@ -25,7 +25,7 @@ $stmt = $pdo->query("
     SELECT COUNT(DISTINCT u.id)
       FROM users u
       JOIN agents a ON a.user_id = u.id
-      JOIN bookings b ON b.agent_id = u.id
+      JOIN tenancies b ON b.agent_id = u.id
      WHERE u.primary_role = 'agent'
        AND u.status = 'active'
        AND b.status IN ('agent_verifying','agent_verified','contract_pending')
@@ -41,7 +41,7 @@ $joinAssigned = '';
 if ($tab === 'assigned') {
     // Special tab: agents with active inspection cases
     $joinAssigned = "
-        JOIN bookings b ON b.agent_id = u.id
+        JOIN tenancies b ON b.agent_id = u.id
             AND b.status IN ('agent_verifying','agent_verified','contract_pending')
         JOIN properties p ON p.id = b.property_id
     ";
@@ -63,22 +63,22 @@ if ($filterDept !== '') {
     $params[] = $filterDept;
 }
 
-// For "assigned" tab, include property + booking details
+// For "assigned" tab, include property + tenancy details
 $selectCols = "u.id, u.email, u.status, u.created_at,
                a.full_name, a.staff_id, a.department,
                a.current_caseload, a.max_caseload, a.availability";
 
 if ($tab === 'assigned') {
     $selectCols .= ",
-                   b.id AS booking_id,
-                   b.status AS booking_status,
-                   b.created_at AS booking_created,
+                   b.id AS tenancy_id,
+                   b.status AS tenancy_status,
+                   b.created_at AS tenancy_created,
                    p.id AS property_id,
                    p.title AS property_title,
                    p.city AS property_city,
                    v.deadline_at AS inspection_deadline,
                    v.outcome AS inspection_outcome";
-    $joinAssigned .= " LEFT JOIN agent_verifications v ON v.booking_id = b.id ";
+    $joinAssigned .= " LEFT JOIN agent_verifications v ON v.tenancy_id = b.id ";
 }
 
 $stmt = $pdo->prepare("
@@ -158,7 +158,7 @@ function agent_status_badge(string $status): array {
     };
 }
 
-function booking_status_label(string $status): array {
+function tenancy_status_label(string $status): array {
     return match ($status) {
         'agent_verifying'   => ['🔍 Inspecting',      'info'],
         'agent_verified'    => ['✓ Verified',         'success'],
@@ -207,7 +207,7 @@ ob_start();
             </thead>
             <tbody>
                 <?php foreach ($rows as $r):
-                    [$bStatusLabel, $bStatusColor] = booking_status_label($r['booking_status']);
+                    [$bStatusLabel, $bStatusColor] = tenancy_status_label($r['tenancy_status']);
                     $deadlineTs = $r['inspection_deadline'] ? strtotime($r['inspection_deadline']) : null;
                     $overdue    = $deadlineTs && time() > $deadlineTs;
                 ?>
@@ -229,7 +229,7 @@ ob_start();
                             </a>
                             <div class="small text-secondary">
                                 <i class="bi bi-geo-alt"></i> <?= e($r['property_city']) ?>
-                                &nbsp;·&nbsp; Booking #<?= (int)$r['booking_id'] ?>
+                                &nbsp;·&nbsp; Tenancy #<?= (int)$r['tenancy_id'] ?>
                             </div>
                         </td>
                         <td>
@@ -248,7 +248,7 @@ ob_start();
                             <?php endif; ?>
                         </td>
                         <td class="text-end pe-3">
-                            <a href="/rentbridge/admin/booking.php?id=<?= (int)$r['booking_id'] ?>"
+                            <a href="/rentbridge/admin/tenancy.php?id=<?= (int)$r['tenancy_id'] ?>"
                                class="btn btn-sm btn-outline-dark">
                                 View case <i class="bi bi-arrow-right ms-1"></i>
                             </a>

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * FLOW 2 — Single student browses, chats, and e-signs contract
  * UC-02 to UC-07
  * Actors: Student 1, Landlord, Agent
@@ -145,7 +145,7 @@ test.describe('Flow 2C — Agent sends Tenant Info Form', () => {
 
 test.describe('Flow 2D — Landlord fills Tenant Info Form (1 tenant)', () => {
 
-  test('UC-05: landlord fills single-tenant form and booking is created', async ({ page }) => {
+  test('UC-05: landlord fills single-tenant form and tenancy is created', async ({ page }) => {
     await login(page, 'landlord');
 
     await page.goto('/chat.php');
@@ -200,7 +200,7 @@ test.describe('Flow 2D — Landlord fills Tenant Info Form (1 tenant)', () => {
 
     // Assert success notice
     await expect(
-      page.locator('.alert-success, text=Booking created, text=berjaya')
+      page.locator('.alert-success, text=Tenancy created, text=berjaya')
     ).toBeVisible().catch(() => {});
   });
 
@@ -208,14 +208,14 @@ test.describe('Flow 2D — Landlord fills Tenant Info Form (1 tenant)', () => {
 
 test.describe('Flow 2E — Agent generates contract PDF', () => {
 
-  test('UC-06: agent generates contract; booking moves to contract_pending', async ({ page }) => {
+  test('UC-06: agent generates contract; tenancy moves to contract_pending', async ({ page }) => {
     await login(page, 'agent');
 
     // Navigate to agent cases / dashboard
     await page.goto('/agent/dashboard.php');
     await page.waitForLoadState('networkidle');
 
-    // Find the booking case
+    // Find the tenancy case
     const caseLink = page.locator('a[href*="case.php"]').first();
     if (!(await caseLink.count())) {
       await page.goto('/agent/cases.php');
@@ -248,7 +248,7 @@ test.describe('Flow 2E — Agent generates contract PDF', () => {
         if (m) contractId = m[1];
       }
     } else {
-      test.skip(true, 'Generate Contract button not visible — booking may not be at correct state');
+      test.skip(true, 'Generate Contract button not visible — tenancy may not be at correct state');
     }
   });
 
@@ -262,12 +262,12 @@ test.describe('Flow 2F — Student e-signs contract', () => {
     // Navigate to sign page
     const signUrl = contractId
       ? `/contracts/sign.php?id=${contractId}`
-      : '/student/booking.php';
+      : '/student/tenancy.php';
 
     await page.goto(signUrl);
     await page.waitForLoadState('networkidle');
 
-    // If redirected to booking page, find sign link
+    // If redirected to tenancy page, find sign link
     if (!page.url().includes('sign.php')) {
       const signLink = page.locator('a[href*="sign.php"]').first();
       if (await signLink.count()) {

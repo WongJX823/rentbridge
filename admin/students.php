@@ -6,7 +6,7 @@ $pdo = db();
 
 // --- TAB STATE ---
 $tab = $_GET['tab'] ?? 'all';
-$validTabs = ['all', 'booked', 'active', 'deactivated'];
+$validTabs = ['all', 'tenanted', 'active', 'deactivated'];
 if (!in_array($tab, $validTabs, true)) $tab = 'all';
 
 // --- SEARCH ---
@@ -20,8 +20,8 @@ $counts['all'] = (int)$pdo->query(
     "SELECT COUNT(*) FROM users WHERE primary_role = 'student'"
 )->fetchColumn();
 
-// Booked: students with an active contract
-$counts['booked'] = (int)$pdo->query("
+// Tenanted: students with an active contract
+$counts['tenanted'] = (int)$pdo->query("
     SELECT COUNT(DISTINCT u.id)
       FROM users u
       JOIN contracts c ON c.student_id = u.id
@@ -44,7 +44,7 @@ $where  = "u.primary_role = 'student'";
 $params = [];
 $extraJoin = '';
 
-if ($tab === 'booked') {
+if ($tab === 'tenanted') {
     $extraJoin = "JOIN contracts c ON c.student_id = u.id AND c.status = 'active'";
 } elseif ($tab === 'active') {
     $where .= " AND u.status = 'active'";
@@ -90,7 +90,7 @@ function build_student_tab_url(string $tab, string $q): string {
 
 $pageTabs = [
     ['label' => 'All',         'href' => build_student_tab_url('all',         $searchQuery), 'active' => $tab==='all',         'count' => $counts['all']],
-    ['label' => 'Booked',      'href' => build_student_tab_url('booked',      $searchQuery), 'active' => $tab==='booked',      'count' => $counts['booked']],
+    ['label' => 'Tenanted',    'href' => build_student_tab_url('tenanted',    $searchQuery), 'active' => $tab==='tenanted',    'count' => $counts['tenanted']],
     ['label' => 'Active',      'href' => build_student_tab_url('active',      $searchQuery), 'active' => $tab==='active',      'count' => $counts['active']],
     ['label' => 'Deactivated', 'href' => build_student_tab_url('deactivated', $searchQuery), 'active' => $tab==='deactivated', 'count' => $counts['deactivated']],
 ];

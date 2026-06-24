@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../includes/auth.php';
 require_role('student');
 
@@ -6,21 +6,21 @@ $pdo = db();
 
 // Handle cancel action
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'cancel') {
-    $bookingId = (int)($_POST['booking_id'] ?? 0);
+    $tenancyId = (int)($_POST['tenancy_id'] ?? 0);
     $cancellable = ['pending_landlord', 'pending_agent', 'agent_assigned'];
 
     $stmt = $pdo->prepare(
-        'SELECT id, status, agent_id FROM bookings WHERE id = ? AND student_id = ? LIMIT 1'
+        'SELECT id, status, agent_id FROM tenancies WHERE id = ? AND student_id = ? LIMIT 1'
     );
-    $stmt->execute([$bookingId, current_user_id()]);
+    $stmt->execute([$tenancyId, current_user_id()]);
     $row = $stmt->fetch();
 
     if ($row && in_array($row['status'], $cancellable, true)) {
         try {
             $pdo->beginTransaction();
 
-            $pdo->prepare("UPDATE bookings SET status = 'cancelled_by_student' WHERE id = ?")
-                ->execute([$bookingId]);
+            $pdo->prepare("UPDATE tenancies SET status = 'cancelled_by_student' WHERE id = ?")
+                ->execute([$tenancyId]);
 
             if ($row['agent_id']) {
                 $pdo->prepare(
@@ -34,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'cance
         }
     }
 
-    header('Location: /rentbridge/student/bookings.php');
+    header('Location: /rentbridge/student/tenancies.php');
     exit;
 }
 $stmt = $pdo->prepare("
@@ -47,7 +47,7 @@ $stmt = $pdo->prepare("
            (SELECT image_path FROM property_images
              WHERE property_id = p.id
              ORDER BY is_primary DESC, id ASC LIMIT 1) AS image_path
-      FROM bookings b
+      FROM tenancies b
       JOIN properties p ON p.id = b.property_id
       JOIN landlords  l ON l.user_id = b.landlord_id
       LEFT JOIN agents a ON a.user_id = b.agent_id
@@ -55,7 +55,7 @@ $stmt = $pdo->prepare("
      ORDER BY b.created_at DESC
 ");
 $stmt->execute([current_user_id()]);
-$bookings = $stmt->fetchAll();
+$tenancies = $stmt->fetchAll();
 
 // Helper: human-readable status
 function status_label(string $status): array {
@@ -78,7 +78,7 @@ function status_label(string $status): array {
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>My bookings · RentBridge</title>
+    <title>My tenancies · RentBridge</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -93,30 +93,30 @@ function status_label(string $status): array {
 <div class="container py-5">
     <div class="d-flex justify-content-between align-items-end mb-4">
         <div>
-            <h1 class="mb-1">My bookings</h1>
-            <p class="text-secondary mb-0"><?= count($bookings) ?> booking<?= count($bookings) === 1 ? '' : 's' ?></p>
+            <h1 class="mb-1">My tenancies</h1>
+            <p class="text-secondary mb-0"><?= count($tenancies) ?> tenancy<?= count($tenancies) === 1 ? '' : 's' ?></p>
         </div>
         <a href="/rentbridge/listings.php" class="btn btn-ghost">
             <i class="bi bi-search me-1"></i> Browse more
         </a>
     </div>
 
-    <?php if (empty($bookings)): ?>
+    <?php if (empty($tenancies)): ?>
         <div class="text-center py-5 bg-white rounded-3 border">
             <i class="bi bi-calendar-x" style="font-size: 3rem; color: var(--rb-line);"></i>
-            <h4 class="mt-3">No bookings yet</h4>
+            <h4 class="mt-3">No tenancies yet</h4>
             <p class="text-secondary">Find a place that feels right.</p>
             <a href="/rentbridge/listings.php" class="btn btn-primary">Browse listings</a>
         </div>
     <?php else: ?>
         <div class="row g-4">
-            <?php foreach ($bookings as $b):
+            <?php foreach ($tenancies as $b):
                 [$label, $color] = status_label($b['status']);
             ?>
                 <div class="col-12">
-                    <a href="/rentbridge/student/booking.php?id=<?= (int)$b['id'] ?>"
+                    <a href="/rentbridge/student/tenancy.php?id=<?= (int)$b['id'] ?>"
                         class="text-decoration-none text-dark d-block">
-                            <div class="bg-white border rounded-3 overflow-hidden booking-row">
+                            <div class="bg-white border rounded-3 overflow-hidden tenancy-row">
                                 <div class="row g-0">
                             <div class="col-md-3" style="background:linear-gradient(135deg,#E6ECF4,#E4F2EA); min-height: 160px;">
                                 <?php if (!empty($b['image_path'])): ?>
@@ -179,11 +179,11 @@ function status_label(string $status): array {
                                 <?php endif; ?>
                                 <?php if (in_array($b['status'], ['pending_landlord', 'pending_agent', 'agent_assigned'], true)): ?>
                                     <form method="post" class="mt-3"
-                                          onsubmit="return confirm('Cancel this booking request?')">
+                                          onsubmit="return confirm('Cancel this tenancy request?')">
                                         <input type="hidden" name="action" value="cancel">
-                                        <input type="hidden" name="booking_id" value="<?= (int)$b['id'] ?>">
+                                        <input type="hidden" name="tenancy_id" value="<?= (int)$b['id'] ?>">
                                         <button type="submit" class="btn btn-sm btn-outline-danger">
-                                            <i class="bi bi-x-circle me-1"></i>Cancel booking
+                                            <i class="bi bi-x-circle me-1"></i>Cancel tenancy
                                         </button>
                                     </form>
                                 <?php endif; ?>

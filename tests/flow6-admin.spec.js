@@ -1,8 +1,8 @@
-/**
- * FLOW 6 — Admin full flow: dashboard → analytics → users → bookings → transfer
+﻿/**
+ * FLOW 6 — Admin full flow: dashboard → analytics → users → tenancies → transfer
  * UC-21 to UC-26
  * Actor: Admin (admin@test.com)
- * Covers: dashboard counts, user stats CSV, user management, booking detail,
+ * Covers: dashboard counts, user stats CSV, user management, tenancy detail,
  *         agent transfer request, role guards, edge case inputs
  */
 
@@ -21,7 +21,7 @@ test.describe('Flow 6A — Admin login and dashboard', () => {
 
     // Dashboard shows summary counts
     await expect(
-      page.locator('.stat-card, .count-card, text=Users, text=Properties, text=Bookings')
+      page.locator('.stat-card, .count-card, text=Users, text=Properties, text=Tenancies')
     ).toBeVisible().catch(() => {});
   });
 
@@ -58,7 +58,7 @@ test.describe('Flow 6B — User analytics', () => {
 
 test.describe('Flow 6C — User management', () => {
 
-  test('UC-23: admin can search users and view detail; delete blocked for active booking', async ({ page }) => {
+  test('UC-23: admin can search users and view detail; delete blocked for active tenancy', async ({ page }) => {
     await login(page, 'admin');
 
     // Navigate to users list
@@ -83,7 +83,7 @@ test.describe('Flow 6C — User management', () => {
       await expect(page.locator('text=Ahmad Faris, text=s1@test.com, text=student')).toBeVisible().catch(() => {});
     }
 
-    // Attempt delete of user with active booking → should show error, not succeed silently
+    // Attempt delete of user with active tenancy → should show error, not succeed silently
     const deleteBtn = page.locator('button:has-text("Delete"), a:has-text("Delete User")').first();
     if (await deleteBtn.count()) {
       page.on('dialog', async (dialog) => await dialog.accept());
@@ -91,7 +91,7 @@ test.describe('Flow 6C — User management', () => {
       await page.waitForLoadState('networkidle');
       // Should NOT be on a success page; should show error or stay on same page
       const errorShown = await page.locator(
-        'text=cannot delete, text=active booking, .alert-danger, .alert-warning'
+        'text=cannot delete, text=active tenancy, .alert-danger, .alert-warning'
       ).count();
       expect(errorShown + (await page.locator('text=Ahmad Faris').count())).toBeGreaterThan(0);
     }
@@ -99,7 +99,7 @@ test.describe('Flow 6C — User management', () => {
 
 });
 
-test.describe('Flow 6D–E — Properties and bookings management', () => {
+test.describe('Flow 6D–E — Properties and tenancies management', () => {
 
   test('UC-24a: admin can filter properties by pending status', async ({ page }) => {
     await login(page, 'admin');
@@ -131,20 +131,20 @@ test.describe('Flow 6D–E — Properties and bookings management', () => {
     }
   });
 
-  test('UC-24b: admin booking detail shows co-tenant table and contract link', async ({ page }) => {
+  test('UC-24b: admin tenancy detail shows co-tenant table and contract link', async ({ page }) => {
     await login(page, 'admin');
 
-    await page.goto('/admin/bookings.php');
+    await page.goto('/admin/tenancies.php');
     await page.waitForLoadState('networkidle');
 
     await expect(page.locator('text=Fatal error')).toHaveCount(0);
 
-    const bookingLink = page.locator('a[href*="booking.php?id"]').first();
-    if (!(await bookingLink.count())) {
-      test.skip(true, 'No bookings found in admin panel');
+    const tenancyLink = page.locator('a[href*="tenancy.php?id"]').first();
+    if (!(await tenancyLink.count())) {
+      test.skip(true, 'No tenancies found in admin panel');
       return;
     }
-    await bookingLink.click();
+    await tenancyLink.click();
     await page.waitForLoadState('networkidle');
 
     // Assert co-tenant table visible

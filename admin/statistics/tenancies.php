@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../../includes/auth.php';
 require_role('admin');
 
@@ -13,7 +13,7 @@ if (($_GET['export'] ?? '') === 'tenancies') {
                s.full_name AS student_name, s.matric_no,
                l.full_name AS landlord_name,
                a.full_name AS agent_name
-          FROM bookings b
+          FROM tenancies b
           JOIN properties p ON p.id = b.property_id
           JOIN students s ON s.user_id = b.student_id
           JOIN landlords l ON l.user_id = b.landlord_id
@@ -53,12 +53,12 @@ $rangeDate = match($range) {
 };
 
 // === STAT CARDS ===
-$total       = (int)$pdo->query("SELECT COUNT(*) FROM bookings")->fetchColumn();
-$active      = (int)$pdo->query("SELECT COUNT(*) FROM bookings WHERE status='active'")->fetchColumn();
-$pending     = (int)$pdo->query("SELECT COUNT(*) FROM bookings WHERE status IN ('pending_landlord','pending_agent','agent_assigned','agent_verifying','contract_pending')")->fetchColumn();
-$completed   = (int)$pdo->query("SELECT COUNT(*) FROM bookings WHERE status='completed'")->fetchColumn();
-$cancelled   = (int)$pdo->query("SELECT COUNT(*) FROM bookings WHERE status IN ('cancelled_by_student','cancelled_by_landlord','cancelled_by_admin','rejected_by_landlord','verification_failed')")->fetchColumn();
-$totalValue  = (float)$pdo->query("SELECT COALESCE(SUM(monthly_rent),0) FROM bookings WHERE status='active'")->fetchColumn();
+$total       = (int)$pdo->query("SELECT COUNT(*) FROM tenancies")->fetchColumn();
+$active      = (int)$pdo->query("SELECT COUNT(*) FROM tenancies WHERE status='active'")->fetchColumn();
+$pending     = (int)$pdo->query("SELECT COUNT(*) FROM tenancies WHERE status IN ('pending_landlord','pending_agent','agent_assigned','agent_verifying','contract_pending')")->fetchColumn();
+$completed   = (int)$pdo->query("SELECT COUNT(*) FROM tenancies WHERE status='completed'")->fetchColumn();
+$cancelled   = (int)$pdo->query("SELECT COUNT(*) FROM tenancies WHERE status IN ('cancelled_by_student','cancelled_by_landlord','cancelled_by_admin','rejected_by_landlord','verification_failed')")->fetchColumn();
+$totalValue  = (float)$pdo->query("SELECT COALESCE(SUM(monthly_rent),0) FROM tenancies WHERE status='active'")->fetchColumn();
 
 // === FUNNEL: status counts (for conversion chart) ===
 $stmt = $pdo->query("
@@ -70,14 +70,14 @@ $stmt = $pdo->query("
        SUM(CASE WHEN status IN ('active','completed','contract_pending') THEN 1 ELSE 0 END) AS contract_stage,
        SUM(CASE WHEN status IN ('active','completed') THEN 1 ELSE 0 END) AS signed_active,
        SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS completed
-     FROM bookings
+     FROM tenancies
 ");
 $funnel = $stmt->fetch();
 
 // === CHART: Status distribution (pie) ===
 $stmt = $pdo->query("
     SELECT status, COUNT(*) AS cnt
-      FROM bookings
+      FROM tenancies
      GROUP BY status
      ORDER BY cnt DESC
 ");
@@ -91,7 +91,7 @@ $stmt = $pdo->prepare("
            SUM(CASE WHEN status IN ('cancelled_by_student','cancelled_by_landlord','cancelled_by_admin','rejected_by_landlord','verification_failed') THEN 1 ELSE 0 END) AS cancelled,
            SUM(CASE WHEN status IN ('pending_landlord','pending_agent','agent_assigned','agent_verifying','contract_pending') THEN 1 ELSE 0 END) AS in_progress,
            COUNT(*) AS total
-      FROM bookings
+      FROM tenancies
      WHERE created_at >= ?
      GROUP BY month
      ORDER BY month ASC
@@ -102,7 +102,7 @@ $monthlyTrend = $stmt->fetchAll();
 // === CHART: Average tenancy duration ===
 $stmt = $pdo->query("
     SELECT duration_type, COUNT(*) AS cnt
-      FROM bookings
+      FROM tenancies
      GROUP BY duration_type
 ");
 $durationDist = $stmt->fetchAll();
@@ -110,7 +110,7 @@ $durationDist = $stmt->fetchAll();
 // === CHART: Cancellation reasons (top reasons) ===
 $stmt = $pdo->query("
     SELECT status, COUNT(*) AS cnt
-      FROM bookings
+      FROM tenancies
      WHERE status IN ('cancelled_by_student','cancelled_by_landlord','cancelled_by_admin','rejected_by_landlord','verification_failed')
      GROUP BY status
 ");

@@ -1,9 +1,9 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../includes/auth.php';
-require_once __DIR__ . '/../includes/bookings.php';
+require_once __DIR__ . '/../includes/tenancies.php';
 require_role('agent');
 
-$caseId = (int)($_GET['id'] ?? $_POST['booking_id'] ?? 0);
+$caseId = (int)($_GET['id'] ?? $_POST['tenancy_id'] ?? 0);
 if ($caseId <= 0) {
     http_response_code(400);
     die('Invalid case ID.');
@@ -26,7 +26,7 @@ $stmt = $pdo->prepare("
            l.full_name   AS landlord_name,
            l.phone       AS landlord_phone,
            ul.email      AS landlord_email
-      FROM bookings b
+      FROM tenancies b
       JOIN properties p ON p.id = b.property_id
       JOIN students   s ON s.user_id = b.student_id
       JOIN users      us ON us.id = b.student_id
@@ -65,20 +65,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 // Status → agent_verifying (NEW: inspection step before contract)
                 $stmt = $pdo->prepare(
-                    'UPDATE bookings SET status = "agent_verifying" WHERE id = ?'
+                    'UPDATE tenancies SET status = "agent_verifying" WHERE id = ?'
                 );
                 $stmt->execute([$caseId]);
 
-                // Mark property as booked (off public listings)
+                // Mark property as reserved (off public listings)
                 $stmt = $pdo->prepare(
-                    'UPDATE properties SET status = "booked" WHERE id = ?'
+                    'UPDATE properties SET status = "reserved" WHERE id = ?'
                 );
                 $stmt->execute([(int)$case['property_id']]);
 
                 // Create the inspection record with 5-day deadline
                 $stmt = $pdo->prepare(
                     'INSERT INTO agent_verifications
-                        (booking_id, agent_id, started_at, deadline_at)
+                        (tenancy_id, agent_id, started_at, deadline_at)
                      VALUES (?, ?, NOW(), DATE_ADD(NOW(), INTERVAL 5 DAY))'
                 );
                 $stmt->execute([$caseId, current_user_id()]);
@@ -92,7 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'Your UTeM agent is on the case!',
                     current_user_display_name() . ' will inspect "' . $case['property_title']
                         . '" within 5 days. The contract will be issued after inspection passes.',
-                    '/rentbridge/student/bookings.php'
+                    '/rentbridge/student/tenancies.php'
                 );
 
                 // Notify landlord
@@ -103,11 +103,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     current_user_display_name() . ' (UTeM staff) will inspect your property "'
                         . $case['property_title']
                         . '" within 5 days. Please arrange access (key handover or in-person meet).',
-                    '/rentbridge/landlord/bookings.php'
+                    '/rentbridge/landlord/tenancies.php'
                 );
 
                 set_flash('success', 'Case accepted. Please inspect the property within 5 days.');
-                header('Location: /rentbridge/agent/inspection.php?booking_id=' . $caseId);
+                header('Location: /rentbridge/agent/inspection.php?tenancy_id=' . $caseId);
                 exit;
             }
 
@@ -318,7 +318,7 @@ $months  = max(1, (int)round(($endTs - $startTs) / (30.44 * 86400)));
 
     <form method="POST" action="/rentbridge/agent/send_cotenant_form.php" class="d-inline">
         <?= csrf_field() ?>
-        <input type="hidden" name="booking_id" value="<?= (int)$case['id'] ?>">
+        <input type="hidden" name="tenancy_id" value="<?= (int)$case['id'] ?>">
         <button type="submit" class="btn btn-warning btn-sm">
             <i class="bi bi-send me-1"></i>
             <?= $additionalCount > 0 ? 'Re-send' : 'Send' ?> co-tenant form to student
@@ -332,7 +332,7 @@ $months  = max(1, (int)round(($endTs - $startTs) / (30.44 * 86400)));
 </div>  
 <!-- CONTRACT GENERATION -->
 <?php
-$stmt = $pdo->prepare("SELECT * FROM contracts WHERE booking_id = ? LIMIT 1");
+$stmt = $pdo->prepare("SELECT * FROM contracts WHERE tenancy_id = ? LIMIT 1");
 $stmt->execute([(int)$case['id']]);
 $contract = $stmt->fetch();
 
@@ -367,7 +367,7 @@ foreach ($coTenants as $ct) {
             Generate the contract PDF. You'll download it and send to all parties
             (landlord + tenants) for handwritten signing via WhatsApp/email.
         </p>
-        <a href="/rentbridge/agent/generate_contract.php?booking_id=<?= (int)$case['id'] ?>"
+        <a href="/rentbridge/agent/generate_contract.php?tenancy_id=<?= (int)$case['id'] ?>"
            class="btn btn-success">
             <i class="bi bi-file-earmark-pdf me-1"></i> Generate contract PDF
         </a>
@@ -395,7 +395,7 @@ foreach ($coTenants as $ct) {
         </div>
 
         <div class="d-flex gap-2 flex-wrap">
-            <a href="/rentbridge/agent/generate_contract.php?booking_id=<?= (int)$case['id'] ?>"
+            <a href="/rentbridge/agent/generate_contract.php?tenancy_id=<?= (int)$case['id'] ?>"
                target="_blank" class="btn btn-primary">
                 <i class="bi bi-download me-1"></i> Download PDF
             </a>
@@ -417,7 +417,7 @@ foreach ($coTenants as $ct) {
     <form method="POST" action="/rentbridge/agent/upload_signed_contract.php"
           enctype="multipart/form-data">
         <?= csrf_field() ?>
-        <input type="hidden" name="booking_id" value="<?= (int)$case['id'] ?>">
+        <input type="hidden" name="tenancy_id" value="<?= (int)$case['id'] ?>">
 
         <div class="mb-3">
             <input type="file" name="signed_pdf" class="form-control"
@@ -477,7 +477,7 @@ if ($mixedSigningPending): ?>
 <h6 class="text-secondary text-uppercase small mb-2">Upload merged signed contract</h6>
 <form method="POST" action="/rentbridge/agent/upload_signed_contract.php" enctype="multipart/form-data">
     <?= csrf_field() ?>
-    <input type="hidden" name="booking_id" value="<?= (int)$case['id'] ?>">
+    <input type="hidden" name="tenancy_id" value="<?= (int)$case['id'] ?>">
     <div class="mb-3">
         <input type="file" name="signed_pdf" class="form-control" accept="application/pdf" required>
         <small class="text-secondary">PDF only, max 20MB</small>
@@ -513,7 +513,7 @@ if ($mixedSigningPending): ?>
 
                         <form method="POST">
                             <?= csrf_field() ?>
-                            <input type="hidden" name="booking_id" value="<?= (int)$case['id'] ?>">
+                            <input type="hidden" name="tenancy_id" value="<?= (int)$case['id'] ?>">
 
                             <div class="mb-3">
                                 <label class="form-label">Optional message <small class="text-secondary fw-normal">— required if rejecting</small></label>
@@ -563,7 +563,7 @@ $reportSubjects = [
     ['id' => (int)$case['student_id'],  'name' => $case['student_name'],  'role' => 'student'],
     ['id' => (int)$case['landlord_id'], 'name' => $case['landlord_name'], 'role' => 'landlord'],
 ];
-render_report_modal($reportSubjects, 'booking', (int)$case['id']);
+render_report_modal($reportSubjects, 'tenancy', (int)$case['id']);
 ?>
 
 </body>

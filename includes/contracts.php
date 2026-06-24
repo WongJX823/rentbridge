@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/auth.php';
 
 /* ============================================================
@@ -37,24 +37,24 @@ TERMS;
 }
 
 /**
- * Create a contract for a booking, when the agent accepts.
+ * Create a contract for a tenancy, when the agent accepts.
  * Returns the new contract ID, or null on failure.
  */
-function create_contract_from_booking(int $bookingId): ?int {
+function create_contract_from_tenancy(int $tenancyId): ?int {
     $pdo = db();
 
-    // Fetch booking + verify it's at agent_assigned status
+    // Fetch tenancy + verify it's at agent_assigned status
     $stmt = $pdo->prepare(
-        'SELECT * FROM bookings WHERE id = ? AND status = "agent_assigned" LIMIT 1'
+        'SELECT * FROM tenancies WHERE id = ? AND status = "agent_assigned" LIMIT 1'
     );
-    $stmt->execute([$bookingId]);
-    $booking = $stmt->fetch();
+    $stmt->execute([$tenancyId]);
+    $tenancy = $stmt->fetch();
 
-    if (!$booking || !$booking['agent_id']) return null;
+    if (!$tenancy || !$tenancy['agent_id']) return null;
 
     // Already has a contract?
-    $stmt = $pdo->prepare('SELECT id FROM contracts WHERE booking_id = ? LIMIT 1');
-    $stmt->execute([$bookingId]);
+    $stmt = $pdo->prepare('SELECT id FROM contracts WHERE tenancy_id = ? LIMIT 1');
+    $stmt->execute([$tenancyId]);
     if ($stmt->fetch()) return null;
 
     try {
@@ -63,22 +63,22 @@ function create_contract_from_booking(int $bookingId): ?int {
         // Insert contract (status starts as pending_signatures)
         $stmt = $pdo->prepare(
             'INSERT INTO contracts
-                (contract_code, booking_id, student_id, landlord_id, agent_id, property_id,
+                (contract_code, tenancy_id, student_id, landlord_id, agent_id, property_id,
                  start_date, end_date, monthly_rent, deposit, terms, status)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "pending_signatures")'
         );
         // Placeholder contract_code, we'll update with real code after we have the ID
         $stmt->execute([
             'TEMP',
-            $bookingId,
-            (int)$booking['student_id'],
-            (int)$booking['landlord_id'],
-            (int)$booking['agent_id'],
-            (int)$booking['property_id'],
-            $booking['start_date'],
-            $booking['end_date'],
-            (float)$booking['monthly_rent'],
-            (float)$booking['deposit'],
+            $tenancyId,
+            (int)$tenancy['student_id'],
+            (int)$tenancy['landlord_id'],
+            (int)$tenancy['agent_id'],
+            (int)$tenancy['property_id'],
+            $tenancy['start_date'],
+            $tenancy['end_date'],
+            (float)$tenancy['monthly_rent'],
+            (float)$tenancy['deposit'],
             standard_tenancy_terms(),
         ]);
         $contractId = (int)$pdo->lastInsertId();
@@ -88,15 +88,15 @@ function create_contract_from_booking(int $bookingId): ?int {
         $stmt = $pdo->prepare('UPDATE contracts SET contract_code = ? WHERE id = ?');
         $stmt->execute([$code, $contractId]);
 
-        // Bump booking status
-        $stmt = $pdo->prepare('UPDATE bookings SET status = "contract_pending" WHERE id = ?');
-        $stmt->execute([$bookingId]);
+        // Bump tenancy status
+        $stmt = $pdo->prepare('UPDATE tenancies SET status = "contract_pending" WHERE id = ?');
+        $stmt->execute([$tenancyId]);
 
         $pdo->commit();
 
         // Notify the student (they sign first)
         notify(
-            (int)$booking['student_id'],
+            (int)$tenancy['student_id'],
             'contract_ready',
             'Contract ready for your signature',
             'Your tenancy contract (' . $code . ') is ready. Please review and sign.',
@@ -267,11 +267,11 @@ function apply_signature(int $contractId, int $userId, string $dataUrl): array {
             );
             $stmt->execute([$contractId]);
 
-            // Bump booking too
+            // Bump tenancy too
             $stmt = $pdo->prepare(
-                'UPDATE bookings SET status = "active" WHERE id = ?'
+                'UPDATE tenancies SET status = "active" WHERE id = ?'
             );
-            $stmt->execute([(int)$contract['booking_id']]);
+            $stmt->execute([(int)$contract['tenancy_id']]);
         }
 
         $pdo->commit();

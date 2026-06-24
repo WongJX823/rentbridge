@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../includes/auth.php';
 require_role('student');  // Only students can book
 
@@ -96,10 +96,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // ---- Check for overlapping bookings on this property ----
+    // ---- Check for overlapping tenancies on this property ----
     if (empty($errors)) {
         $stmt = $pdo->prepare("
-            SELECT id FROM bookings
+            SELECT id FROM tenancies
              WHERE property_id = ?
                AND status IN ('pending_landlord','pending_agent','agent_assigned',
                               'agent_verifying','agent_verified','contract_pending','active')
@@ -108,22 +108,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ");
         $stmt->execute([$propertyId, $old['end_date'], $old['start_date']]);
         if ($stmt->fetch()) {
-            $errors['general'] = 'This property already has a booking that overlaps with your dates. Please pick different dates.';
+            $errors['general'] = 'This property already has a tenancy that overlaps with your dates. Please pick different dates.';
         }
     }
 
-    // ---- Prevent student booking their own property (edge case) ----
+    // ---- Prevent student tenancy their own property (edge case) ----
     if (empty($errors) && $prop['landlord_id'] == current_user_id()) {
         $errors['general'] = 'You cannot book your own property.';
     }
 
-    // ---- All good — save the booking ----
+    // ---- All good — save the tenancy ----
     if (empty($errors)) {
         try {
             $pdo->beginTransaction();
 
             $stmt = $pdo->prepare(
-                'INSERT INTO bookings
+                'INSERT INTO tenancies
                     (student_id, property_id, landlord_id, start_date, end_date,
                      duration_type, monthly_rent, deposit, student_note, status)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, "pending_landlord")'
@@ -139,21 +139,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $prop['deposit'],
                 $old['student_note'],
             ]);
-            $bookingId = (int)$pdo->lastInsertId();
+            $tenancyId = (int)$pdo->lastInsertId();
 
             $pdo->commit();
 
             // Notify the landlord (dashboard banner)
             notify(
                 (int)$prop['landlord_id'],
-                'booking_request',
-                'New booking request',
+                'tenancy_request',
+                'New tenancy request',
                 'A student has requested to book "' . $prop['title'] . '".',
-                '/rentbridge/landlord/bookings.php?id=' . $bookingId
+                '/rentbridge/landlord/tenancies.php?id=' . $tenancyId
             );
 
-            set_flash('success', 'Booking request sent! The landlord will review and respond shortly.');
-            header('Location: /rentbridge/student/bookings.php');
+            set_flash('success', 'Tenancy request sent! The landlord will review and respond shortly.');
+            header('Location: /rentbridge/student/tenancies.php');
             exit;
 
         } catch (Throwable $e) {
@@ -277,7 +277,7 @@ $today = date('Y-m-d');
                         <?php endif; ?>
                     </div>
 
-                    <!-- Booking summary -->
+                    <!-- Tenancy summary -->
                     <div class="alert alert-light border" id="summary" style="display:none;">
                         <div class="row text-center">
                             <div class="col-sm-4">
@@ -303,7 +303,7 @@ $today = date('Y-m-d');
                     </div>
 
                     <button type="submit" class="btn btn-primary btn-lg w-100">
-                        <i class="bi bi-send me-1"></i> Send booking request
+                        <i class="bi bi-send me-1"></i> Send tenancy request
                     </button>
 
                     <p class="text-center text-secondary small mt-3 mb-0">

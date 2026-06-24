@@ -1,9 +1,9 @@
-<?php
+﻿<?php
 /**
  * Chat system — shared helpers
  *
  * Conversations are 1-to-1 between two users, with optional context
- * (a property inquiry, a booking, etc.). Users are stored canonically
+ * (a property inquiry, a tenancy, etc.). Users are stored canonically
  * with user_a < user_b.
  */
 
@@ -18,7 +18,7 @@ function find_or_create_conversation(
     int $userB,
     string $contextType = 'other',
     ?int $propertyId = null,
-    ?int $bookingId = null
+    ?int $tenancyId = null
 ): int {
     if ($userA === $userB) {
         throw new RuntimeException('Cannot create conversation with yourself.');
@@ -30,18 +30,18 @@ function find_or_create_conversation(
     $stmt = $pdo->prepare("
         SELECT id FROM conversations
          WHERE user_a = ? AND user_b = ?
-           AND (property_id <=> ?) AND (booking_id <=> ?)
+           AND (property_id <=> ?) AND (tenancy_id <=> ?)
          LIMIT 1
     ");
-    $stmt->execute([$lo, $hi, $propertyId, $bookingId]);
+    $stmt->execute([$lo, $hi, $propertyId, $tenancyId]);
     $existing = $stmt->fetchColumn();
     if ($existing) return (int)$existing;
 
     $stmt = $pdo->prepare("
-        INSERT INTO conversations (user_a, user_b, property_id, booking_id, context_type)
+        INSERT INTO conversations (user_a, user_b, property_id, tenancy_id, context_type)
         VALUES (?, ?, ?, ?, ?)
     ");
-    $stmt->execute([$lo, $hi, $propertyId, $bookingId, $contextType]);
+    $stmt->execute([$lo, $hi, $propertyId, $tenancyId, $contextType]);
     return (int)$pdo->lastInsertId();
 }
 
@@ -198,7 +198,7 @@ function mark_messages_read(int $conversationId, int $userId): void {
  */
 function get_user_inbox(int $userId): array {
     $stmt = db()->prepare("
-        SELECT c.id, c.context_type, c.property_id, c.booking_id, c.is_locked,
+        SELECT c.id, c.context_type, c.property_id, c.tenancy_id, c.is_locked,
                c.last_message_at, c.last_message_preview, c.last_sender_id,
                CASE WHEN c.context_type = 'housemate_group' THEN NULL
                     WHEN c.user_a = ? THEN c.user_b

@@ -1,15 +1,15 @@
-/**
+﻿/**
  * FLOW 4 — Student posts for housemates, 4 sign, 2 added later (edge cases)
  * UC-12 to UC-16
  * Actors: Students 1–6, Landlord, Agent, Admin
- * Covers: co-tenancy post → applications → 4-person booking → e-sign × 5 → late addition
+ * Covers: co-tenancy post → applications → 4-person tenancy → e-sign × 5 → late addition
  */
 
 const { test, expect } = require('@playwright/test');
 const { login } = require('./helpers/auth');
 
 let postId;
-let bookingId;
+let tenancyId;
 let contractId;
 
 test.describe('Flow 4A–B — Student 1 posts; Students 2–4 apply', () => {
@@ -134,23 +134,23 @@ test.describe('Flow 4C–D — Contract prep for 4 tenants', () => {
 
 test.describe('Flow 4F — Admin adds 5th tenant before signing', () => {
 
-  test('UC-14: admin adds student 5 to the booking', async ({ page }) => {
+  test('UC-14: admin adds student 5 to the tenancy', async ({ page }) => {
     await login(page, 'admin');
 
-    await page.goto('/admin/bookings.php');
+    await page.goto('/admin/tenancies.php');
     await page.waitForLoadState('networkidle');
 
-    const bookingLink = page.locator('a[href*="booking.php?id"]').first();
-    if (!(await bookingLink.count())) {
-      test.skip(true, 'No booking found in admin panel');
+    const tenancyLink = page.locator('a[href*="tenancy.php?id"]').first();
+    if (!(await tenancyLink.count())) {
+      test.skip(true, 'No tenancy found in admin panel');
       return;
     }
-    await bookingLink.click();
+    await tenancyLink.click();
     await page.waitForLoadState('networkidle');
 
     const url = page.url();
     const bm  = url.match(/id=(\d+)/);
-    if (bm) bookingId = bm[1];
+    if (bm) tenancyId = bm[1];
 
     // Add co-tenant form
     const addCoTenantBtn = page.locator('button:has-text("Add Co-Tenant"), a:has-text("Add Tenant")').first();
@@ -168,7 +168,7 @@ test.describe('Flow 4F — Admin adds 5th tenant before signing', () => {
 
       await expect(page.locator('text=Tan Jia Hui, .alert-success')).toBeVisible().catch(() => {});
     } else {
-      test.skip(true, 'Add co-tenant button not found on admin booking page');
+      test.skip(true, 'Add co-tenant button not found on admin tenancy page');
     }
   });
 
@@ -187,10 +187,10 @@ test.describe('Flow 4G — All 5 students e-sign', () => {
       await login(page, role);
 
       // Navigate to sign page
-      await page.goto(contractId ? `/contracts/sign.php?id=${contractId}` : '/student/booking.php');
+      await page.goto(contractId ? `/contracts/sign.php?id=${contractId}` : '/student/tenancy.php');
       await page.waitForLoadState('networkidle');
 
-      // If on booking page, find sign link
+      // If on tenancy page, find sign link
       if (!page.url().includes('sign.php')) {
         const signLink = page.locator('a[href*="sign.php"]').first();
         if (await signLink.count()) {
@@ -237,11 +237,11 @@ test.describe('Flow 4G — All 5 students e-sign', () => {
 
 test.describe('Flow 4H — Late co-tenant added after activation (edge case)', () => {
 
-  test('UC-16: agent adds student 6 after booking is active; s6 signs; booking stays active', async ({ page }) => {
+  test('UC-16: agent adds student 6 after tenancy is active; s6 signs; tenancy stays active', async ({ page }) => {
     await login(page, 'agent');
 
-    if (bookingId) {
-      await page.goto(`/agent/case.php?id=${bookingId}`);
+    if (tenancyId) {
+      await page.goto(`/agent/case.php?id=${tenancyId}`);
     } else {
       await page.goto('/agent/dashboard.php');
       await page.locator('a[href*="case.php"]').first().click();
@@ -267,7 +267,7 @@ test.describe('Flow 4H — Late co-tenant added after activation (edge case)', (
 
     // Student 6 signs
     await login(page, 'student6');
-    await page.goto('/student/booking.php');
+    await page.goto('/student/tenancy.php');
     await page.waitForLoadState('networkidle');
 
     const signLink = page.locator('a[href*="sign.php"]').first();
@@ -287,10 +287,10 @@ test.describe('Flow 4H — Late co-tenant added after activation (edge case)', (
       await page.waitForLoadState('networkidle');
     }
 
-    // Assert booking still active (not reset by late addition)
+    // Assert tenancy still active (not reset by late addition)
     await login(page, 'admin');
-    if (bookingId) {
-      await page.goto(`/admin/booking.php?id=${bookingId}`);
+    if (tenancyId) {
+      await page.goto(`/admin/tenancy.php?id=${tenancyId}`);
       await page.waitForLoadState('networkidle');
       await expect(page.locator('text=active, .badge:has-text("active")')).toBeVisible().catch(() => {});
     }

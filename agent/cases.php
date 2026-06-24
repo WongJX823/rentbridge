@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../includes/auth.php';
 require_role('agent');
 
@@ -25,7 +25,7 @@ $statusGroups = [
 $counts = [];
 foreach ($statusGroups as $key => $statuses) {
     $ph = implode(',', array_fill(0, count($statuses), '?'));
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM bookings WHERE agent_id = ? AND status IN ($ph)");
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM tenancies WHERE agent_id = ? AND status IN ($ph)");
     $stmt->execute(array_merge([$userId], $statuses));
     $counts[$key] = (int)$stmt->fetchColumn();
 }
@@ -75,7 +75,7 @@ $stmt = $pdo->prepare("
     SELECT b.id, b.status, b.start_date, b.end_date, b.monthly_rent, b.created_at,
            p.id AS property_id, p.title AS property_title, p.city,
            s.full_name AS student_name, s.matric_no
-      FROM bookings b
+      FROM tenancies b
       JOIN properties p ON p.id = b.property_id
       JOIN students s ON s.user_id = b.student_id
      WHERE $where
@@ -250,7 +250,7 @@ ob_start();
                                     Review <i class="bi bi-arrow-right"></i>
                                 </a>
                             <?php elseif ($c['status'] === 'agent_verifying'): ?>
-                                <a href="/rentbridge/agent/inspection.php?booking_id=<?= (int)$c['id'] ?>"
+                                <a href="/rentbridge/agent/inspection.php?tenancy_id=<?= (int)$c['id'] ?>"
                                    class="btn btn-sm btn-primary">
                                     Inspect <i class="bi bi-arrow-right"></i>
                                 </a>

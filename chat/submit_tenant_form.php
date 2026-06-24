@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../includes/auth.php';
 require_login();  // any logged-in user; we verify role-specific access below
 $userRole = current_role();
@@ -142,9 +142,9 @@ $durationType = match(true) {
 try {
     $pdo->beginTransaction();
 
-    // Create booking row
+    // Create tenancy row
     $stmt = $pdo->prepare("
-        INSERT INTO bookings 
+        INSERT INTO tenancies 
             (student_id, property_id, landlord_id, agent_id,
              start_date, end_date, duration_type,
              monthly_rent, deposit, status,
@@ -157,7 +157,7 @@ try {
         $monthlyRent, $deposit,
         $notes !== '' ? $notes : null,
     ]);
-    $bookingId = (int)$pdo->lastInsertId();
+    $tenancyId = (int)$pdo->lastInsertId();
 
     // Insert primary tenant (the student)
     // In the co_tenants INSERT:
@@ -165,11 +165,11 @@ try {
 
     $stmt = $pdo->prepare("
         INSERT INTO co_tenants 
-            (booking_id, student_id, is_primary, full_name, ic_number, phone, email, sign_order, added_by, status)
+            (tenancy_id, student_id, is_primary, full_name, ic_number, phone, email, sign_order, added_by, status)
         VALUES (?, ?, 1, ?, ?, ?, ?, 1, ?, 'pending')
     ");
     $stmt->execute([
-        $bookingId, $studentId,
+        $tenancyId, $studentId,
         $tenantName, $tenantIC,
         $tenantPhone ?: null, $tenantEmail ?: null,
         $submitterId,  // ← submitter, could be landlord or student
@@ -180,10 +180,10 @@ try {
     foreach ($coTenants as $co) {
         $stmt = $pdo->prepare("
             INSERT INTO co_tenants 
-                (booking_id, student_id, is_primary, full_name, ic_number, sign_order, added_by, status)
+                (tenancy_id, student_id, is_primary, full_name, ic_number, sign_order, added_by, status)
             VALUES (?, NULL, 0, ?, ?, ?, ?, 'pending')
         ");
-        $stmt->execute([$bookingId, $co['name'], $co['ic'], $order, $landlordId]);
+        $stmt->execute([$tenancyId, $co['name'], $co['ic'], $order, $landlordId]);
         $order++;
     }
 
@@ -191,12 +191,12 @@ try {
     $tenantCount = 1 + count($coTenants);
     $responsePayload = json_encode([
         'source_form_id' => $formId,
-        'booking_id'     => $bookingId,
+        'tenancy_id'     => $tenancyId,
         'tenant_count'   => $tenantCount,
     ]);
     $bodyText = sprintf(
-        'Tenant info submitted for "%s" — %d tenant%s · Booking #%d',
-        $prop['title'], $tenantCount, $tenantCount > 1 ? 's' : '', $bookingId
+        'Tenant info submitted for "%s" — %d tenant%s · Tenancy #%d',
+        $prop['title'], $tenantCount, $tenantCount > 1 ? 's' : '', $tenancyId
     );
 
     $stmt = $pdo->prepare("
@@ -230,7 +230,7 @@ try {
     $pdo->commit();
     echo json_encode([
         'ok' => true,
-        'booking_id' => $bookingId,
+        'tenancy_id' => $tenancyId,
         'message' => 'Form submitted. Agent will now generate the contract.',
     ]);
 } catch (Throwable $e) {
@@ -277,8 +277,8 @@ if ($agentId > 0 && $landlordId > 0) {
     }
     
     $bodyText = sprintf(
-        'Student %s is renting "%s" — booking #%d created. Contract paperwork in progress.',
-        $tenantName, $prop['title'], $bookingId
+        'Student %s is renting "%s" — tenancy #%d created. Contract paperwork in progress.',
+        $tenantName, $prop['title'], $tenancyId
     );
     $stmt = $pdo->prepare("
         INSERT INTO messages 

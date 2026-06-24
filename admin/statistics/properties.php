@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../../includes/auth.php';
 require_role('admin');
 
@@ -14,7 +14,7 @@ if (($_GET['export'] ?? '') === 'pricing_full') {
                MAX(monthly_rent) AS max_rent,
                ROUND(AVG(deposit), 0) AS avg_deposit
           FROM properties
-         WHERE status IN ('available','booked','rented')
+         WHERE status IN ('available','reserved','rented')
          GROUP BY city, property_type, furnishing
          ORDER BY city, property_type, furnishing
     ");
@@ -84,7 +84,7 @@ $totalProperties = (int)$pdo->query("SELECT COUNT(*) FROM properties")->fetchCol
 $available       = (int)$pdo->query("SELECT COUNT(*) FROM properties WHERE status='available'")->fetchColumn();
 $rented          = (int)$pdo->query("SELECT COUNT(*) FROM properties WHERE status='rented'")->fetchColumn();
 $pending         = (int)$pdo->query("SELECT COUNT(*) FROM properties WHERE status='pending_approval'")->fetchColumn();
-$avgRent         = (float)$pdo->query("SELECT AVG(monthly_rent) FROM properties WHERE status IN ('available','booked','rented')")->fetchColumn();
+$avgRent         = (float)$pdo->query("SELECT AVG(monthly_rent) FROM properties WHERE status IN ('available','reserved','rented')")->fetchColumn();
 $verifiedCount   = (int)$pdo->query("SELECT COUNT(*) FROM properties WHERE agent_verified_at IS NOT NULL")->fetchColumn();
 $verifiedPct     = $totalProperties > 0 ? round(($verifiedCount / $totalProperties) * 100) : 0;
 
@@ -107,7 +107,7 @@ $listingTrend = $stmt->fetchAll();
 $stmt = $pdo->query("
     SELECT property_type, COUNT(*) AS cnt
       FROM properties
-     WHERE status IN ('available','booked','rented')
+     WHERE status IN ('available','reserved','rented')
      GROUP BY property_type
 ");
 $typeDist = $stmt->fetchAll();
@@ -116,7 +116,7 @@ $typeDist = $stmt->fetchAll();
 $stmt = $pdo->query("
     SELECT furnishing, COUNT(*) AS cnt
       FROM properties
-     WHERE status IN ('available','booked','rented')
+     WHERE status IN ('available','reserved','rented')
      GROUP BY furnishing
 ");
 $furnishDist = $stmt->fetchAll();
@@ -128,7 +128,7 @@ $stmt = $pdo->query("
            ROUND(MIN(monthly_rent), 0) AS min_rent,
            ROUND(MAX(monthly_rent), 0) AS max_rent
       FROM properties
-     WHERE status IN ('available','booked','rented')
+     WHERE status IN ('available','reserved','rented')
      GROUP BY property_type
 ");
 $rentByType = $stmt->fetchAll();
@@ -141,7 +141,7 @@ $stmt = $pdo->query("
            MIN(monthly_rent) AS min_rent,
            MAX(monthly_rent) AS max_rent
       FROM properties
-     WHERE status IN ('available','booked','rented')
+     WHERE status IN ('available','reserved','rented')
      GROUP BY city, property_type, furnishing
      ORDER BY city, property_type, furnishing
 ");
@@ -152,9 +152,9 @@ $stmt = $pdo->query("
     SELECT city,
            COUNT(*) AS listing_count,
            ROUND(AVG(monthly_rent), 0) AS avg_rent,
-           SUM(CASE WHEN status='rented' OR status='booked' THEN 1 ELSE 0 END) AS tenancy_count
+           SUM(CASE WHEN status='rented' OR status='reserved' THEN 1 ELSE 0 END) AS tenancy_count
       FROM properties
-     WHERE status IN ('available','booked','rented')
+     WHERE status IN ('available','reserved','rented')
      GROUP BY city
      ORDER BY listing_count DESC
      LIMIT 15
@@ -165,7 +165,7 @@ $areaStats = $stmt->fetchAll();
 $stmt = $pdo->query("
     SELECT p.id, p.title, p.city, p.property_type, p.monthly_rent
       FROM properties p
-     WHERE p.status IN ('available','booked','rented')
+     WHERE p.status IN ('available','reserved','rented')
      ORDER BY p.monthly_rent DESC
      LIMIT 5
 ");
@@ -174,7 +174,7 @@ $mostExpensive = $stmt->fetchAll();
 $stmt = $pdo->query("
     SELECT p.id, p.title, p.city, p.property_type, p.monthly_rent
       FROM properties p
-     WHERE p.status IN ('available','booked','rented')
+     WHERE p.status IN ('available','reserved','rented')
      ORDER BY p.monthly_rent ASC
      LIMIT 5
 ");
@@ -194,7 +194,7 @@ $stmt = $pdo->query("
        END AS bucket,
        COUNT(*) AS cnt
      FROM properties
-    WHERE status IN ('available','booked','rented')
+    WHERE status IN ('available','reserved','rented')
     GROUP BY bucket
     ORDER BY MIN(monthly_rent)
 ");
@@ -676,7 +676,7 @@ new Chart(document.getElementById('chartAreaListings'), {
                 borderRadius: 4
             },
             {
-                label: 'Tenancies (rented/booked)',
+                label: 'Tenancies (rented/reserved)',
                 data: areaData.map(r => parseInt(r.tenancy_count)),
                 backgroundColor: colors.emerald,
                 borderRadius: 4

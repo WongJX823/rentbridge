@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../includes/auth.php';
 require_role('landlord');
 
@@ -26,13 +26,13 @@ $stmt = $pdo->prepare("
         COUNT(*) AS total,
         SUM(status = 'available') AS available_count,
         SUM(status = 'rented') AS rented_count,
-        SUM(status = 'booked') AS booked_count,
+        SUM(status = 'reserved') AS reserved_count,
         SUM(status = 'pending_approval') AS pending_count
       FROM properties
      WHERE landlord_id = ?
 ");
 $stmt->execute([$userId]);
-$stats = $stmt->fetch() ?: ['total' => 0, 'available_count' => 0, 'rented_count' => 0, 'booked_count' => 0, 'pending_count' => 0];
+$stats = $stmt->fetch() ?: ['total' => 0, 'available_count' => 0, 'rented_count' => 0, 'reserved_count' => 0, 'pending_count' => 0];
 
 $isEditMode = isset($_GET['edit']) && $_GET['edit'] === '1';
 

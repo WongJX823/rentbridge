@@ -1,4 +1,4 @@
-/* ================================================
+﻿/* ================================================
    RentBridge Theme — Module 3
    Navy + Emerald, Fraunces + Manrope typography
    ================================================ */
@@ -348,7 +348,7 @@ h1, h2, h3, h4, h5 {
 .rb-pw-hint.strong  { color: var(--rb-emerald-dark); font-weight: 600; }
 
 /* ================================================
-   DURATION RADIO CARDS (booking form)
+   DURATION RADIO CARDS (tenancy form)
    ================================================ */
 .duration-card {
     display: block;
@@ -386,16 +386,16 @@ h1, h2, h3, h4, h5 {
 }
 
 /* ================================================
-   BOOKING LIST ROWS
+   TENANCY LIST ROWS
    ================================================ */
-.booking-row {
+.tenancy-row {
     transition: all 0.2s ease;
 }
-.booking-row:hover {
+.tenancy-row:hover {
     box-shadow: 0 10px 30px -10px rgba(15, 44, 82, 0.15);
     transform: translateY(-2px);
 }
-.booking-row--urgent {
+.tenancy-row--urgent {
     border-left: 4px solid #D4A017 !important;
 }
 
