@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/chat.php';
 require_login();
@@ -597,9 +597,9 @@ if (
                 </div>
 
             <?php elseif ($msgType === 'co_tenant_form'):
-                $bookingIdMsg = (int)($meta['booking_id'] ?? 0);
+                $tenancyIdMsg = (int)($meta['tenancy_id'] ?? 0);
                 $isReceiver = !$isMine;
-                $existingCoTenants = $bookingIdMsg > 0 ? get_co_tenants($bookingIdMsg) : [];
+                $existingCoTenants = $tenancyIdMsg > 0 ? get_co_tenants($tenancyIdMsg) : [];
                 $hasSubmitted = count($existingCoTenants) > 1;
             ?>
                 <div class="chat-message <?= $isMine ? 'mine' : 'theirs' ?>"
@@ -623,7 +623,7 @@ if (
                         <button type="button" class="btn btn-warning btn-sm"
                                 data-bs-toggle="modal"
                                 data-bs-target="#coTenantFormModal"
-                                data-booking-id="<?= $bookingIdMsg ?>">
+                                data-tenancy-id="<?= $tenancyIdMsg ?>">
                             <i class="bi bi-pencil-square me-1"></i> Fill in co-tenant details
                         </button>
                     <?php elseif ($hasSubmitted): ?>
@@ -697,12 +697,12 @@ if (
                         </div>
                     </div>
                     <?php elseif ($msgType === 'tenant_info_response'): 
-                        // Fetch current booking status to decide which buttons to show
-                        $bookingStatus = null;
-                        if (!empty($meta['booking_id'])) {
-                            $stmt = $pdo->prepare("SELECT status FROM bookings WHERE id = ?");
-                            $stmt->execute([(int)$meta['booking_id']]);
-                            $bookingStatus = $stmt->fetchColumn();
+                        // Fetch current tenancy status to decide which buttons to show
+                        $tenancyStatus = null;
+                        if (!empty($meta['tenancy_id'])) {
+                            $stmt = $pdo->prepare("SELECT status FROM tenancies WHERE id = ?");
+                            $stmt->execute([(int)$meta['tenancy_id']]);
+                            $tenancyStatus = $stmt->fetchColumn();
                         }
                     ?>
                         <div class="my-3 d-flex justify-content-center">
@@ -716,29 +716,29 @@ if (
                                         </div>
                                     </div>
                                     
-                                    <?php if (current_role() === 'agent' && !empty($meta['booking_id'])): ?>
-                                        <?php if ($bookingStatus === 'active'): ?>
+                                    <?php if (current_role() === 'agent' && !empty($meta['tenancy_id'])): ?>
+                                        <?php if ($tenancyStatus === 'active'): ?>
                                             <span class="badge bg-success">
                                                 <i class="bi bi-check2-all"></i> Tenancy active
                                             </span>
-                                        <?php elseif ($bookingStatus === 'contract_pending'): ?>
+                                        <?php elseif ($tenancyStatus === 'contract_pending'): ?>
                                             <div class="d-flex gap-2 flex-wrap">
-                                                <a href="/rentbridge/agent/upload_signed_contract.php?booking_id=<?= (int)$meta['booking_id'] ?>"
+                                                <a href="/rentbridge/agent/upload_signed_contract.php?tenancy_id=<?= (int)$meta['tenancy_id'] ?>"
                                                 class="btn btn-success btn-sm">
                                                     <i class="bi bi-upload me-1"></i> Upload signed contract
                                                 </a>
-                                                <a href="/rentbridge/agent/generate_contract.php?booking_id=<?= (int)$meta['booking_id'] ?>"
+                                                <a href="/rentbridge/agent/generate_contract.php?tenancy_id=<?= (int)$meta['tenancy_id'] ?>"
                                                 class="btn btn-outline-success btn-sm">
                                                     <i class="bi bi-arrow-clockwise me-1"></i> Regenerate
                                                 </a>
                                             </div>
                                         <?php else: ?>
-                                            <a href="/rentbridge/agent/generate_contract.php?booking_id=<?= (int)$meta['booking_id'] ?>"
+                                            <a href="/rentbridge/agent/generate_contract.php?tenancy_id=<?= (int)$meta['tenancy_id'] ?>"
                                             class="btn btn-success btn-sm">
                                                 <i class="bi bi-file-earmark-pdf me-1"></i> Generate contract
                                             </a>
                                         <?php endif; ?>
-                                    <?php elseif ($bookingStatus === 'active'): ?>
+                                    <?php elseif ($tenancyStatus === 'active'): ?>
                                         <span class="badge bg-success">
                                             <i class="bi bi-check2-all"></i> Tenancy active
                                         </span>
@@ -971,7 +971,7 @@ if (
             <form id="coTenantForm" method="POST"
                   action="/rentbridge/chat/submit_tenant_form.php.php">
                 <?= csrf_field() ?>
-                <input type="hidden" name="booking_id" id="coTenantBookingId">
+                <input type="hidden" name="tenancy_id" id="coTenantTenancyId">
 
                 <div class="modal-body">
                     <div class="alert alert-light border small mb-3">

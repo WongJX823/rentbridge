@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/agent_assignment.php';
 require_role('agent');
@@ -39,12 +39,12 @@ $stmt = $pdo->prepare("
 $stmt->execute([$userId]);
 $pendingReviews = $stmt->fetchAll();
 
-// Bookings awaiting signed contract upload
+// Tenancies awaiting signed contract upload
 $stmt = $pdo->prepare("
     SELECT b.id, b.property_id, b.created_at, b.start_date,
            p.title, p.city,
            s.full_name AS student_name
-      FROM bookings b
+      FROM tenancies b
       JOIN properties p ON p.id = b.property_id
       JOIN students s ON s.user_id = b.student_id
      WHERE b.agent_id = ?
@@ -56,23 +56,23 @@ $pendingUploads = $stmt->fetchAll();
 
 // Counts for dashboard cards
 $counts = [];
-$stmt = $pdo->prepare("SELECT COUNT(*) FROM bookings WHERE agent_id = ? AND status = 'pending_agent'");
+$stmt = $pdo->prepare("SELECT COUNT(*) FROM tenancies WHERE agent_id = ? AND status = 'pending_agent'");
 $stmt->execute([$userId]);
 $counts['pending'] = (int)$stmt->fetchColumn();
 
-$stmt = $pdo->prepare("SELECT COUNT(*) FROM bookings WHERE agent_id = ? AND status = 'agent_verifying'");
+$stmt = $pdo->prepare("SELECT COUNT(*) FROM tenancies WHERE agent_id = ? AND status = 'agent_verifying'");
 $stmt->execute([$userId]);
 $counts['verifying'] = (int)$stmt->fetchColumn();
 
-$stmt = $pdo->prepare("SELECT COUNT(*) FROM bookings WHERE agent_id = ? AND status IN ('contract_pending')");
+$stmt = $pdo->prepare("SELECT COUNT(*) FROM tenancies WHERE agent_id = ? AND status IN ('contract_pending')");
 $stmt->execute([$userId]);
 $counts['contracts'] = (int)$stmt->fetchColumn();
 
-$stmt = $pdo->prepare("SELECT COUNT(*) FROM bookings WHERE agent_id = ? AND status = 'active'");
+$stmt = $pdo->prepare("SELECT COUNT(*) FROM tenancies WHERE agent_id = ? AND status = 'active'");
 $stmt->execute([$userId]);
 $counts['active'] = (int)$stmt->fetchColumn();
 
-$stmt = $pdo->prepare("SELECT COUNT(*) FROM bookings WHERE agent_id = ? AND status = 'completed'");
+$stmt = $pdo->prepare("SELECT COUNT(*) FROM tenancies WHERE agent_id = ? AND status = 'completed'");
 $stmt->execute([$userId]);
 $counts['completed'] = (int)$stmt->fetchColumn();
 
@@ -90,10 +90,10 @@ $stmt = $pdo->prepare("
            p.title AS property_title, p.city,
            s.full_name AS student_name,
            v.deadline_at, v.outcome AS verification_outcome
-      FROM bookings b
+      FROM tenancies b
       JOIN properties p ON p.id = b.property_id
       JOIN students s ON s.user_id = b.student_id
-      LEFT JOIN agent_verifications v ON v.booking_id = b.id
+      LEFT JOIN agent_verifications v ON v.tenancy_id = b.id
      WHERE b.agent_id = ?
        AND b.status IN ('pending_agent','agent_verifying')
      ORDER BY b.created_at ASC
@@ -330,7 +330,7 @@ ob_start();
                         <?= e(date('d M', strtotime($u['created_at']))) ?>
                     </td>
                     <td>
-                        <a href="/rentbridge/agent/upload_signed_contract.php?booking_id=<?= (int)$u['id'] ?>"
+                        <a href="/rentbridge/agent/upload_signed_contract.php?tenancy_id=<?= (int)$u['id'] ?>"
                            class="btn btn-sm btn-success">
                             <i class="bi bi-upload me-1"></i> Upload signed PDF
                         </a>
@@ -400,7 +400,7 @@ ob_start();
                                     Review <i class="bi bi-arrow-right"></i>
                                 </a>
                             <?php else: ?>
-                                <a href="/rentbridge/agent/inspection.php?booking_id=<?= (int)$c['id'] ?>"
+                                <a href="/rentbridge/agent/inspection.php?tenancy_id=<?= (int)$c['id'] ?>"
                                    class="btn btn-sm btn-outline-dark">
                                     Continue <i class="bi bi-arrow-right"></i>
                                 </a>

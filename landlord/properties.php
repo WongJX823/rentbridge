@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../includes/auth.php';
 require_role('landlord');
 
@@ -6,17 +6,17 @@ $pdo = db();
 $userId = current_user_id();
 
 $tab = $_GET['tab'] ?? 'all';
-$validTabs = ['all','pending','available','booked','rented','hidden','rejected'];
+$validTabs = ['all','pending','available','reserved','rented','hidden','rejected'];
 if (!in_array($tab, $validTabs, true)) $tab = 'all';
 
 $searchQuery = trim($_GET['q'] ?? '');
 
 // Status mapping per tab
 $statusGroups = [
-    'all'        => ['pending_approval','available','booked','rented','hidden','rejected'],
+    'all'        => ['pending_approval','available','reserved','rented','hidden','rejected'],
     'pending'    => ['pending_approval'],
     'available'  => ['available'],
-    'booked'     => ['booked'],
+    'reserved'     => ['reserved'],
     'rented'     => ['rented'],
     'hidden'     => ['hidden'],
     'rejected'   => ['rejected'],
@@ -48,7 +48,7 @@ $stmt = $pdo->prepare("
     SELECT p.*,
            a.full_name AS agent_name,
            a.phone AS agent_phone,
-           (SELECT COUNT(*) FROM bookings b
+           (SELECT COUNT(*) FROM tenancies b
              WHERE b.property_id = p.id
                AND b.status = 'pending_landlord') AS pending_requests,
            (SELECT pi.image_path FROM property_images pi
@@ -77,7 +77,7 @@ $pageTabs = [
     ['label'=>'All',       'href'=>build_landlord_tab_url('all',       $searchQuery), 'active'=>$tab==='all',       'count'=>$counts['all']],
     ['label'=>'Pending',   'href'=>build_landlord_tab_url('pending',   $searchQuery), 'active'=>$tab==='pending',   'count'=>$counts['pending']],
     ['label'=>'Available', 'href'=>build_landlord_tab_url('available', $searchQuery), 'active'=>$tab==='available', 'count'=>$counts['available']],
-    ['label'=>'Booked',    'href'=>build_landlord_tab_url('booked',    $searchQuery), 'active'=>$tab==='booked',    'count'=>$counts['booked']],
+    ['label'=>'Reserved',    'href'=>build_landlord_tab_url('reserved',    $searchQuery), 'active'=>$tab==='reserved',    'count'=>$counts['reserved']],
     ['label'=>'Rented',    'href'=>build_landlord_tab_url('rented',    $searchQuery), 'active'=>$tab==='rented',    'count'=>$counts['rented']],
     ['label'=>'Hidden',    'href'=>build_landlord_tab_url('hidden',    $searchQuery), 'active'=>$tab==='hidden',    'count'=>$counts['hidden']],
     ['label'=>'Rejected',  'href'=>build_landlord_tab_url('rejected',  $searchQuery), 'active'=>$tab==='rejected',  'count'=>$counts['rejected']],
@@ -106,7 +106,7 @@ function landlord_status_badge(string $status): array {
     return match ($status) {
         'pending_approval' => ['Pending review', 'warning'],
         'available'        => ['Available',      'success'],
-        'booked'           => ['Booked',         'info'],
+        'reserved'           => ['Reserved',         'info'],
         'rented'           => ['Rented',         'primary'],
         'hidden'           => ['Hidden',         'secondary'],
         'rejected'         => ['Rejected',       'danger'],

@@ -1,31 +1,31 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../includes/auth.php';
 require_role('agent');
 
 $pdo = db();
 $agentId = current_user_id();
-$bookingId = (int)($_GET['booking_id'] ?? $_POST['booking_id'] ?? 0);
+$tenancyId = (int)($_GET['tenancy_id'] ?? $_POST['tenancy_id'] ?? 0);
 
-if ($bookingId <= 0) {
-    die('Invalid booking ID');
+if ($tenancyId <= 0) {
+    die('Invalid tenancy ID');
 }
 
 // Verify agent owns this case
 $stmt = $pdo->prepare("
     SELECT b.*, p.title AS property_title, p.id AS property_id, p.monthly_rent
-      FROM bookings b
+      FROM tenancies b
       JOIN properties p ON p.id = b.property_id
      WHERE b.id = ? AND b.agent_id = ?
 ");
-$stmt->execute([$bookingId, $agentId]);
-$booking = $stmt->fetch();
+$stmt->execute([$tenancyId, $agentId]);
+$tenancy = $stmt->fetch();
 
-if (!$booking) {
-    die('Booking not found or not assigned to you.');
+if (!$tenancy) {
+    die('Tenancy not found or not assigned to you.');
 }
 
-if ($booking['status'] !== 'contract_pending') {
-    die('Booking is not in contract_pending state (current: ' . $booking['status'] . ')');
+if ($tenancy['status'] !== 'contract_pending') {
+    die('Tenancy is not in contract_pending state (current: ' . $tenancy['status'] . ')');
 }
 
 // Handle the upload
@@ -59,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             mkdir($signedDir, 0755, true);
         }
 
-        $newName = 'signed_' . $bookingId . '_' . time() . '_' . bin2hex(random_bytes(4)) . '.pdf';
+        $newName = 'signed_' . $tenancyId . '_' . time() . '_' . bin2hex(random_bytes(4)) . '.pdf';
         $destAbs = $signedDir . '/' . $newName;
         $destRel = 'uploads/contracts/signed/' . $newName;
 
@@ -69,16 +69,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             try {
                 $pdo->beginTransaction();
 
-                // Update booking
+                // Update tenancy
                 $stmt = $pdo->prepare("
-                    UPDATE bookings
+                    UPDATE tenancies
                        SET status = 'active',
                            signed_contract_path = ?,
                            signed_uploaded_at = NOW(),
                            signed_uploaded_by = ?
                      WHERE id = ?
                 ");
-                $stmt->execute([$destRel, $agentId, $bookingId]);
+                $stmt->execute([$destRel, $agentId, $tenancyId]);
 
                 // Activate the contract record too (covers the e-sign mixed-signing path)
                 $pdo->prepare("
@@ -88,19 +88,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                            signed_uploaded_at = NOW(),
                            signed_uploaded_by = ?,
                            activated_at = NOW()
-                     WHERE booking_id = ? AND status = 'pending_signatures'
-                ")->execute([$destRel, $agentId, $bookingId]);
+                     WHERE tenancy_id = ? AND status = 'pending_signatures'
+                ")->execute([$destRel, $agentId, $tenancyId]);
 
                 // Create commission record (1 month base rent, 70% UTeM / 30% agent)
-                $contractIdRow = $pdo->prepare("SELECT id FROM contracts WHERE booking_id = ? LIMIT 1");
-                $contractIdRow->execute([$bookingId]);
+                $contractIdRow = $pdo->prepare("SELECT id FROM contracts WHERE tenancy_id = ? LIMIT 1");
+                $contractIdRow->execute([$tenancyId]);
                 $contractId = (int)$contractIdRow->fetchColumn();
 
                 if ($contractId > 0) {
                     $dupCheck = $pdo->prepare("SELECT id FROM agent_commissions WHERE contract_id = ? LIMIT 1");
                     $dupCheck->execute([$contractId]);
                     if (!$dupCheck->fetchColumn()) {
-                        $baseRent      = (float)$booking['monthly_rent'];
+                        $baseRent      = (float)$tenancy['monthly_rent'];
                         $commissionAmt = $baseRent;
                         $sstAmt        = round($commissionAmt * 0.06, 2);
                         $totalPayable  = round($commissionAmt + $sstAmt, 2);
@@ -115,33 +115,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 // Mark property as rented
                 $stmt = $pdo->prepare("UPDATE properties SET status = 'rented' WHERE id = ?");
-                $stmt->execute([(int)$booking['property_id']]);
+                $stmt->execute([(int)$tenancy['property_id']]);
 
                 // Mark all co_tenants signed
                 $stmt = $pdo->prepare("
                     UPDATE co_tenants
                        SET status = 'signed',
                            signed_at = NOW()
-                     WHERE booking_id = ?
+                     WHERE tenancy_id = ?
                 ");
-                $stmt->execute([$bookingId]);
+                $stmt->execute([$tenancyId]);
 
                 // Notify all parties
                 if (function_exists('notify')) {
                     // Student
                     notify(
-                        (int)$booking['student_id'],
+                        (int)$tenancy['student_id'],
                         'contract_signed',
                         'Contract activated',
-                        'Signed contract for "' . $booking['property_title'] . '" has been uploaded. Tenancy is now active.',
+                        'Signed contract for "' . $tenancy['property_title'] . '" has been uploaded. Tenancy is now active.',
                         '/rentbridge/student/dashboard.php'
                     );
                     // Landlord
                     notify(
-                        (int)$booking['landlord_id'],
+                        (int)$tenancy['landlord_id'],
                         'contract_signed',
                         'Contract activated',
-                        'Signed contract for "' . $booking['property_title'] . '" is on file. Tenancy is now active.',
+                        'Signed contract for "' . $tenancy['property_title'] . '" is on file. Tenancy is now active.',
                         '/rentbridge/landlord/properties.php'
                     );
                 }
@@ -153,7 +153,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } catch (Throwable $e) {
                 $pdo->rollBack();
                 @unlink($destAbs);
-                $errors[] = 'Failed to update booking: ' . $e->getMessage();
+                $errors[] = 'Failed to update tenancy: ' . $e->getMessage();
             }
         }
     }
@@ -172,7 +172,7 @@ ob_start();
 
 <h1 style="font-family:'Fraunces',serif;">Upload signed contract</h1>
 <p class="text-secondary">
-    Booking #<?= (int)$bookingId ?> · <?= e($booking['property_title']) ?>
+    Tenancy #<?= (int)$tenancyId ?> · <?= e($tenancy['property_title']) ?>
 </p>
 
 <?php if (!empty($errors)): ?>
@@ -200,7 +200,7 @@ ob_start();
 
     <form method="POST" enctype="multipart/form-data">
         <?= csrf_field() ?>
-        <input type="hidden" name="booking_id" value="<?= (int)$bookingId ?>">
+        <input type="hidden" name="tenancy_id" value="<?= (int)$tenancyId ?>">
 
         <div class="mb-3">
             <label class="form-label fw-semibold">

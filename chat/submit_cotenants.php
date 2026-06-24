@@ -1,15 +1,15 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/co_tenants.php';
 require_role('student');
 verify_csrf();
 
-$bookingId = (int)($_POST['booking_id'] ?? 0);
+$tenancyId = (int)($_POST['tenancy_id'] ?? 0);
 $primaryIc = trim($_POST['primary_ic'] ?? '');
 $coTenants = $_POST['cotenant'] ?? [];
 
-if ($bookingId <= 0) {
-    set_flash('danger', 'Invalid booking.');
+if ($tenancyId <= 0) {
+    set_flash('danger', 'Invalid tenancy.');
     header('Location: /rentbridge/chat.php');
     exit;
 }
@@ -20,15 +20,15 @@ $pdo = $pdo ?? db();
 // Verify user is primary tenant
 $stmt = $pdo->prepare("
     SELECT 1 FROM co_tenants
-     WHERE booking_id = ? AND student_id = ? AND is_primary = 1 LIMIT 1
+     WHERE tenancy_id = ? AND student_id = ? AND is_primary = 1 LIMIT 1
 ");
-$stmt->execute([$bookingId, $userId]);
+$stmt->execute([$tenancyId, $userId]);
 if (!$stmt->fetchColumn()) {
-    die('You are not the primary tenant on this booking.');
+    die('You are not the primary tenant on this tenancy.');
 }
 
 // Update primary info
-$res = update_primary_tenant($bookingId, $primaryIc);
+$res = update_primary_tenant($tenancyId, $primaryIc);
 if (!$res['ok']) {
     set_flash('danger', 'Primary tenant update failed: ' . $res['error']);
     header('Location: /rentbridge/chat.php');
@@ -36,8 +36,8 @@ if (!$res['ok']) {
 }
 
 // Remove all existing additional co-tenants (start fresh)
-$pdo->prepare("UPDATE co_tenants SET status = 'removed' WHERE booking_id = ? AND is_primary = 0")
-    ->execute([$bookingId]);
+$pdo->prepare("UPDATE co_tenants SET status = 'removed' WHERE tenancy_id = ? AND is_primary = 0")
+    ->execute([$tenancyId]);
 
 // Add each new co-tenant
 $added = 0;
@@ -48,7 +48,7 @@ foreach ($coTenants as $idx => $ct) {
     $phone = trim($ct['phone'] ?? '') ?: null;
     if ($name === '' && $ic === '') continue; // empty row
 
-    $result = add_co_tenant($bookingId, $name, $ic, $phone, null, $userId);
+    $result = add_co_tenant($tenancyId, $name, $ic, $phone, null, $userId);
     if ($result['ok']) {
         $added++;
     } else {
@@ -65,16 +65,16 @@ if (!empty($errors)) {
 }
 
 // Notify agent
-$stmt = $pdo->prepare("SELECT agent_id FROM bookings WHERE id = ?");
-$stmt->execute([$bookingId]);
+$stmt = $pdo->prepare("SELECT agent_id FROM tenancies WHERE id = ?");
+$stmt->execute([$tenancyId]);
 $agentId = (int)$stmt->fetchColumn();
 if ($agentId > 0) {
     notify(
         $agentId,
         'cotenant_submitted',
         'Co-tenant info submitted',
-        'Student submitted co-tenant details for booking #' . $bookingId,
-        '/rentbridge/agent/case.php?id=' . $bookingId
+        'Student submitted co-tenant details for tenancy #' . $tenancyId,
+        '/rentbridge/agent/case.php?id=' . $tenancyId
     );
 }
 

@@ -205,6 +205,37 @@ body:not(.sidebar-collapsed) .topbar-toggle:hover {
     color: white;
 }
 
+/* Fix <button> used as a sidebar link */
+button.sidebar-link {
+    background: transparent;
+    border: none;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    font: inherit;
+}
+
+/* Collapsible Help & Info submenu */
+.sidebar-submenu {
+    padding-left: 8px;
+}
+.sidebar-sublink {
+    font-size: 0.88rem;
+    padding: 7px 12px;
+    color: var(--admin-sidebar-text-muted, rgba(255,255,255,0.65));
+}
+.sidebar-sublink:hover {
+    color: white;
+}
+.sidebar-chevron {
+    margin-left: auto;
+    font-size: 0.75rem;
+    transition: transform 0.2s;
+}
+.sidebar-collapsible-toggle.open .sidebar-chevron {
+    transform: rotate(180deg);
+}
+
 .sidebar-footer {
     padding: 8px;
 }

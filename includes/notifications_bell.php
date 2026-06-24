@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Notification bell dropdown.
  * Requires: $userId (int), db() and e() available.
@@ -63,7 +63,7 @@ if (!function_exists('_nb_icon')) {
     function _nb_icon(string $type): string {
         return match(true) {
             str_contains($type, 'contract')   => 'bi-file-earmark-check',
-            str_contains($type, 'booking')    => 'bi-calendar-check',
+            str_contains($type, 'tenancy')    => 'bi-calendar-check',
             str_contains($type, 'agent')      => 'bi-person-badge',
             str_contains($type, 'cotenant')   => 'bi-people',
             str_contains($type, 'inspection') => 'bi-search',

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../includes/auth.php';
 require_role('admin');
 
@@ -54,10 +54,10 @@ $stmt = $pdo->prepare("
            c.id        AS contract_id,
            c.contract_code,
            c.status    AS contract_status
-      FROM bookings b
+      FROM tenancies b
       JOIN students s ON s.user_id = b.student_id
       LEFT JOIN agents a ON a.user_id = b.agent_id
-      LEFT JOIN contracts c ON c.booking_id = b.id
+      LEFT JOIN contracts c ON c.tenancy_id = b.id
      WHERE b.property_id = ?
      ORDER BY b.created_at DESC
 ");
@@ -110,7 +110,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        if ($action === 'hide' && in_array($property['status'], ['available','booked','rented'], true)) {
+        if ($action === 'hide' && in_array($property['status'], ['available','reserved','rented'], true)) {
             $stmt = $pdo->prepare("UPDATE properties SET status = 'hidden' WHERE id = ?");
             $stmt->execute([$propertyId]);
             set_flash('info', 'Property hidden from listings.');
@@ -139,7 +139,7 @@ function prop_status_badge(string $status): array {
     return match ($status) {
         'pending_approval' => ['Pending review', 'warning'],
         'available'        => ['Available',      'success'],
-        'booked'           => ['Booked',         'info'],
+        'reserved'           => ['Reserved',         'info'],
         'rented'           => ['Rented',         'primary'],
         'hidden'           => ['Hidden',         'secondary'],
         'rejected'         => ['Rejected',       'danger'],
@@ -195,7 +195,7 @@ ob_start();
         <h5 class="mb-3">Review this listing</h5>
         <p class="text-secondary small mb-3">
             Verify the listing photos, address, and landlord details look legitimate before approving.
-            The agent's physical inspection will happen later at booking time.
+            The agent's physical inspection will happen later at tenancy time.
         </p>
         <div class="d-flex gap-2 flex-wrap">
             <form method="POST" class="d-inline">
@@ -223,7 +223,7 @@ ob_start();
             </form>
         </div>
     </div>
-<?php elseif (in_array($property['status'], ['available','booked','rented'], true)): ?>
+<?php elseif (in_array($property['status'], ['available','reserved','rented'], true)): ?>
     <div class="d-flex gap-2 mb-4 flex-wrap">
         <form method="POST" class="d-inline">
             <?= csrf_field() ?>
@@ -466,7 +466,7 @@ $documents = get_property_documents($propertyId);
                         </td>
                         <td><span class="badge bg-<?= $tColor ?>"><?= e($tLabel) ?></span></td>
                         <td class="text-end">
-                            <a href="/rentbridge/admin/booking.php?id=<?= (int)$t['id'] ?>"
+                            <a href="/rentbridge/admin/tenancy.php?id=<?= (int)$t['id'] ?>"
                                class="btn btn-sm btn-outline-dark">
                                 View <i class="bi bi-arrow-right ms-1"></i>
                             </a>

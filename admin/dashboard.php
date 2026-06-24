@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../includes/auth.php';
 require_role('admin');
 
@@ -10,7 +10,7 @@ $counts = [
     'landlords'   => (int)$pdo->query("SELECT COUNT(*) FROM users WHERE primary_role = 'landlord'")->fetchColumn(),
     'agents'      => (int)$pdo->query("SELECT COUNT(*) FROM users WHERE primary_role = 'agent'")->fetchColumn(),
     'properties'  => (int)$pdo->query("SELECT COUNT(*) FROM properties")->fetchColumn(),
-    'bookings'    => (int)$pdo->query("SELECT COUNT(*) FROM bookings")->fetchColumn(),
+    'tenancies'    => (int)$pdo->query("SELECT COUNT(*) FROM tenancies")->fetchColumn(),
     'contracts'   => (int)$pdo->query("SELECT COUNT(*) FROM contracts WHERE status = 'active'")->fetchColumn(),
 ];
 
@@ -19,7 +19,7 @@ $attention = [
     'pending_agents'      => (int)$pdo->query("SELECT COUNT(*) FROM users WHERE primary_role = 'agent' AND status = 'pending'")->fetchColumn(),
     'pending_properties'  => (int)$pdo->query("SELECT COUNT(*) FROM properties WHERE status = 'pending_approval'")->fetchColumn(),
     'needs_admin_props'   => (int)$pdo->query("SELECT COUNT(*) FROM properties WHERE status = 'needs_admin'")->fetchColumn(),
-    'aborted_inspections' => (int)$pdo->query("SELECT COUNT(*) FROM bookings WHERE status = 'inspection_aborted'")->fetchColumn(),
+    'aborted_inspections' => (int)$pdo->query("SELECT COUNT(*) FROM tenancies WHERE status = 'inspection_aborted'")->fetchColumn(),
     'pending_transfers'   => (int)$pdo->query("SELECT COUNT(*) FROM agent_transfer_requests WHERE status = 'pending_admin'")->fetchColumn(),
     'pending_reports'     => (int)$pdo->query("SELECT COUNT(*) FROM reports WHERE status = 'pending'")->fetchColumn(),
 ];
@@ -60,7 +60,7 @@ ob_start();
                     </a>
                 <?php endif; ?>
                 <?php if ($attention['aborted_inspections'] > 0): ?>
-                    <a href="/rentbridge/admin/bookings.php?status=inspection_aborted" class="badge bg-danger text-white text-decoration-none">
+                    <a href="/rentbridge/admin/tenancies.php?status=inspection_aborted" class="badge bg-danger text-white text-decoration-none">
                         <i class="bi bi-x-octagon me-1"></i>
                         <?= $attention['aborted_inspections'] ?> inspection<?= $attention['aborted_inspections'] === 1 ? '' : 's' ?> aborted — needs resolution
                     </a>
@@ -121,16 +121,16 @@ ob_start();
         <div class="admin-stat-action">View all <i class="bi bi-arrow-right"></i></div>
     </a>
 
-    <a href="/rentbridge/admin/bookings.php" class="admin-stat-card">
+    <a href="/rentbridge/admin/tenancies.php" class="admin-stat-card">
         <div class="admin-stat-icon" style="background: #F4F4EE; color: #6c5e3a;">
             <i class="bi bi-clipboard-data-fill"></i>
         </div>
-        <div class="admin-stat-value"><?= $counts['bookings'] ?></div>
-        <div class="admin-stat-label">Total bookings</div>
+        <div class="admin-stat-value"><?= $counts['tenancies'] ?></div>
+        <div class="admin-stat-label">Total tenancies</div>
         <div class="admin-stat-action">View all <i class="bi bi-arrow-right"></i></div>
     </a>
 
-    <a href="/rentbridge/admin/bookings.php?tab=active" class="admin-stat-card">
+    <a href="/rentbridge/admin/tenancies.php?tab=active" class="admin-stat-card">
         <div class="admin-stat-icon" style="background: #E4F2EA; color: #1e6b3f;">
             <i class="bi bi-check-circle-fill"></i>
         </div>

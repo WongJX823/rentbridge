@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/transfers.php';
 require_role('admin');
@@ -219,7 +219,7 @@ ob_start();
                 <div class="alert alert-info small">
                     <i class="bi bi-info-circle me-1"></i>
                     <strong>If you approve:</strong> the system will notify <?= TRANSFER_BATCH_SIZE ?> agents (FIFO by workload).
-                    The first to accept takes over the property and all its active bookings.
+                    The first to accept takes over the property and all its active tenancies.
                 </div>
             </div>
             <form method="POST">

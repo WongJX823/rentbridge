@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/transfers.php';
 require_role('agent');
@@ -9,9 +9,9 @@ $userId = current_user_id();
 // Properties this agent is currently responsible for
 $stmt = $pdo->prepare("
     SELECT p.id, p.title, p.city, p.status,
-           COUNT(b.id) AS active_bookings
+           COUNT(b.id) AS active_tenancies
       FROM properties p
-      LEFT JOIN bookings b ON b.property_id = p.id
+      LEFT JOIN tenancies b ON b.property_id = p.id
              AND b.agent_id = ?
              AND b.status IN ('pending_agent','agent_assigned','agent_verifying','agent_verified','contract_pending','active')
      WHERE p.assigned_agent_id = ?
@@ -169,8 +169,8 @@ ob_start();
                     <option value="<?= (int)$p['id'] ?>"
                         <?= ((int)($_POST['property_id'] ?? 0) === (int)$p['id']) ? 'selected' : '' ?>>
                         <?= e($p['title']) ?> (<?= e($p['city']) ?>)
-                        <?php if ($p['active_bookings'] > 0): ?>
-                            — <?= (int)$p['active_bookings'] ?> active booking(s)
+                        <?php if ($p['active_tenancies'] > 0): ?>
+                            — <?= (int)$p['active_tenancies'] ?> active tenancy(s)
                         <?php endif; ?>
                     </option>
                 <?php endforeach; ?>
@@ -194,7 +194,7 @@ ob_start();
         <div class="alert alert-warning small">
             <i class="bi bi-exclamation-triangle me-1"></i>
             <strong>Note:</strong> Once transferred, you will lose access to this property and all
-            its bookings. This cannot be undone without admin intervention.
+            its tenancies. This cannot be undone without admin intervention.
         </div>
 
         <button type="submit" class="btn btn-primary"

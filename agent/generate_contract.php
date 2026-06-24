@@ -1,18 +1,18 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/co_tenants.php';
 require_once __DIR__ . '/../vendor/autoload.php';
 require_role('agent');
 
-$bookingId = (int)($_GET['booking_id'] ?? 0);
-if ($bookingId <= 0) {
-    die('Invalid booking.');
+$tenancyId = (int)($_GET['tenancy_id'] ?? 0);
+if ($tenancyId <= 0) {
+    die('Invalid tenancy.');
 }
 
 $pdo = db();
 $userId = current_user_id();
 
-// === Fetch booking + parties ===
+// === Fetch tenancy + parties ===
 $stmt = $pdo->prepare("
     SELECT b.*,
            p.title         AS property_title,
@@ -29,7 +29,7 @@ $stmt = $pdo->prepare("
            ul.email        AS landlord_email,
            a.full_name     AS agent_name,
            a.staff_id      AS agent_staff_id
-      FROM bookings b
+      FROM tenancies b
       JOIN properties p   ON p.id = b.property_id
       JOIN landlords l    ON l.user_id = b.landlord_id
       JOIN users ul       ON ul.id = b.landlord_id
@@ -37,18 +37,18 @@ $stmt = $pdo->prepare("
      WHERE b.id = ? AND b.agent_id = ?
      LIMIT 1
 ");
-$stmt->execute([$bookingId, $userId]);
-$booking = $stmt->fetch();
+$stmt->execute([$tenancyId, $userId]);
+$tenancy = $stmt->fetch();
 
-if (!$booking) {
-    die('Booking not found or you are not the assigned agent.');
+if (!$tenancy) {
+    die('Tenancy not found or you are not the assigned agent.');
 }
 
 // === Fetch co-tenants ===
-$coTenants = get_co_tenants($bookingId);
+$coTenants = get_co_tenants($tenancyId);
 
 if (empty($coTenants)) {
-    die('No tenants found for this booking. Please send the co-tenant form first.');
+    die('No tenants found for this tenancy. Please send the co-tenant form first.');
 }
 
 // === GATE: ensure primary IC is set ===
@@ -66,20 +66,20 @@ if (!$primary) {
 
 if ($primary['ic_number'] === 'PENDING' || empty($primary['ic_number'])) {
     set_flash('warning', 'Primary tenant has not submitted their IC number yet. Send the co-tenant form first.');
-    header('Location: /rentbridge/agent/case.php?id=' . $bookingId);
+    header('Location: /rentbridge/agent/case.php?id=' . $tenancyId);
     exit;
 }
 
 // Check landlord IC exists
-if (empty($booking['landlord_ic'])) {
+if (empty($tenancy['landlord_ic'])) {
     set_flash('warning', 'Landlord profile missing IC number. Cannot generate contract.');
-    header('Location: /rentbridge/agent/case.php?id=' . $bookingId);
+    header('Location: /rentbridge/agent/case.php?id=' . $tenancyId);
     exit;
 }
 
 // === Determine contract code (reuse if exists, generate if new) ===
-$stmt = $pdo->prepare("SELECT id, contract_code FROM contracts WHERE booking_id = ? LIMIT 1");
-$stmt->execute([$bookingId]);
+$stmt = $pdo->prepare("SELECT id, contract_code FROM contracts WHERE tenancy_id = ? LIMIT 1");
+$stmt->execute([$tenancyId]);
 $existingContract = $stmt->fetch();
 
 if ($existingContract) {
@@ -99,33 +99,33 @@ if ($existingContract) {
     // Insert new contract row
     $stmt = $pdo->prepare("
         INSERT INTO contracts
-            (contract_code, booking_id, student_id, landlord_id, agent_id, property_id,
+            (contract_code, tenancy_id, student_id, landlord_id, agent_id, property_id,
              start_date, end_date, monthly_rent, deposit, terms, status, created_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Standard 1-year tenancy.', 'pending_signatures', NOW())
     ");
     $stmt->execute([
         $contractCode,
-        $bookingId,
-        (int)$booking['student_id'],
-        (int)$booking['landlord_id'],
-        (int)$booking['agent_id'],
-        (int)$booking['property_id'],
-        $booking['start_date'],
-        $booking['end_date'],
-        (float)$booking['monthly_rent'],
-        (float)$booking['deposit'],
+        $tenancyId,
+        (int)$tenancy['student_id'],
+        (int)$tenancy['landlord_id'],
+        (int)$tenancy['agent_id'],
+        (int)$tenancy['property_id'],
+        $tenancy['start_date'],
+        $tenancy['end_date'],
+        (float)$tenancy['monthly_rent'],
+        (float)$tenancy['deposit'],
     ]);
     $contractId = (int)$pdo->lastInsertId();
 }
 
 // === Generate the PDF ===
-$startDate  = date('jS \\d\\a\\y \\o\\f F Y', strtotime($booking['start_date']));
-$startShort = date('d/m/Y', strtotime($booking['start_date']));
-$endShort   = date('d/m/Y', strtotime($booking['end_date']));
+$startDate  = date('jS \\d\\a\\y \\o\\f F Y', strtotime($tenancy['start_date']));
+$startShort = date('d/m/Y', strtotime($tenancy['start_date']));
+$endShort   = date('d/m/Y', strtotime($tenancy['end_date']));
 $today      = date('jS \\d\\a\\y \\o\\f F Y');
-$monthlyRent = number_format((float)$booking['monthly_rent'], 2);
-$securityDeposit = number_format((float)$booking['deposit'], 2);
-$utilityDeposit  = number_format((float)$booking['deposit'] * 0.3, 2); // typically ~30% of security
+$monthlyRent = number_format((float)$tenancy['monthly_rent'], 2);
+$securityDeposit = number_format((float)$tenancy['deposit'], 2);
+$utilityDeposit  = number_format((float)$tenancy['deposit'] * 0.3, 2); // typically ~30% of security
 
 // Build co-tenant list for Part 3 (First Schedule)
 $tenantListHtml = '';
@@ -142,17 +142,17 @@ foreach ($coTenants as $idx => $ct) {
 
 // Build signature blocks
 $signatureBlocksHtml = '';
-$signatureBlocksHtml .= buildSignatureBlock('LANDLORD', $booking['landlord_name'], $booking['landlord_ic'], $booking['landlord_phone']);
+$signatureBlocksHtml .= buildSignatureBlock('LANDLORD', $tenancy['landlord_name'], $tenancy['landlord_ic'], $tenancy['landlord_phone']);
 foreach ($coTenants as $idx => $ct) {
     $role = ((int)$ct['is_primary'] === 1) ? 'TENANT (Primary)' : 'CO-TENANT';
     $signatureBlocksHtml .= buildSignatureBlock($role, $ct['full_name'], $ct['ic_number'], $ct['phone'] ?? '');
 }
 // Agent witness block
-if (!empty($booking['agent_name'])) {
+if (!empty($tenancy['agent_name'])) {
     $signatureBlocksHtml .= buildSignatureBlock(
         'WITNESSED BY AGENT',
-        $booking['agent_name'],
-        $booking['agent_staff_id'] ?? '',
+        $tenancy['agent_name'],
+        $tenancy['agent_staff_id'] ?? '',
         '',
         true
     );
@@ -172,7 +172,7 @@ function buildSignatureBlock(string $role, string $name, string $ic, string $pho
 }
 
 // Build full HTML
-$propertyAddress = $booking['property_address'] . ', ' . $booking['property_city'] . ' ' . $booking['property_postcode'] . ', ' . $booking['property_state'];
+$propertyAddress = $tenancy['property_address'] . ', ' . $tenancy['property_city'] . ' ' . $tenancy['property_postcode'] . ', ' . $tenancy['property_state'];
 
 $html = <<<HTML
 <style>
@@ -208,8 +208,8 @@ table.parties td { padding: 8pt; vertical-align: top; }
 <table class="parties">
     <tr>
         <td class="center">
-            <strong>{$booking['landlord_name']}</strong><br>
-            {$booking['landlord_ic']}<br>
+            <strong>{$tenancy['landlord_name']}</strong><br>
+            {$tenancy['landlord_ic']}<br>
             <em>(LANDLORD)</em>
         </td>
     </tr>
@@ -218,7 +218,7 @@ table.parties td { padding: 8pt; vertical-align: top; }
     </tr>
     <tr>
         <td class="center">
-            <em>(TENANT{$bookingId})</em><br><br>
+            <em>(TENANT{$tenancyId})</em><br><br>
             {$tenantListHtml}
         </td>
     </tr>
@@ -283,9 +283,9 @@ table.parties td { padding: 8pt; vertical-align: top; }
 
 <div class="schedule-item">
     <strong>2. Landlord:</strong><br>
-    NAME: {$booking['landlord_name']}<br>
-    NRIC: {$booking['landlord_ic']}<br>
-    CONTACT: {$booking['landlord_phone']}
+    NAME: {$tenancy['landlord_name']}<br>
+    NRIC: {$tenancy['landlord_ic']}<br>
+    CONTACT: {$tenancy['landlord_phone']}
 </div>
 
 <div class="schedule-item">
@@ -297,7 +297,7 @@ table.parties td { padding: 8pt; vertical-align: top; }
 
 <div class="schedule-item">
     <strong>4. Demised Premises:</strong><br>
-    TYPE: {$booking['property_type']}<br>
+    TYPE: {$tenancy['property_type']}<br>
     ADDRESS: {$propertyAddress}
 </div>
 
@@ -396,24 +396,24 @@ try {
     ");
     $stmt->execute([$relativePath, $userId, $docHash, $contractId]);
 
-    // Update booking status
-    $stmt = $pdo->prepare("UPDATE bookings SET status = 'contract_pending' WHERE id = ?");
-    $stmt->execute([$bookingId]);
+    // Update tenancy status
+    $stmt = $pdo->prepare("UPDATE tenancies SET status = 'contract_pending' WHERE id = ?");
+    $stmt->execute([$tenancyId]);
 
     // Notify all parties
     notify(
-        (int)$booking['student_id'],
+        (int)$tenancy['student_id'],
         'contract_generated',
         'Tenancy contract generated',
         'Agent has generated contract ' . $contractCode . '. The agent will send it to you for signing.',
-        '/rentbridge/student/booking.php?id=' . $bookingId
+        '/rentbridge/student/tenancy.php?id=' . $tenancyId
     );
     notify(
-        (int)$booking['landlord_id'],
+        (int)$tenancy['landlord_id'],
         'contract_generated',
         'Tenancy contract generated',
         'Agent has generated contract ' . $contractCode . '. You will receive it from the agent for signing.',
-        '/rentbridge/landlord/booking.php?id=' . $bookingId
+        '/rentbridge/landlord/tenancy.php?id=' . $tenancyId
     );
 
     // Stream the PDF to the agent for download
@@ -425,6 +425,6 @@ try {
 
 } catch (Throwable $e) {
     set_flash('danger', 'Failed to generate contract: ' . $e->getMessage());
-    header('Location: /rentbridge/agent/case.php?id=' . $bookingId);
+    header('Location: /rentbridge/agent/case.php?id=' . $tenancyId);
     exit;
 }

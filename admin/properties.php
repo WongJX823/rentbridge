@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../includes/auth.php';
 require_role('admin');
 
@@ -6,7 +6,7 @@ $pdo = db();
 
 // --- TAB STATE ---
 $tab = $_GET['tab'] ?? 'all';
-$validTabs = ['all', 'pending', 'available', 'booked', 'rented', 'hidden', 'rejected'];
+$validTabs = ['all', 'pending', 'available', 'rented', 'hidden', 'rejected'];
 if (!in_array($tab, $validTabs, true)) $tab = 'all';
 
 // --- FILTER STATE ---
@@ -15,7 +15,7 @@ $filterCity  = trim($_GET['city'] ?? '');
 
 // --- TAB COUNTS ---
 $counts = [];
-foreach (['pending_approval', 'available', 'booked', 'rented', 'hidden', 'rejected'] as $s) {
+foreach (['pending_approval', 'available', 'rented', 'hidden', 'rejected'] as $s) {
     $stmt = $pdo->prepare("SELECT COUNT(*) FROM properties WHERE status = ?");
     $stmt->execute([$s]);
     $key = $s === 'pending_approval' ? 'pending' : $s;
@@ -44,26 +44,24 @@ if ($filterCity !== '') {
     $params[] = $filterCity;
 }
 
-// Build query — JOIN current active booking's agent if any
+// Build query — JOIN current active tenancy's agent if any
 $stmt = $pdo->prepare("
     SELECT p.*,
            p.landlord_id AS landlord_user_id,
-           l.full_name AS landlord_name,
+           (SELECT l.full_name FROM landlords l WHERE l.user_id = p.landlord_id LIMIT 1) AS landlord_name,
            (SELECT a.full_name
-              FROM bookings b
+              FROM tenancies b
               JOIN agents a ON a.user_id = b.agent_id
              WHERE b.property_id = p.id
                AND b.status IN ('agent_verifying','agent_assigned','contract_pending','active')
              ORDER BY b.id DESC LIMIT 1
            ) AS current_inspector,
            (SELECT ag.full_name
-              FROM users a
-              JOIN agents ag ON ag.user_id = p.agent_verified_by
-             WHERE a.id = p.agent_verified_by
+              FROM agents ag
+             WHERE ag.user_id = p.agent_verified_by
+             LIMIT 1
            ) AS verifier_name
       FROM properties p
-      JOIN users u ON u.id = p.landlord_id
-      JOIN landlords l ON l.user_id = p.landlord_id
       WHERE $where
       ORDER BY p.created_at DESC
 ");
@@ -89,7 +87,6 @@ $pageTabs = [
     ['label' => 'All',       'href' => build_property_tab_url('all',       $searchQuery, $filterCity), 'active' => $tab==='all',       'count' => $counts['all']],
     ['label' => 'Pending',   'href' => build_property_tab_url('pending',   $searchQuery, $filterCity), 'active' => $tab==='pending',   'count' => $counts['pending']],
     ['label' => 'Available', 'href' => build_property_tab_url('available', $searchQuery, $filterCity), 'active' => $tab==='available', 'count' => $counts['available']],
-    ['label' => 'Booked',    'href' => build_property_tab_url('booked',    $searchQuery, $filterCity), 'active' => $tab==='booked',    'count' => $counts['booked']],
     ['label' => 'Rented',    'href' => build_property_tab_url('rented',    $searchQuery, $filterCity), 'active' => $tab==='rented',    'count' => $counts['rented']],
     ['label' => 'Hidden',    'href' => build_property_tab_url('hidden',    $searchQuery, $filterCity), 'active' => $tab==='hidden',    'count' => $counts['hidden']],
     ['label' => 'Rejected',  'href' => build_property_tab_url('rejected',  $searchQuery, $filterCity), 'active' => $tab==='rejected',  'count' => $counts['rejected']],
@@ -129,7 +126,7 @@ function property_status_badge(string $status): array {
     return match ($status) {
         'pending_approval' => ['Pending review', 'warning'],
         'available'        => ['Available',      'success'],
-        'booked'           => ['Booked',         'info'],
+        'reserved'           => ['Reserved',         'info'],
         'rented'           => ['Rented',         'primary'],
         'hidden'           => ['Hidden',         'secondary'],
         'rejected'         => ['Rejected',       'danger'],
@@ -137,7 +134,7 @@ function property_status_badge(string $status): array {
     };
 }
 
-function booking_short_label(string $status): string {
+function tenancy_short_label(string $status): string {
     return match ($status) {
         'agent_verifying'   => '🔍 inspecting',
         'agent_verified'    => '✓ verified',

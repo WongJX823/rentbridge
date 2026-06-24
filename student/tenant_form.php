@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../includes/auth.php';
 require_role('student');
 
@@ -136,9 +136,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadySubmitted) {
         try {
             $pdo->beginTransaction();
 
-            // Create booking
+            // Create tenancy
             $stmt = $pdo->prepare("
-                INSERT INTO bookings
+                INSERT INTO tenancies
                     (student_id, property_id, landlord_id, agent_id,
                      start_date, end_date, duration_type,
                      monthly_rent, deposit, status,
@@ -151,16 +151,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadySubmitted) {
                 $monthlyRent, $deposit,
                 $notes !== '' ? $notes : null,
             ]);
-            $bookingId = (int)$pdo->lastInsertId();
+            $tenancyId = (int)$pdo->lastInsertId();
 
             // Insert primary tenant
             $stmt = $pdo->prepare("
                 INSERT INTO co_tenants
-                    (booking_id, student_id, is_primary, full_name, ic_number, phone, email, sign_order, added_by, status)
+                    (tenancy_id, student_id, is_primary, full_name, ic_number, phone, email, sign_order, added_by, status)
                 VALUES (?, ?, 1, ?, ?, ?, ?, 1, ?, 'pending')
             ");
             $stmt->execute([
-                $bookingId, $userId,
+                $tenancyId, $userId,
                 $tenantName, $tenantIC,
                 $tenantPhone ?: null, $tenantEmail ?: null,
                 $userId,
@@ -171,10 +171,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadySubmitted) {
             foreach ($coTenants as $co) {
                 $stmt = $pdo->prepare("
                     INSERT INTO co_tenants
-                        (booking_id, student_id, is_primary, full_name, ic_number, sign_order, added_by, status)
+                        (tenancy_id, student_id, is_primary, full_name, ic_number, sign_order, added_by, status)
                     VALUES (?, NULL, 0, ?, ?, ?, ?, 'pending')
                 ");
-                $stmt->execute([$bookingId, $co['name'], $co['ic'], $order, $userId]);
+                $stmt->execute([$tenancyId, $co['name'], $co['ic'], $order, $userId]);
                 $order++;
             }
 
@@ -182,12 +182,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadySubmitted) {
             $tenantCount = 1 + count($coTenants);
             $responsePayload = json_encode([
                 'source_form_id' => $formId,
-                'booking_id'     => $bookingId,
+                'tenancy_id'     => $tenancyId,
                 'tenant_count'   => $tenantCount,
             ]);
             $bodyText = sprintf(
-                'Tenant info submitted for "%s" — %d tenant%s · Booking #%d',
-                $prop['title'], $tenantCount, $tenantCount > 1 ? 's' : '', $bookingId
+                'Tenant info submitted for "%s" — %d tenant%s · Tenancy #%d',
+                $prop['title'], $tenantCount, $tenantCount > 1 ? 's' : '', $tenancyId
             );
             $stmt = $pdo->prepare("
                 INSERT INTO messages
@@ -219,7 +219,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadySubmitted) {
 
             $pdo->commit();
             $success    = true;
-            $bookingIdFinal = $bookingId;
+            $tenancyIdFinal = $tenancyId;
 
         } catch (Throwable $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();

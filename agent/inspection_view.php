@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../includes/auth.php';
 require_login();
 
@@ -10,11 +10,11 @@ if ($verificationId <= 0) {
 
 $pdo = db();
 
-// Fetch the verification + booking + property + photos
+// Fetch the verification + tenancy + property + photos
 $stmt = $pdo->prepare("
     SELECT v.*,
-           b.id             AS booking_id,
-           b.status         AS booking_status,
+           b.id             AS tenancy_id,
+           b.status         AS tenancy_status,
            b.student_id,
            b.landlord_id,
            b.agent_id,
@@ -32,7 +32,7 @@ $stmt = $pdo->prepare("
            a.department     AS agent_department,
            a.staff_id       AS agent_staff_id
       FROM agent_verifications v
-      JOIN bookings   b ON b.id = v.booking_id
+      JOIN tenancies   b ON b.id = v.tenancy_id
       JOIN properties p ON p.id = b.property_id
       JOIN students   s ON s.user_id = b.student_id
       JOIN landlords  l ON l.user_id = b.landlord_id
@@ -103,9 +103,9 @@ $checklist = [
 // Back link depends on role
 $backLink = match ($role) {
     'agent'    => '/rentbridge/agent/cases.php',
-    'student'  => '/rentbridge/student/booking.php?id=' . (int)$v['booking_id'],
-    'landlord' => '/rentbridge/landlord/booking.php?id=' . (int)$v['booking_id'],
-    'admin'    => '/rentbridge/admin/booking.php?id=' . (int)$v['booking_id'],
+    'student'  => '/rentbridge/student/tenancy.php?id=' . (int)$v['tenancy_id'],
+    'landlord' => '/rentbridge/landlord/tenancy.php?id=' . (int)$v['tenancy_id'],
+    'admin'    => '/rentbridge/admin/tenancy.php?id=' . (int)$v['tenancy_id'],
     default    => '/rentbridge/index.php',
 };
 ?>
@@ -169,7 +169,7 @@ $backLink = match ($role) {
                 <div>
                     <h1 class="mb-1">Inspection Report</h1>
                     <p class="text-secondary mb-0">
-                        Booking #<?= (int)$v['booking_id'] ?> · <?= e($v['property_title']) ?>
+                        Tenancy #<?= (int)$v['tenancy_id'] ?> · <?= e($v['property_title']) ?>
                     </p>
                 </div>
                 <span class="badge bg-<?= $outcomeColor ?> fs-6"><?= e($outcomeLabel) ?></span>
@@ -331,13 +331,13 @@ $backLink = match ($role) {
                             <p class="mb-0 text-warning">
                                 <i class="bi bi-exclamation-triangle-fill"></i>
                                 <strong>Minor issues disclosed.</strong>
-                                The student has been notified and must decide whether to proceed with the booking.
+                                The student has been notified and must decide whether to proceed with the tenancy.
                             </p>
                         <?php elseif ($v['outcome'] === 'failed'): ?>
                             <p class="mb-0 text-danger">
                                 <i class="bi bi-x-octagon-fill"></i>
                                 <strong>Inspection failed.</strong>
-                                The booking has been auto-cancelled due to major issues. Admin will review the property listing.
+                                The tenancy has been auto-cancelled due to major issues. Admin will review the property listing.
                             </p>
                         <?php else: ?>
                             <p class="mb-0 text-secondary">

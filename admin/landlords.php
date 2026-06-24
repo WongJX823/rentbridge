@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../includes/auth.php';
 require_role('admin');
 
@@ -26,7 +26,7 @@ $counts['active'] = (int)$pdo->query("
       JOIN properties p ON p.landlord_id = u.id
      WHERE u.primary_role = 'landlord'
        AND u.status = 'active'
-       AND p.status IN ('available','booked','rented')
+       AND p.status IN ('available','reserved','rented')
 ")->fetchColumn();
 
 // Pending: landlord has at least one property in pending_approval
@@ -44,7 +44,7 @@ $params = [];
 $extraJoin = '';
 
 if ($tab === 'active') {
-    $extraJoin = "JOIN properties p ON p.landlord_id = u.id AND p.status IN ('available','booked','rented')";
+    $extraJoin = "JOIN properties p ON p.landlord_id = u.id AND p.status IN ('available','reserved','rented')";
     $where .= " AND u.status = 'active'";
 } elseif ($tab === 'pending') {
     $extraJoin = "JOIN properties p ON p.landlord_id = u.id AND p.status = 'pending_approval'";
@@ -63,7 +63,7 @@ $stmt = $pdo->prepare("
            l.full_name, l.ic_no, l.phone, l.verified,
            (SELECT COUNT(*) FROM properties WHERE landlord_id = u.id) AS total_properties,
            (SELECT COUNT(*) FROM properties WHERE landlord_id = u.id AND status = 'pending_approval') AS pending_properties,
-           (SELECT COUNT(*) FROM properties WHERE landlord_id = u.id AND status IN ('available','booked','rented')) AS active_properties
+           (SELECT COUNT(*) FROM properties WHERE landlord_id = u.id AND status IN ('available','reserved','rented')) AS active_properties
       FROM users u
       JOIN landlords l ON l.user_id = u.id
       $extraJoin
