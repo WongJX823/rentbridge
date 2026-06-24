@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/uploads.php';
 require_role('landlord');
@@ -27,8 +27,8 @@ if ($isEdit) {
     }
 
     // Don't allow edit on already-rented properties
-    if (in_array($existing['status'], ['rented','booked'], true)) {
-        set_flash('warning', 'Cannot edit a property that is currently rented or booked.');
+    if (in_array($existing['status'], ['rented','reserved'], true)) {
+        set_flash('warning', 'Cannot edit a property that is currently rented or reserved.');
         header('Location: /rentbridge/landlord/property.php?id=' . $editId);
         exit;
     }
@@ -346,7 +346,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     SELECT ROUND(AVG(monthly_rent), 0) AS avg_rent
                       FROM properties
                      WHERE city = ? AND property_type = ?
-                       AND status IN ('available','booked','rented')
+                       AND status IN ('available','reserved','rented')
                        AND id != ?
                 ");
                 $bmStmt->execute([$old['city'], $old['property_type'], $propertyId]);

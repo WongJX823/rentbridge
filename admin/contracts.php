@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../includes/auth.php';
 require_role('admin');
 
@@ -147,7 +147,7 @@ function pretty_filter(string $s): string {
                 $cacheBust = ($pdfFullPath && file_exists($pdfFullPath)) ? '?v=' . filemtime($pdfFullPath) : '';
             ?>
                 <div class="col-12">
-                    <div class="bg-white border rounded-3 p-4 <?= $isPending ? 'booking-row--urgent' : '' ?>">
+                    <div class="bg-white border rounded-3 p-4 <?= $isPending ? 'tenancy-row--urgent' : '' ?>">
                         <div class="row g-3 align-items-center">
 
                             <!-- Code + status -->

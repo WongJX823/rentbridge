@@ -1,9 +1,9 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../includes/auth.php';
 require_role('landlord');
 
-$bookingId = (int)($_GET['id'] ?? 0);
-if ($bookingId <= 0) {
+$tenancyId = (int)($_GET['id'] ?? 0);
+if ($tenancyId <= 0) {
     http_response_code(400);
     die('Invalid tenancy ID.');
 }
@@ -41,19 +41,19 @@ $stmt = $pdo->prepare("
            v.id             AS verification_id,
            v.outcome        AS verification_outcome,
            v.issue_severity AS verification_severity
-      FROM bookings b
+      FROM tenancies b
       JOIN properties p ON p.id = b.property_id
       JOIN users su ON su.id = b.student_id
       JOIN students s ON s.user_id = b.student_id
       LEFT JOIN users au ON au.id = b.agent_id
       LEFT JOIN agents a ON a.user_id = b.agent_id
-      LEFT JOIN contracts c ON c.booking_id = b.id
-      LEFT JOIN agent_verifications v ON v.booking_id = b.id
+      LEFT JOIN contracts c ON c.tenancy_id = b.id
+      LEFT JOIN agent_verifications v ON v.tenancy_id = b.id
      WHERE b.id = ?
        AND b.landlord_id = ?
      LIMIT 1
 ");
-$stmt->execute([$bookingId, $userId]);
+$stmt->execute([$tenancyId, $userId]);
 $tenancy = $stmt->fetch();
 
 if (!$tenancy) {
@@ -73,17 +73,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $pdo->beginTransaction();
             $stmt = $pdo->prepare("
-                UPDATE bookings
+                UPDATE tenancies
                    SET status = 'pending_agent',
                        landlord_response = ?
                  WHERE id = ?
             ");
-            $stmt->execute([$response ?: null, $bookingId]);
+            $stmt->execute([$response ?: null, $tenancyId]);
 
             // Auto-assign agent (uses existing helper)
-            require_once __DIR__ . '/../includes/bookings.php';
+            require_once __DIR__ . '/../includes/tenancies.php';
             if (function_exists('auto_assign_agent')) {
-                auto_assign_agent($bookingId);
+                auto_assign_agent($tenancyId);
             }
 
             // Notify student
@@ -91,14 +91,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 (int)$tenancy['student_id'],
                 'tenancy_approved',
                 'Landlord approved your tenancy application',
-                'Your tenancy #' . $bookingId . ' for "' . $tenancy['property_title']
+                'Your tenancy #' . $tenancyId . ' for "' . $tenancy['property_title']
                     . '" was approved. An agent will inspect the property next.',
-                '/rentbridge/student/booking.php?id=' . $bookingId
+                '/rentbridge/student/tenancy.php?id=' . $tenancyId
             );
 
             $pdo->commit();
             set_flash('success', 'Tenancy approved. Agent will be assigned for inspection.');
-            header('Location: /rentbridge/landlord/booking.php?id=' . $bookingId);
+            header('Location: /rentbridge/landlord/tenancy.php?id=' . $tenancyId);
             exit;
         }
 
@@ -109,27 +109,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 $pdo->beginTransaction();
                 $stmt = $pdo->prepare("
-                    UPDATE bookings
+                    UPDATE tenancies
                        SET status = 'rejected_by_landlord',
                            landlord_response = ?,
                            cancellation_reason = ?,
                            cancelled_by = ?
                      WHERE id = ?
                 ");
-                $stmt->execute([$reason, $reason, $userId, $bookingId]);
+                $stmt->execute([$reason, $reason, $userId, $tenancyId]);
 
                 notify(
                     (int)$tenancy['student_id'],
                     'tenancy_rejected',
                     'Tenancy application not approved',
-                    'Your tenancy #' . $bookingId . ' for "' . $tenancy['property_title']
+                    'Your tenancy #' . $tenancyId . ' for "' . $tenancy['property_title']
                         . '" was not approved. Reason: ' . $reason,
-                    '/rentbridge/student/booking.php?id=' . $bookingId
+                    '/rentbridge/student/tenancy.php?id=' . $tenancyId
                 );
 
                 $pdo->commit();
                 set_flash('warning', 'Tenancy rejected. Student has been notified.');
-                header('Location: /rentbridge/landlord/booking.php?id=' . $bookingId);
+                header('Location: /rentbridge/landlord/tenancy.php?id=' . $tenancyId);
                 exit;
             }
         }
@@ -141,13 +141,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 $pdo->beginTransaction();
                 $stmt = $pdo->prepare("
-                    UPDATE bookings
+                    UPDATE tenancies
                        SET status = 'cancelled_by_landlord',
                            cancellation_reason = ?,
                            cancelled_by = ?
                      WHERE id = ?
                 ");
-                $stmt->execute([$reason, $userId, $bookingId]);
+                $stmt->execute([$reason, $userId, $tenancyId]);
 
                 // Release property
                 $stmt = $pdo->prepare("UPDATE properties SET status = 'available' WHERE id = ?");
@@ -158,22 +158,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     (int)$tenancy['student_id'],
                     'tenancy_cancelled',
                     'Tenancy cancelled by landlord',
-                    'Tenancy #' . $bookingId . ' cancelled. Reason: ' . $reason,
-                    '/rentbridge/student/bookings.php'
+                    'Tenancy #' . $tenancyId . ' cancelled. Reason: ' . $reason,
+                    '/rentbridge/student/tenancies.php'
                 );
                 if (!empty($tenancy['agent_id'])) {
                     notify(
                         (int)$tenancy['agent_id'],
                         'tenancy_cancelled',
                         'Tenancy cancelled by landlord',
-                        'Tenancy #' . $bookingId . ' was cancelled. Case closed.',
+                        'Tenancy #' . $tenancyId . ' was cancelled. Case closed.',
                         '/rentbridge/agent/cases.php'
                     );
                 }
 
                 $pdo->commit();
                 set_flash('warning', 'Tenancy cancelled. All parties notified.');
-                header('Location: /rentbridge/landlord/booking.php?id=' . $bookingId);
+                header('Location: /rentbridge/landlord/tenancy.php?id=' . $tenancyId);
                 exit;
             }
         }
@@ -191,7 +191,7 @@ if ($tenancy['contract_id']) {
     if (!empty($tenancy['agent_signed_at']))    $signed++;
 }
 
-$pageTitle = 'Tenancy #' . $bookingId;
+$pageTitle = 'Tenancy #' . $tenancyId;
 $activeNav = 'properties';
 
 function landlord_tenancy_status(string $status): array {
@@ -230,7 +230,7 @@ ob_start();
 <!-- HEADER -->
 <div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-2">
     <div>
-        <h2 class="mb-1">Tenancy #<?= (int)$bookingId ?></h2>
+        <h2 class="mb-1">Tenancy #<?= (int)$tenancyId ?></h2>
         <p class="text-secondary mb-0">
             Submitted <?= e(date('d M Y, H:i', strtotime($tenancy['created_at']))) ?>
         </p>
@@ -349,7 +349,7 @@ ob_start();
                 <i class="bi bi-telephone"></i> <?= e($tenancy['student_phone']) ?>
             </div>
         </div>
-        <a href="/rentbridge/chat/start.php?with=<?= (int)$tenancy['student_id'] ?>&booking_id=<?= (int)$bookingId ?>"
+        <a href="/rentbridge/chat/start.php?with=<?= (int)$tenancy['student_id'] ?>&tenancy_id=<?= (int)$tenancyId ?>"
            class="btn btn-outline-primary btn-sm">
             <i class="bi bi-chat-dots me-1"></i> Open chat
         </a>
@@ -373,7 +373,7 @@ ob_start();
         <div class="d-flex gap-2 flex-wrap">
             <?php if ((int)($tenancy['agent_allow_whatsapp'] ?? 0) === 1): ?>
                 <?php
-                $waMsg = 'Hi, regarding tenancy #' . $bookingId . ' (' . $tenancy['property_title'] . ')';
+                $waMsg = 'Hi, regarding tenancy #' . $tenancyId . ' (' . $tenancy['property_title'] . ')';
                 ?>
                 <a href="<?= e(whatsapp_link($tenancy['agent_phone'], $waMsg)) ?>"
                    target="_blank" class="btn btn-sm"
@@ -381,7 +381,7 @@ ob_start();
                     <i class="bi bi-whatsapp"></i> WhatsApp
                 </a>
             <?php endif; ?>
-            <a href="/rentbridge/chat/start.php?with=<?= (int)$tenancy['agent_id'] ?>&booking_id=<?= (int)$bookingId ?>"
+            <a href="/rentbridge/chat/start.php?with=<?= (int)$tenancy['agent_id'] ?>&tenancy_id=<?= (int)$tenancyId ?>"
                class="btn btn-outline-primary btn-sm">
                 <i class="bi bi-chat-dots me-1"></i> Open chat
             </a>
@@ -546,7 +546,7 @@ if (!empty($tenancy['agent_id']))
 if (!empty($reportSubjects)):
     // Append modal to pageContent so it's inside the layout
     ob_start();
-    render_report_modal($reportSubjects, 'booking', (int)$tenancy['id']);
+    render_report_modal($reportSubjects, 'tenancy', (int)$tenancy['id']);
     $pageContent .= ob_get_clean();
 endif;
 

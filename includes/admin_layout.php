@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Admin layout wrapper — sticky sidebar + sticky tab bar + filter drawer.
  *
@@ -95,8 +95,8 @@ $pageContent   = $pageContent   ?? '';
                 <i class="bi bi-house-door-fill"></i>
                 <span class="sidebar-label">Properties</span>
             </a>
-            <a href="/rentbridge/admin/bookings.php"
-               class="sidebar-link <?= $activeNav === 'bookings' ? 'active' : '' ?>">
+            <a href="/rentbridge/admin/tenancies.php"
+               class="sidebar-link <?= $activeNav === 'tenancies' ? 'active' : '' ?>">
                 <i class="bi bi-clipboard-data-fill"></i>
                 <span class="sidebar-label">Tenancies</span>
             </a>

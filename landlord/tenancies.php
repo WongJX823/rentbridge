@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../includes/auth.php';
 require_role('landlord');
 
@@ -14,7 +14,7 @@ $stmt = $pdo->prepare("
            (SELECT image_path FROM property_images
              WHERE property_id = p.id
              ORDER BY is_primary DESC, id ASC LIMIT 1) AS image_path
-      FROM bookings b
+      FROM tenancies b
       JOIN properties p ON p.id = b.property_id
       JOIN students   s ON s.user_id = b.student_id
       LEFT JOIN agents a ON a.user_id = b.agent_id
@@ -23,9 +23,9 @@ $stmt = $pdo->prepare("
               b.created_at DESC
 ");
 $stmt->execute([current_user_id()]);
-$bookings = $stmt->fetchAll();
+$tenancies = $stmt->fetchAll();
 
-// Reuse status helper (same as student bookings page)
+// Reuse status helper (same as student tenancies page)
 function status_label(string $status): array {
     return match ($status) {
         'pending_landlord'      => ['Needs your response', 'warning'],
@@ -44,7 +44,7 @@ function status_label(string $status): array {
 
 // Count pending for the banner
 $pendingCount = 0;
-foreach ($bookings as $b) {
+foreach ($tenancies as $b) {
     if ($b['status'] === 'pending_landlord') $pendingCount++;
 }
 ?>
@@ -52,7 +52,7 @@ foreach ($bookings as $b) {
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Bookings · Landlord · RentBridge</title>
+    <title>Tenancies · Landlord · RentBridge</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -67,9 +67,9 @@ foreach ($bookings as $b) {
 <div class="container py-5">
     <div class="d-flex justify-content-between align-items-end mb-4">
         <div>
-            <h1 class="mb-1">Booking requests</h1>
+            <h1 class="mb-1">Tenancy requests</h1>
             <p class="text-secondary mb-0">
-                <?= count($bookings) ?> booking<?= count($bookings) === 1 ? '' : 's' ?> total
+                <?= count($tenancies) ?> tenancy<?= count($tenancies) === 1 ? '' : 's' ?> total
             </p>
         </div>
         <a href="/rentbridge/landlord/dashboard.php" class="btn btn-ghost">
@@ -81,28 +81,28 @@ foreach ($bookings as $b) {
         <div class="alert d-flex align-items-center gap-3" style="background:#FFF4D6; border-color:#D4A017; color:#7C5E0A;">
             <i class="bi bi-bell-fill fs-4"></i>
             <div>
-                <strong><?= $pendingCount ?> booking request<?= $pendingCount === 1 ? '' : 's' ?> waiting for your response</strong>
+                <strong><?= $pendingCount ?> tenancy request<?= $pendingCount === 1 ? '' : 's' ?> waiting for your response</strong>
                 <div class="small">Students are waiting to hear back. Approve or reject below.</div>
             </div>
         </div>
     <?php endif; ?>
 
-    <?php if (empty($bookings)): ?>
+    <?php if (empty($tenancies)): ?>
         <div class="text-center py-5 bg-white rounded-3 border">
             <i class="bi bi-inbox" style="font-size: 3rem; color: var(--rb-line);"></i>
-            <h4 class="mt-3">No booking requests yet</h4>
+            <h4 class="mt-3">No tenancy requests yet</h4>
             <p class="text-secondary">Once a student books your property, you'll see it here.</p>
         </div>
     <?php else: ?>
         <div class="row g-4">
-            <?php foreach ($bookings as $b):
+            <?php foreach ($tenancies as $b):
                 [$label, $color] = status_label($b['status']);
                 $isPending = $b['status'] === 'pending_landlord';
             ?>
                 <div class="col-12">
-                    <a href="/rentbridge/landlord/booking.php?id=<?= (int)$b['id'] ?>"
+                    <a href="/rentbridge/landlord/tenancy.php?id=<?= (int)$b['id'] ?>"
                        class="text-decoration-none text-dark d-block">
-                        <div class="bg-white border rounded-3 overflow-hidden booking-row <?= $isPending ? 'booking-row--urgent' : '' ?>">
+                        <div class="bg-white border rounded-3 overflow-hidden tenancy-row <?= $isPending ? 'tenancy-row--urgent' : '' ?>">
                             <div class="row g-0">
                                 <div class="col-md-3" style="background:linear-gradient(135deg,#E6ECF4,#E4F2EA); min-height: 160px;">
                                     <?php if (!empty($b['image_path'])): ?>

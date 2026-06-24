@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/auth.php';
 
 const ASSIGNMENT_TIMEOUT_HOURS = 24;
@@ -185,7 +185,7 @@ function agent_accept_property(int $propertyId, int $agentId): array {
 
     if (!$convoId) {
         $stmt = $pdo->prepare("
-            INSERT INTO conversations (user_a, user_b, property_id, booking_id, context_type)
+            INSERT INTO conversations (user_a, user_b, property_id, tenancy_id, context_type)
             VALUES (?, ?, ?, NULL, 'agent_case')
         ");
         $stmt->execute([$lo, $hi, $propertyId]);

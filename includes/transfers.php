@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/auth.php';
 
 const TRANSFER_BATCH_SIZE = 5;
@@ -21,7 +21,7 @@ function dispatch_transfer_batch(int $transferId): bool {
     $alreadyNotified = array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
     $alreadyNotified[] = (int)$req['requesting_agent_id'];
 
-    // FIFO: order by pending bookings ASC
+    // FIFO: order by pending tenancies ASC
     $stmt = $pdo->query("
         SELECT a.user_id
           FROM agents a
@@ -122,9 +122,9 @@ function complete_transfer(int $transferId, int $newAgentId): bool {
         $pdo->prepare("UPDATE properties SET assigned_agent_id = ? WHERE id = ?")
             ->execute([$newAgentId, $propertyId]);
 
-        // Re-assign all pending/active bookings for this property
+        // Re-assign all pending/active tenancies for this property
         $pdo->prepare("
-            UPDATE bookings
+            UPDATE tenancies
                SET agent_id = ?
              WHERE property_id = ?
                AND agent_id = ?
@@ -169,7 +169,7 @@ function complete_transfer(int $transferId, int $newAgentId): bool {
         );
         notify($newAgentId, 'transfer_accepted',
             'You are now handling "' . $req['property_title'] . '"',
-            'You accepted the case transfer. All active bookings for this property are now assigned to you.',
+            'You accepted the case transfer. All active tenancies for this property are now assigned to you.',
             '/rentbridge/agent/cases.php?tab=properties'
         );
 

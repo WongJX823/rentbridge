@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/reports.php';
 require_role('admin');
@@ -160,7 +160,7 @@ ob_start();
     <div class="col-auto">
         <select name="filter_ctx" class="form-select form-select-sm" onchange="this.form.submit()">
             <option value="">All contexts</option>
-            <option value="booking" <?= $filterCtx === 'booking' ? 'selected' : '' ?>>Booking</option>
+            <option value="tenancy" <?= $filterCtx === 'tenancy' ? 'selected' : '' ?>>Tenancy</option>
             <option value="message" <?= $filterCtx === 'message' ? 'selected' : '' ?>>Chat message</option>
             <option value="general" <?= $filterCtx === 'general' ? 'selected' : '' ?>>General</option>
         </select>

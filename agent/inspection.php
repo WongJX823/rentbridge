@@ -1,17 +1,17 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/uploads.php';
 require_role('agent');
 
-$bookingId = (int)($_GET['booking_id'] ?? $_POST['booking_id'] ?? 0);
-if ($bookingId <= 0) {
+$tenancyId = (int)($_GET['tenancy_id'] ?? $_POST['tenancy_id'] ?? 0);
+if ($tenancyId <= 0) {
     http_response_code(400);
-    die('Invalid booking ID.');
+    die('Invalid tenancy ID.');
 }
 
 $pdo = db();
 
-// Fetch booking + verification record
+// Fetch tenancy + verification record
 $stmt = $pdo->prepare("
     SELECT b.*,
            p.title          AS property_title,
@@ -29,36 +29,36 @@ $stmt = $pdo->prepare("
            v.started_at     AS v_started,
            v.deadline_at    AS v_deadline,
            v.submitted_at   AS v_submitted
-      FROM bookings b
+      FROM tenancies b
       JOIN properties p ON p.id = b.property_id
       JOIN students   s ON s.user_id = b.student_id
       JOIN landlords  l ON l.user_id = b.landlord_id
-      LEFT JOIN agent_verifications v ON v.booking_id = b.id
+      LEFT JOIN agent_verifications v ON v.tenancy_id = b.id
      WHERE b.id = ?
        AND b.agent_id = ?
      LIMIT 1
 ");
-$stmt->execute([$bookingId, current_user_id()]);
-$booking = $stmt->fetch();
+$stmt->execute([$tenancyId, current_user_id()]);
+$tenancy = $stmt->fetch();
 
-if (!$booking) {
+if (!$tenancy) {
     http_response_code(404);
-    die('Booking not found or you are not assigned as the agent.');
+    die('Tenancy not found or you are not assigned as the agent.');
 }
 
-if ($booking['status'] !== 'agent_verifying') {
-    set_flash('warning', 'This booking is not in inspection phase. Current status: ' . $booking['status']);
+if ($tenancy['status'] !== 'agent_verifying') {
+    set_flash('warning', 'This tenancy is not in inspection phase. Current status: ' . $tenancy['status']);
     header('Location: /rentbridge/agent/cases.php');
     exit;
 }
 
-if (!$booking['verification_id']) {
+if (!$tenancy['verification_id']) {
     die('Verification record missing. Please contact admin.');
 }
 
-if ($booking['v_outcome'] !== 'in_progress') {
+if ($tenancy['v_outcome'] !== 'in_progress') {
     set_flash('info', 'Inspection already submitted.');
-    header('Location: /rentbridge/agent/inspection_view.php?id=' . $booking['verification_id']);
+    header('Location: /rentbridge/agent/inspection_view.php?id=' . $tenancy['verification_id']);
     exit;
 }
 
@@ -93,40 +93,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                            inspection_notes = ?,
                            submitted_at = NOW()
                      WHERE id = ?
-                ")->execute([$abortReason, $booking['verification_id']]);
+                ")->execute([$abortReason, $tenancy['verification_id']]);
 
                 $pdo->prepare("
-                    UPDATE bookings
+                    UPDATE tenancies
                        SET status = 'inspection_aborted',
                            cancellation_reason = ?
                      WHERE id = ?
-                ")->execute(['Inspection aborted by agent: ' . $abortReason, $bookingId]);
+                ")->execute(['Inspection aborted by agent: ' . $abortReason, $tenancyId]);
 
                 // Release property back to available
                 $pdo->prepare("UPDATE properties SET status = 'available' WHERE id = ?")
-                    ->execute([(int)$booking['property_id']]);
+                    ->execute([(int)$tenancy['property_id']]);
 
                 $pdo->commit();
 
                 notify(
-                    (int)$booking['student_id'],
+                    (int)$tenancy['student_id'],
                     'inspection_aborted',
                     'Inspection could not be completed',
-                    'The agent was unable to inspect "' . $booking['property_title']
-                        . '". Reason: ' . $abortReason . '. Your booking has been cancelled — you may rebook.',
-                    '/rentbridge/student/bookings.php'
+                    'The agent was unable to inspect "' . $tenancy['property_title']
+                        . '". Reason: ' . $abortReason . '. Your tenancy has been cancelled — you may rebook.',
+                    '/rentbridge/student/tenancies.php'
                 );
                 notify(
-                    (int)$booking['landlord_id'],
+                    (int)$tenancy['landlord_id'],
                     'inspection_aborted',
                     'Agent could not complete inspection',
                     'The assigned agent was unable to inspect your property "'
-                        . $booking['property_title'] . '". Reason: ' . $abortReason
+                        . $tenancy['property_title'] . '". Reason: ' . $abortReason
                         . '. Please contact admin if this is incorrect.',
-                    '/rentbridge/landlord/bookings.php'
+                    '/rentbridge/landlord/tenancies.php'
                 );
 
-                set_flash('info', 'Inspection aborted. Booking has been cancelled and parties notified.');
+                set_flash('info', 'Inspection aborted. Tenancy has been cancelled and parties notified.');
                 header('Location: /rentbridge/agent/cases.php');
                 exit;
 
@@ -189,7 +189,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $outcome = match ($old['issue_severity']) {
         'none'  => 'passed',
         'minor' => 'passed_with_disclosure',  // student must acknowledge
-        'major' => 'failed',                  // booking auto-cancels
+        'major' => 'failed',                  // tenancy auto-cancels
     };
 
     // ---- ALL VALID — save the inspection ----
@@ -222,7 +222,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $old['issues_found'] !== '' ? $old['issues_found'] : null,
                 $old['issue_severity'],
                 $outcome,
-                $booking['verification_id']
+                $tenancy['verification_id']
             ]);
 
             // 2. Save photos
@@ -232,14 +232,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ");
             foreach ($validPhotos as $file) {
                 $savedPath = save_inspection_photo($file);
-                $photoStmt->execute([$booking['verification_id'], $savedPath]);
+                $photoStmt->execute([$tenancy['verification_id'], $savedPath]);
             }
 
-            // 3. Update booking status based on outcome
+            // 3. Update tenancy status based on outcome
             if ($outcome === 'passed') {
                 // Clean pass → ready for contract
-                $stmt = $pdo->prepare("UPDATE bookings SET status = 'agent_verified' WHERE id = ?");
-                $stmt->execute([$bookingId]);
+                $stmt = $pdo->prepare("UPDATE tenancies SET status = 'agent_verified' WHERE id = ?");
+                $stmt->execute([$tenancyId]);
 
                 // Mark property as agent-verified
                 $stmt = $pdo->prepare("
@@ -248,36 +248,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                            agent_verified_by = ?
                      WHERE id = ?
                 ");
-                $stmt->execute([current_user_id(), (int)$booking['property_id']]);
+                $stmt->execute([current_user_id(), (int)$tenancy['property_id']]);
 
                 // Notify student
                 notify(
-                    (int)$booking['student_id'],
+                    (int)$tenancy['student_id'],
                     'inspection_passed',
                     'Property inspection passed! ✓',
-                    'Your booking #' . $bookingId . ' for "' . $booking['property_title']
+                    'Your tenancy #' . $tenancyId . ' for "' . $tenancy['property_title']
                         . '" passed inspection. The contract is being prepared for signing.',
-                    '/rentbridge/student/booking.php?id=' . $bookingId
+                    '/rentbridge/student/tenancy.php?id=' . $tenancyId
                 );
 
                 // Notify landlord
                 notify(
-                    (int)$booking['landlord_id'],
+                    (int)$tenancy['landlord_id'],
                     'inspection_passed',
                     'Property inspection passed ✓',
-                    'The agent has verified your property "' . $booking['property_title']
-                        . '" for booking #' . $bookingId . '. Contract is being prepared.',
-                    '/rentbridge/landlord/booking.php?id=' . $bookingId
+                    'The agent has verified your property "' . $tenancy['property_title']
+                        . '" for tenancy #' . $tenancyId . '. Contract is being prepared.',
+                    '/rentbridge/landlord/tenancy.php?id=' . $tenancyId
                 );
 
                 // Auto-create the contract NOW (deferred from accept step)
                 require_once __DIR__ . '/../includes/contracts.php';
-                $contractId = create_contract_from_booking($bookingId);
+                $contractId = create_contract_from_tenancy($tenancyId);
 
-                // Update booking to contract_pending
+                // Update tenancy to contract_pending
                 if ($contractId) {
-                    $stmt = $pdo->prepare("UPDATE bookings SET status = 'contract_pending' WHERE id = ?");
-                    $stmt->execute([$bookingId]);
+                    $stmt = $pdo->prepare("UPDATE tenancies SET status = 'contract_pending' WHERE id = ?");
+                    $stmt->execute([$tenancyId]);
                 }
             }
             elseif ($outcome === 'passed_with_disclosure') {
@@ -285,46 +285,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // For now: keep status 'agent_verifying' until student decides
                 // We'll build the student decision page next
                 notify(
-                    (int)$booking['student_id'],
+                    (int)$tenancy['student_id'],
                     'inspection_issues',
                     '⚠ Minor issues found — your decision needed',
-                    'The agent inspection found minor issues with "' . $booking['property_title']
+                    'The agent inspection found minor issues with "' . $tenancy['property_title']
                         . '". Please review and decide whether to proceed.',
-                    '/rentbridge/student/inspection_decision.php?booking_id=' . $bookingId
+                    '/rentbridge/student/inspection_decision.php?tenancy_id=' . $tenancyId
                 );
             }
             elseif ($outcome === 'failed') {
-                // Major issues → auto-cancel booking
+                // Major issues → auto-cancel tenancy
                 $stmt = $pdo->prepare("
-                    UPDATE bookings
+                    UPDATE tenancies
                        SET status = 'verification_failed',
                            cancellation_reason = ?
                      WHERE id = ?
                 ");
                 $stmt->execute([
                     'Failed agent inspection: ' . $old['issues_found'],
-                    $bookingId
+                    $tenancyId
                 ]);
 
                 // Release property back to available
                 $stmt = $pdo->prepare("UPDATE properties SET status = 'available' WHERE id = ?");
-                $stmt->execute([(int)$booking['property_id']]);
+                $stmt->execute([(int)$tenancy['property_id']]);
 
                 // Notify all parties
                 notify(
-                    (int)$booking['student_id'],
+                    (int)$tenancy['student_id'],
                     'inspection_failed',
-                    '❌ Inspection failed — booking cancelled',
-                    'The agent found major issues with "' . $booking['property_title']
-                        . '" during inspection. Your booking has been cancelled.',
-                    '/rentbridge/student/bookings.php'
+                    '❌ Inspection failed — tenancy cancelled',
+                    'The agent found major issues with "' . $tenancy['property_title']
+                        . '" during inspection. Your tenancy has been cancelled.',
+                    '/rentbridge/student/tenancies.php'
                 );
                 notify(
-                    (int)$booking['landlord_id'],
+                    (int)$tenancy['landlord_id'],
                     'inspection_failed',
                     'Major issues found during inspection',
-                    'The agent inspection found major issues with "' . $booking['property_title']
-                        . '". The booking has been cancelled. Please address the issues and contact admin.',
+                    'The agent inspection found major issues with "' . $tenancy['property_title']
+                        . '". The tenancy has been cancelled. Please address the issues and contact admin.',
                     '/rentbridge/landlord/properties.php'
                 );
 
@@ -336,9 +336,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         (int)$admin['id'],
                         'inspection_failed',
                         '⚠ Property failed agent inspection',
-                        'Booking #' . $bookingId . ' — property "' . $booking['property_title']
+                        'Tenancy #' . $tenancyId . ' — property "' . $tenancy['property_title']
                             . '" failed major-issue inspection. Review recommended.',
-                        '/rentbridge/admin/property.php?id=' . $booking['property_id']
+                        '/rentbridge/admin/property.php?id=' . $tenancy['property_id']
                     );
                 }
             }
@@ -346,7 +346,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->commit();
 
             set_flash('success', 'Inspection submitted successfully.');
-            header('Location: /rentbridge/agent/inspection_view.php?id=' . $booking['verification_id']);
+            header('Location: /rentbridge/agent/inspection_view.php?id=' . $tenancy['verification_id']);
             exit;
 
         } catch (Throwable $e) {
@@ -357,7 +357,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Compute deadline status for the warning banner
-$deadlineTs = strtotime($booking['v_deadline']);
+$deadlineTs = strtotime($tenancy['v_deadline']);
 $now        = time();
 $hoursLeft  = max(0, round(($deadlineTs - $now) / 3600));
 $overdue    = $now > $deadlineTs;
@@ -389,7 +389,7 @@ $overdue    = $now > $deadlineTs;
             </p>
 
             <h1 class="mb-1">Property Inspection</h1>
-            <p class="text-secondary mb-4">Booking #<?= (int)$bookingId ?> · <?= e($booking['property_title']) ?></p>
+            <p class="text-secondary mb-4">Tenancy #<?= (int)$tenancyId ?> · <?= e($tenancy['property_title']) ?></p>
 
             <?php if ($overdue): ?>
                 <div class="alert alert-danger d-flex align-items-center gap-2">
@@ -420,23 +420,23 @@ $overdue    = $now > $deadlineTs;
                 <div class="row g-3">
                     <div class="col-md-6">
                         <small class="text-secondary text-uppercase">Property</small>
-                        <div class="fw-semibold"><?= e($booking['property_title']) ?></div>
+                        <div class="fw-semibold"><?= e($tenancy['property_title']) ?></div>
                         <div class="small text-secondary">
-                            <?= e($booking['property_address']) ?>,<br>
-                            <?= e($booking['property_city']) ?> <?= e($booking['property_postcode']) ?>,
-                            <?= e($booking['property_state']) ?>
+                            <?= e($tenancy['property_address']) ?>,<br>
+                            <?= e($tenancy['property_city']) ?> <?= e($tenancy['property_postcode']) ?>,
+                            <?= e($tenancy['property_state']) ?>
                         </div>
                     </div>
                     <div class="col-md-3">
                         <small class="text-secondary text-uppercase">Student</small>
-                        <div class="fw-semibold"><?= e($booking['student_name']) ?></div>
+                        <div class="fw-semibold"><?= e($tenancy['student_name']) ?></div>
                     </div>
                     <div class="col-md-3">
                         <small class="text-secondary text-uppercase">Landlord</small>
-                        <div class="fw-semibold"><?= e($booking['landlord_name']) ?></div>
+                        <div class="fw-semibold"><?= e($tenancy['landlord_name']) ?></div>
                         <div class="small text-secondary">
-                            IC: <?= e($booking['landlord_ic']) ?><br>
-                            <?= e($booking['landlord_phone']) ?>
+                            IC: <?= e($tenancy['landlord_ic']) ?><br>
+                            <?= e($tenancy['landlord_phone']) ?>
                         </div>
                     </div>
                 </div>
@@ -444,7 +444,7 @@ $overdue    = $now > $deadlineTs;
 
             <?php
             require_once __DIR__ . '/../includes/uploads.php';
-            $documents = get_property_documents((int)$booking['property_id']);
+            $documents = get_property_documents((int)$tenancy['property_id']);
             ?>
             <?php if (!empty($documents)): ?>
             <div class="bg-white border rounded-3 p-4 mb-4"
@@ -490,7 +490,7 @@ $overdue    = $now > $deadlineTs;
             <!-- Inspection form -->
             <form method="POST" enctype="multipart/form-data" novalidate>
                 <?= csrf_field() ?>
-                <input type="hidden" name="booking_id" value="<?= (int)$bookingId ?>">
+                <input type="hidden" name="tenancy_id" value="<?= (int)$tenancyId ?>">
 
                 <!-- Property verification checklist -->
                 <div class="bg-white border rounded-3 p-4 mb-4">
@@ -523,7 +523,7 @@ $overdue    = $now > $deadlineTs;
 
                     <?php
                     $idChecklist = [
-                        'landlord_id_matches'    => 'Landlord IC matches account info (' . $booking['landlord_ic'] . ')',
+                        'landlord_id_matches'    => 'Landlord IC matches account info (' . $tenancy['landlord_ic'] . ')',
                         'ownership_doc_sighted'  => 'Property ownership document sighted (title / SPA / utility bill)',
                     ];
                     foreach ($idChecklist as $field => $label):
@@ -582,7 +582,7 @@ $overdue    = $now > $deadlineTs;
                             ⚠ Minor issues — student can decide whether to proceed
                         </option>
                         <option value="major" <?= $old['issue_severity']==='major'?'selected':'' ?>>
-                            ❌ Major issues — booking should be cancelled
+                            ❌ Major issues — tenancy should be cancelled
                         </option>
                     </select>
 
@@ -603,7 +603,7 @@ $overdue    = $now > $deadlineTs;
                         <strong>What happens next?</strong><br>
                         • <strong>No issues</strong>: contract auto-generated, all parties notified to sign<br>
                         • <strong>Minor issues</strong>: student reviews the report, decides to proceed or cancel<br>
-                        • <strong>Major issues</strong>: booking cancelled, admin notified, property may be removed from listings
+                        • <strong>Major issues</strong>: tenancy cancelled, admin notified, property may be removed from listings
                     </small>
                 </div>
 
@@ -632,7 +632,7 @@ $overdue    = $now > $deadlineTs;
                         </div>
                         <form method="POST">
                             <?= csrf_field() ?>
-                            <input type="hidden" name="booking_id" value="<?= (int)$bookingId ?>">
+                            <input type="hidden" name="tenancy_id" value="<?= (int)$tenancyId ?>">
                             <input type="hidden" name="action" value="abort">
                             <div class="modal-body">
                                 <?php if (!empty($errors['abort'])): ?>
@@ -641,7 +641,7 @@ $overdue    = $now > $deadlineTs;
                                 <p class="small text-secondary">
                                     Use this only if you genuinely cannot carry out the inspection —
                                     e.g. landlord unresponsive, property inaccessible, wrong address.
-                                    The booking will be cancelled and both student and landlord notified.
+                                    The tenancy will be cancelled and both student and landlord notified.
                                 </p>
                                 <label class="form-label fw-semibold">Reason <span class="text-danger">*</span></label>
                                 <textarea name="abort_reason" rows="3" class="form-control" required
@@ -650,7 +650,7 @@ $overdue    = $now > $deadlineTs;
                             <div class="modal-footer border-0">
                                 <button type="button" class="btn btn-ghost" data-bs-dismiss="modal">Go back</button>
                                 <button type="submit" class="btn btn-danger"
-                                        onclick="return confirm('This will cancel the booking and notify both parties. Are you sure?');">
+                                        onclick="return confirm('This will cancel the tenancy and notify both parties. Are you sure?');">
                                     <i class="bi bi-x-octagon me-1"></i> Abort inspection
                                 </button>
                             </div>
@@ -679,10 +679,10 @@ $overdue    = $now > $deadlineTs;
 <?php
 require_once __DIR__ . '/../includes/reports.php';
 $reportSubjects = [
-    ['id' => (int)$booking['student_id'],  'name' => $booking['student_name'],  'role' => 'student'],
-    ['id' => (int)$booking['landlord_id'], 'name' => $booking['landlord_name'], 'role' => 'landlord'],
+    ['id' => (int)$tenancy['student_id'],  'name' => $tenancy['student_name'],  'role' => 'student'],
+    ['id' => (int)$tenancy['landlord_id'], 'name' => $tenancy['landlord_name'], 'role' => 'landlord'],
 ];
-render_report_modal($reportSubjects, 'booking', (int)$booking['id']);
+render_report_modal($reportSubjects, 'tenancy', (int)$tenancy['id']);
 ?>
 
 </body>

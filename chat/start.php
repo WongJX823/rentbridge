@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/chat.php';
 require_login();
@@ -53,17 +53,17 @@ elseif ($type === 'friend') {
 }
 
 elseif ($type === 'agent_case') {
-    // Student → Agent (must be assigned to a booking)
-    $bookingId = (int)($_GET['booking_id'] ?? 0);
-    if ($bookingId <= 0) die('Invalid booking.');
+    // Student → Agent (must be assigned to a tenancy)
+    $tenancyId = (int)($_GET['tenancy_id'] ?? 0);
+    if ($tenancyId <= 0) die('Invalid tenancy.');
 
     $stmt = db()->prepare("
-        SELECT student_id, agent_id FROM bookings
+        SELECT student_id, agent_id FROM tenancies
          WHERE id = ? AND agent_id IS NOT NULL LIMIT 1
     ");
-    $stmt->execute([$bookingId]);
+    $stmt->execute([$tenancyId]);
     $b = $stmt->fetch();
-    if (!$b) die('Booking not found or no agent assigned.');
+    if (!$b) die('Tenancy not found or no agent assigned.');
 
     $isStudent = $userId === (int)$b['student_id'];
     $isAgent   = $userId === (int)$b['agent_id'];
@@ -74,7 +74,7 @@ elseif ($type === 'agent_case') {
     }
 
     $otherId = $isStudent ? (int)$b['agent_id'] : (int)$b['student_id'];
-    $convoId = find_or_create_conversation($userId, $otherId, 'agent_case', null, $bookingId);
+    $convoId = find_or_create_conversation($userId, $otherId, 'agent_case', null, $tenancyId);
     header('Location: /rentbridge/chat.php?id=' . $convoId);
     exit;
 }

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/partners.php';
 require_role('student');
@@ -25,7 +25,7 @@ $posts = list_co_tenancy_posts($userId, $filters);
 $myPosts = get_my_co_tenancy_posts($userId);
 
 // All cities for filter dropdown
-$cities = $pdo->query("SELECT DISTINCT city FROM properties WHERE status IN ('available','booked') ORDER BY city")->fetchAll(PDO::FETCH_COLUMN);
+$cities = $pdo->query("SELECT DISTINCT city FROM properties WHERE status = 'available' ORDER BY city")->fetchAll(PDO::FETCH_COLUMN);
 
 $pageTitle = 'Find Housemates';
 $activeNav = 'partners';

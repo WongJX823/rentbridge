@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/includes/auth.php';
 
 $pageTitle     = 'Terms & Conditions';
@@ -341,7 +341,7 @@ ob_start();
     <!-- 13 -->
     <h2 id="t13">13. Communication &amp; Conduct</h2>
     <p>
-        All communications between platform users regarding properties, bookings, and contracts
+        All communications between platform users regarding properties, tenancies, and contracts
         must be conducted through the Platform's built-in messaging system. Arranging payments
         or agreements through external channels (WhatsApp, Telegram, email) does not create
         any obligation on UTeM and is at the user's own risk.

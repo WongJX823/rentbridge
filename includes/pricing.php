@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/auth.php';
 
 // === Constants ===
@@ -252,7 +252,7 @@ function get_pricing_benchmark(
 
 if (!$skipMarketBase) {
         foreach ($tiers as $tier) {
-            $where = ["status IN ('available','booked','rented')", "city = ?"];
+            $where = ["status IN ('available','reserved','rented')", "city = ?"];
             $params = [$city];
 
             if ($tier['type']) { $where[] = "property_type = ?"; $params[] = $propertyType; }

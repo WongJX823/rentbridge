@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/contracts.php';
 require_role('landlord');
@@ -33,11 +33,11 @@ $stmt = $pdo->prepare("SELECT COUNT(*) FROM properties WHERE landlord_id = ? AND
 $stmt->execute([$userId]);
 $counts['rented'] = (int)$stmt->fetchColumn();
 
-$stmt = $pdo->prepare("SELECT COUNT(*) FROM bookings WHERE landlord_id = ? AND status = 'pending_landlord'");
+$stmt = $pdo->prepare("SELECT COUNT(*) FROM tenancies WHERE landlord_id = ? AND status = 'pending_landlord'");
 $stmt->execute([$userId]);
 $counts['pending_tenancies'] = (int)$stmt->fetchColumn();
 
-$stmt = $pdo->prepare("SELECT COUNT(*) FROM bookings WHERE landlord_id = ? AND status = 'active'");
+$stmt = $pdo->prepare("SELECT COUNT(*) FROM tenancies WHERE landlord_id = ? AND status = 'active'");
 $stmt->execute([$userId]);
 $counts['active_tenancies'] = (int)$stmt->fetchColumn();
 
@@ -47,7 +47,7 @@ $stmt = $pdo->prepare("
            p.title AS property_title,
            s.full_name AS student_name,
            s.matric_no
-      FROM bookings b
+      FROM tenancies b
       JOIN properties p ON p.id = b.property_id
       JOIN students s ON s.user_id = b.student_id
      WHERE b.landlord_id = ?
@@ -78,7 +78,7 @@ function landlord_prop_status_badge(string $status): array {
     return match ($status) {
         'pending_approval' => ['Pending review', 'warning'],
         'available'        => ['Available',      'success'],
-        'booked'           => ['Booked',         'info'],
+        'reserved'           => ['Reserved',         'info'],
         'rented'           => ['Rented',         'primary'],
         'hidden'           => ['Hidden',         'secondary'],
         'rejected'         => ['Rejected',       'danger'],
@@ -190,7 +190,7 @@ ob_start();
                             <?= e(date('d M Y', strtotime($t['created_at']))) ?>
                         </td>
                         <td class="text-end pe-3">
-                            <a href="/rentbridge/landlord/booking.php?id=<?= (int)$t['id'] ?>"
+                            <a href="/rentbridge/landlord/tenancy.php?id=<?= (int)$t['id'] ?>"
                                class="btn btn-sm btn-primary">
                                 Review <i class="bi bi-arrow-right"></i>
                             </a>

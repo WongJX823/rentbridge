@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Landlord layout wrapper — sticky sidebar + sticky tab bar.
  *
@@ -35,7 +35,7 @@ $unreadNotif = (int)$stmt->fetchColumn();
 $totalUnread = $unreadChat + $unreadNotif;
 
 // Pending tenancy requests count (for sidebar badge)
-$stmt = $pdo->prepare("SELECT COUNT(*) FROM bookings WHERE landlord_id = ? AND status = 'pending_landlord'");
+$stmt = $pdo->prepare("SELECT COUNT(*) FROM tenancies WHERE landlord_id = ? AND status = 'pending_landlord'");
 $stmt->execute([$userId]);
 $pendingRequests = (int)$stmt->fetchColumn();
 ?>

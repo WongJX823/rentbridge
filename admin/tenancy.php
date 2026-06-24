@@ -1,16 +1,16 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../includes/auth.php';
 require_role('admin');
 
-$bookingId = (int)($_GET['id'] ?? 0);
-if ($bookingId <= 0) {
+$tenancyId = (int)($_GET['id'] ?? 0);
+if ($tenancyId <= 0) {
     http_response_code(400);
     die('Invalid tenancy ID.');
 }
 
 $pdo = db();
 
-// Fetch booking + all parties + contract
+// Fetch tenancy + all parties + contract
 $stmt = $pdo->prepare("
     SELECT b.*,
            p.title          AS property_title,
@@ -29,7 +29,7 @@ $stmt = $pdo->prepare("
            a.department     AS agent_department,
            au.email         AS agent_email,
            ua.full_name     AS uploaded_by_name
-      FROM bookings b
+      FROM tenancies b
       JOIN properties p ON p.id = b.property_id
       JOIN users su ON su.id = b.student_id
       JOIN students s ON s.user_id = b.student_id
@@ -41,7 +41,7 @@ $stmt = $pdo->prepare("
      WHERE b.id = ?
      LIMIT 1
 ");
-$stmt->execute([$bookingId]);
+$stmt->execute([$tenancyId]);
 $tenancy = $stmt->fetch();
 
 if (!$tenancy) {
@@ -53,11 +53,11 @@ if (!$tenancy) {
 $stmt = $pdo->prepare("
     SELECT id, is_primary, full_name, ic_number, phone, email, sign_order, status, signed_at
       FROM co_tenants
-     WHERE booking_id = ?
+     WHERE tenancy_id = ?
        AND status != 'removed'
      ORDER BY sign_order ASC
 ");
-$stmt->execute([$bookingId]);
+$stmt->execute([$tenancyId]);
 $tenants = $stmt->fetchAll();
 
 if (!$tenancy) {
@@ -79,13 +79,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             try {
                 $pdo->beginTransaction();
                 $stmt = $pdo->prepare("
-                    UPDATE bookings
+                    UPDATE tenancies
                        SET status = 'cancelled_by_admin',
                            cancellation_reason = ?,
                            cancelled_by = ?
                      WHERE id = ?
                 ");
-                $stmt->execute([$reason, current_user_id(), $bookingId]);
+                $stmt->execute([$reason, current_user_id(), $tenancyId]);
 
                 // Release property
                 $stmt = $pdo->prepare("UPDATE properties SET status = 'available' WHERE id = ?");
@@ -94,16 +94,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Notify both parties
                 notify((int)$tenancy['student_id'], 'admin_cancelled',
                     'Tenancy cancelled by admin',
-                    'Your tenancy #' . $bookingId . ' was cancelled. Reason: ' . $reason,
-                    '/rentbridge/student/bookings.php');
+                    'Your tenancy #' . $tenancyId . ' was cancelled. Reason: ' . $reason,
+                    '/rentbridge/student/tenancies.php');
                 notify((int)$tenancy['landlord_id'], 'admin_cancelled',
                     'Tenancy cancelled by admin',
-                    'Tenancy #' . $bookingId . ' was cancelled. Reason: ' . $reason,
-                    '/rentbridge/landlord/bookings.php');
+                    'Tenancy #' . $tenancyId . ' was cancelled. Reason: ' . $reason,
+                    '/rentbridge/landlord/tenancies.php');
 
                 $pdo->commit();
                 set_flash('warning', 'Tenancy cancelled and parties notified.');
-                header('Location: /rentbridge/admin/booking.php?id=' . $bookingId);
+                header('Location: /rentbridge/admin/tenancy.php?id=' . $tenancyId);
                 exit;
             } catch (Throwable $e) {
                 if ($pdo->inTransaction()) $pdo->rollBack();
@@ -114,8 +114,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // --- LAYOUT ---
-$pageTitle = 'Tenancy #' . $bookingId;
-$activeNav = 'bookings';
+$pageTitle = 'Tenancy #' . $tenancyId;
+$activeNav = 'tenancies';
 
 function tenancy_status_label_full(string $status): array {
     return match ($status) {
@@ -140,7 +140,7 @@ ob_start();
 ?>
 
 <p class="small mb-3">
-    <a href="/rentbridge/admin/bookings.php" class="text-secondary text-decoration-none">
+    <a href="/rentbridge/admin/tenancies.php" class="text-secondary text-decoration-none">
         <i class="bi bi-arrow-left"></i> Back to tenancies
     </a>
 </p>
@@ -152,7 +152,7 @@ ob_start();
 <!-- HEADER -->
 <div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-2">
     <div>
-        <h2 class="mb-1">Tenancy #<?= (int)$bookingId ?></h2>
+        <h2 class="mb-1">Tenancy #<?= (int)$tenancyId ?></h2>
         <p class="text-secondary mb-0">
             Created <?= e(date('d M Y, H:i', strtotime($tenancy['created_at']))) ?>
         </p>

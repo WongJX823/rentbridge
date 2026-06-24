@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../includes/auth.php';
 require_role('landlord');
 
@@ -50,10 +50,10 @@ $stmt = $pdo->prepare("
            s.full_name AS student_name, s.matric_no,
            a.full_name AS agent_name,
            c.contract_code, c.id AS contract_id
-      FROM bookings b
+      FROM tenancies b
       JOIN students s ON s.user_id = b.student_id
       LEFT JOIN agents a ON a.user_id = b.agent_id
-      LEFT JOIN contracts c ON c.booking_id = b.id
+      LEFT JOIN contracts c ON c.tenancy_id = b.id
      WHERE b.property_id = ?
      ORDER BY b.created_at DESC
 ");
@@ -62,8 +62,8 @@ $tenancies = $stmt->fetchAll();
 
 // Current inspector (active case)
 $stmt = $pdo->prepare("
-    SELECT a.full_name AS agent_name, a.staff_id, a.department, b.id AS booking_id, b.status
-      FROM bookings b
+    SELECT a.full_name AS agent_name, a.staff_id, a.department, b.id AS tenancy_id, b.status
+      FROM tenancies b
       JOIN agents a ON a.user_id = b.agent_id
      WHERE b.property_id = ?
        AND b.status IN ('agent_assigned','agent_verifying')
@@ -78,7 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
     $action = $_POST['action'] ?? '';
 
-    if ($action === 'hide' && in_array($property['status'], ['available','booked'], true)) {
+    if ($action === 'hide' && in_array($property['status'], ['available','reserved'], true)) {
         $stmt = $pdo->prepare("UPDATE properties SET status = 'hidden' WHERE id = ?");
         $stmt->execute([$propertyId]);
         set_flash('info', 'Property hidden from listings.');
@@ -95,7 +95,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'delete' && in_array($property['status'], ['pending_approval','rejected','hidden'], true)) {
         // Only allow delete if not active anywhere
         $stmt = $pdo->prepare("
-            SELECT COUNT(*) FROM bookings
+            SELECT COUNT(*) FROM tenancies
              WHERE property_id = ?
                AND status NOT IN ('cancelled_by_student','cancelled_by_landlord','cancelled_by_admin','rejected_by_landlord','completed')
         ");
@@ -122,7 +122,7 @@ function landlord_prop_status_info(string $status): array {
             'An agent has been assigned to verify your listing. You can still edit while pending. Once approved, students can browse this property.'],
         'available'        => ['Available', 'success',
             'Live and visible to students. They can browse and apply for tenancy.'],
-        'booked'           => ['Booked', 'info',
+        'reserved'           => ['Reserved', 'info',
             'A tenancy is being processed. The property is reserved but not yet rented.'],
         'rented'           => ['Rented', 'primary',
             'Currently rented. The contract is active.'],
@@ -180,7 +180,7 @@ ob_start();
         </a>
     <?php endif; ?>
 
-    <?php if (in_array($property['status'], ['available','booked'], true)): ?>
+    <?php if (in_array($property['status'], ['available','reserved'], true)): ?>
         <form method="POST" class="d-inline">
             <?= csrf_field() ?>
             <input type="hidden" name="action" value="hide">
@@ -220,7 +220,7 @@ ob_start();
         <strong>Currently with agent:</strong> <?= e($currentInspector['agent_name']) ?>
         (<code><?= e($currentInspector['staff_id']) ?></code> · <?= e($currentInspector['department']) ?>)
         <div class="small">
-            Working on Tenancy #<?= (int)$currentInspector['booking_id'] ?>
+            Working on Tenancy #<?= (int)$currentInspector['tenancy_id'] ?>
             (<?= e(str_replace('_', ' ', $currentInspector['status'])) ?>)
         </div>
     </div>
@@ -433,7 +433,7 @@ $documents = get_property_documents($propertyId);
                     </td>
                     <td><span class="badge bg-<?= $sLabel[1] ?>"><?= e($sLabel[0]) ?></span></td>
                     <td class="text-end">
-                        <a href="/rentbridge/landlord/booking.php?id=<?= (int)$t['id'] ?>"
+                        <a href="/rentbridge/landlord/tenancy.php?id=<?= (int)$t['id'] ?>"
                            class="btn btn-sm btn-outline-dark">
                             View <i class="bi bi-arrow-right"></i>
                         </a>

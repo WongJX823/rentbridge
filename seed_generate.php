@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * RentBridge Seed Data Generator
  * Outputs valid SQL INSERT statements to stdout.
@@ -291,7 +291,7 @@ foreach ($prop_sem_ranges as $sem => $pr) {
         $prop_types_map[$pid] = $ptype;
         $prop_rents_map[$pid] = $rent;
 
-        // scenario 5: prop 80 must be whole_unit (Sem2 group booking)
+        // scenario 5: prop 80 must be whole_unit (Sem2 group tenancy)
         if ($pid === 80) { $ptype='whole_unit'; $prop_types_map[$pid]='whole_unit'; $rent=1100; $prop_rents_map[$pid]=1100; }
 
         $landlord_id = landlord_for_prop($i, $sem, $landlord_sem_ranges);
@@ -384,17 +384,17 @@ foreach ($prop_sem_ranges as $sem => $pr) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 4. BOOKINGS
+// 4. TENANCIES
 // ═══════════════════════════════════════════════════════════════════════════════
 $sql[] = "";
 $sql[] = "-- ============================================================";
-$sql[] = "-- BOOKINGS";
+$sql[] = "-- TENANCIES";
 $sql[] = "-- ============================================================";
 
-$booking_id = 1;
-$bookings_db = []; // bid => data
+$tenancy_id = 1;
+$tenancies_db = []; // bid => data
 
-function booking_status_pick(int $n): string {
+function tenancy_status_pick(int $n): string {
     $r = $n % 100;
     if ($r < 35) return 'active';
     if ($r < 65) return 'completed';
@@ -406,7 +406,7 @@ function booking_status_pick(int $n): string {
     return 'pending_landlord';
 }
 
-function make_booking_sql(array $b): string {
+function make_tenancy_sql(array $b): string {
     // cancelled_by must be int (user_id) or NULL
     $cancelled_by_val = 'NULL';
     if ($b['bstatus'] === 'cancelled_by_student') $cancelled_by_val = qi($b['student_id']);
@@ -414,7 +414,7 @@ function make_booking_sql(array $b): string {
 
     $signed_path = 'NULL'; $signed_at = 'NULL'; $signed_by = 'NULL';
     if (in_array($b['bstatus'], ['active','completed','contract_pending'])) {
-        $signed_path = q('uploads/contracts/booking_'.$b['bid'].'_signed.pdf');
+        $signed_path = q('uploads/contracts/tenancy_'.$b['bid'].'_signed.pdf');
         $signed_at   = q(date('Y-m-d H:i:s', strtotime($b['start']) - 7 * 86400));
         $signed_by   = qi($b['student_id']); // int FK
     }
@@ -425,7 +425,7 @@ function make_booking_sql(array $b): string {
     if ($b['bstatus'] === 'cancelled_by_student')  $cancel_reason = q('Found another place closer to campus');
     if ($b['bstatus'] === 'cancelled_by_landlord') $cancel_reason = q('Property is no longer available');
 
-    return "INSERT IGNORE INTO bookings (id,student_id,property_id,landlord_id,agent_id,start_date,end_date,duration_type,monthly_rent,deposit,status,signed_contract_path,signed_uploaded_at,signed_uploaded_by,student_note,landlord_response,cancellation_reason,cancelled_by,created_at,updated_at) VALUES "
+    return "INSERT IGNORE INTO tenancies (id,student_id,property_id,landlord_id,agent_id,start_date,end_date,duration_type,monthly_rent,deposit,status,signed_contract_path,signed_uploaded_at,signed_uploaded_by,student_note,landlord_response,cancellation_reason,cancelled_by,created_at,updated_at) VALUES "
         . "({$b['bid']},{$b['student_id']},{$b['prop_id']},{$b['landlord_id']},{$b['agent_id']},"
         . q($b['start']) . ',' . q($b['end']) . ',' . q($b['dur']) . ','
         . qf($b['rent']) . ',' . qf($b['rent']*2) . ',' . q($b['bstatus']) . ','
@@ -435,32 +435,32 @@ function make_booking_sql(array $b): string {
         . q($b['created']) . ',' . q($b['created']) . ");";
 }
 
-$booking_sem_cfg = [
+$tenancy_sem_cfg = [
     1 => ['student_pool'=>range(36,85),   'prop_pool'=>range(34,73),  'count'=>30,'start'=>'2024-02-01','created_base'=>'2024-01-25'],
     2 => ['student_pool'=>range(86,155),  'prop_pool'=>range(34,108), 'count'=>50,'start'=>'2024-09-01','created_base'=>'2024-08-10'],
     3 => ['student_pool'=>range(156,235), 'prop_pool'=>range(34,138), 'count'=>70,'start'=>'2025-02-01','created_base'=>'2025-01-20'],
 ];
 
-foreach ($booking_sem_cfg as $sem => $bc) {
+foreach ($tenancy_sem_cfg as $sem => $bc) {
     $sql[] = "";
-    $sql[] = "-- Sem $sem bookings";
+    $sql[] = "-- Sem $sem tenancies";
     $sp = $bc['student_pool'];
     $pp = $bc['prop_pool'];
 
     for ($i = 0; $i < $bc['count']; $i++) {
-        $bid = $booking_id++;
+        $bid = $tenancy_id++;
         $si  = $sp[$i % count($sp)];
         $pi  = $pp[$i % count($pp)];
 
-        // scenario 5 (Sem2): first 4 bookings share prop 80 (whole_unit)
+        // scenario 5 (Sem2): first 4 tenancies share prop 80 (whole_unit)
         if ($sem === 2 && $i < 4) {
             $pi = 80;
             $si = 86 + $i; // students 86,87,88,89
         }
         // scenario 1 (Sem1, idx 5): student 50 cancels
         if ($sem === 1 && $i === 5) $si = 50;
-        // scenario 3 (Sem2, idx 0): completed booking for prop 34
-        if ($sem === 2 && $i === 4) $pi = 34; // idx 4 (after group booking)
+        // scenario 3 (Sem2, idx 0): completed tenancy for prop 34
+        if ($sem === 2 && $i === 4) $pi = 34; // idx 4 (after group tenancy)
 
         $rent = $prop_rents_map[$pi] ?? 300;
         $lid  = $prop_landlord_map[$pi] ?? 236;
@@ -471,12 +471,12 @@ foreach ($booking_sem_cfg as $sem => $bc) {
         $end   = date('Y-m-d', $start_ts + (($i % 2 === 0) ? 180 : 365) * 86400);
         $dur   = ($i % 2 === 0) ? '1_semester' : '1_year';
 
-        $bstatus = booking_status_pick($i + $bid);
+        $bstatus = tenancy_status_pick($i + $bid);
 
         // forced overrides
         if ($sem === 1 && $i === 5)  $bstatus = 'cancelled_by_student';
         if ($sem === 1 && $i === 8)  $bstatus = 'rejected_by_landlord';
-        if ($sem === 2 && $i === 0)  $bstatus = 'active';   // group booking 1
+        if ($sem === 2 && $i === 0)  $bstatus = 'active';   // group tenancy 1
         if ($sem === 2 && $i === 1)  $bstatus = 'active';
         if ($sem === 2 && $i === 2)  $bstatus = 'active';
         if ($sem === 2 && $i === 3)  $bstatus = 'active';
@@ -487,27 +487,27 @@ foreach ($booking_sem_cfg as $sem => $bc) {
         $b = ['bid'=>$bid,'student_id'=>$si,'prop_id'=>$pi,'landlord_id'=>$lid,'agent_id'=>$aid,
               'start'=>$start,'end'=>$end,'dur'=>$dur,'rent'=>$rent,'bstatus'=>$bstatus,
               'sem'=>$sem,'created'=>$created];
-        $sql[] = make_booking_sql($b);
-        $bookings_db[$bid] = $b;
+        $sql[] = make_tenancy_sql($b);
+        $tenancies_db[$bid] = $b;
     }
 }
 
-// ── Extra scenario bookings ───────────────────────────────────────────────────
+// ── Extra scenario tenancies ───────────────────────────────────────────────────
 
-// Scenario 3: Sem3 active booking for prop 34
-$bid_s3 = $booking_id++;
+// Scenario 3: Sem3 active tenancy for prop 34
+$bid_s3 = $tenancy_id++;
 $r34 = $prop_rents_map[34] ?? 300;
 $l34 = $prop_landlord_map[34] ?? 236;
 $b_s3 = ['bid'=>$bid_s3,'student_id'=>200,'prop_id'=>34,'landlord_id'=>$l34,'agent_id'=>15,
          'start'=>'2025-02-05','end'=>'2025-08-05','dur'=>'1_semester','rent'=>$r34,
          'bstatus'=>'active','sem'=>3,'created'=>'2025-01-20 09:00:00'];
-$sql[] = "-- Scenario 3: Sem3 active booking for prop 34";
-$sql[] = make_booking_sql($b_s3);
-$bookings_db[$bid_s3] = $b_s3;
+$sql[] = "-- Scenario 3: Sem3 active tenancy for prop 34";
+$sql[] = make_tenancy_sql($b_s3);
+$tenancies_db[$bid_s3] = $b_s3;
 
 // Scenario 4: student 120 Sem2→completed, Sem3→active on different prop
-$bid_s4a = $booking_id++;
-$bid_s4b = $booking_id++;
+$bid_s4a = $tenancy_id++;
+$bid_s4b = $tenancy_id++;
 $r50 = $prop_rents_map[50] ?? 300; $l50 = $prop_landlord_map[50] ?? 240;
 $r65 = $prop_rents_map[65] ?? 290; $l65 = $prop_landlord_map[65] ?? 241;
 $b_s4a = ['bid'=>$bid_s4a,'student_id'=>120,'prop_id'=>50,'landlord_id'=>$l50,'agent_id'=>16,
@@ -517,16 +517,16 @@ $b_s4b = ['bid'=>$bid_s4b,'student_id'=>120,'prop_id'=>65,'landlord_id'=>$l65,'a
           'start'=>'2025-02-08','end'=>'2025-08-07','dur'=>'1_semester','rent'=>$r65,
           'bstatus'=>'active','sem'=>3,'created'=>'2025-01-22 08:00:00'];
 $sql[] = "-- Scenario 4: student 120 moves between properties";
-$sql[] = make_booking_sql($b_s4a);
-$sql[] = make_booking_sql($b_s4b);
-$bookings_db[$bid_s4a] = $b_s4a;
-$bookings_db[$bid_s4b] = $b_s4b;
+$sql[] = make_tenancy_sql($b_s4a);
+$sql[] = make_tenancy_sql($b_s4b);
+$tenancies_db[$bid_s4a] = $b_s4a;
+$tenancies_db[$bid_s4b] = $b_s4b;
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 5. AGENT VERIFICATIONS
-//    NOTE: agent_verifications has UNIQUE on booking_id, so scenario 8
-//    (two rows, one failed then one passed) must use two *different* booking IDs.
-//    We create a dedicated "re-inspection" booking (same property, same student).
+//    NOTE: agent_verifications has UNIQUE on tenancy_id, so scenario 8
+//    (two rows, one failed then one passed) must use two *different* tenancy IDs.
+//    We create a dedicated "re-inspection" tenancy (same property, same student).
 // ═══════════════════════════════════════════════════════════════════════════════
 $sql[] = "";
 $sql[] = "-- ============================================================";
@@ -536,27 +536,27 @@ $sql[] = "-- ============================================================";
 $av_id = 1;
 $av_trigger_statuses = ['agent_verifying','agent_verified','verification_failed','active','completed','contract_pending'];
 
-// Scenario 8 needs a "second attempt" booking — let's pick booking bid=15 as the FAILED first attempt
-// and create a new booking for the passed second attempt
-$bid_reinspect = $booking_id++;
-if (isset($bookings_db[15])) {
-    $b15 = $bookings_db[15];
+// Scenario 8 needs a "second attempt" tenancy — let's pick tenancy bid=15 as the FAILED first attempt
+// and create a new tenancy for the passed second attempt
+$bid_reinspect = $tenancy_id++;
+if (isset($tenancies_db[15])) {
+    $b15 = $tenancies_db[15];
     $b_ri = ['bid'=>$bid_reinspect,'student_id'=>$b15['student_id'],'prop_id'=>$b15['prop_id'],
              'landlord_id'=>$b15['landlord_id'],'agent_id'=>$b15['agent_id'],
              'start'=>date('Y-m-d', strtotime($b15['start']) + 30),'end'=>$b15['end'],
              'dur'=>$b15['dur'],'rent'=>$b15['rent'],
              'bstatus'=>'active','sem'=>$b15['sem'],'created'=>date('Y-m-d H:i:s', strtotime($b15['created']) + 86400*5)];
-    // Force booking 15 to verification_failed
-    $bookings_db[15]['bstatus'] = 'verification_failed';
-    $sql[] = "-- Scenario 8: re-inspection booking (2nd attempt after failure on bid=15)";
-    $sql[] = make_booking_sql($b_ri);
-    $bookings_db[$bid_reinspect] = $b_ri;
+    // Force tenancy 15 to verification_failed
+    $tenancies_db[15]['bstatus'] = 'verification_failed';
+    $sql[] = "-- Scenario 8: re-inspection tenancy (2nd attempt after failure on bid=15)";
+    $sql[] = make_tenancy_sql($b_ri);
+    $tenancies_db[$bid_reinspect] = $b_ri;
 }
 
-// Update booking 15 status to verification_failed (it was already inserted above; override with UPDATE)
-$sql[] = "UPDATE bookings SET status='verification_failed' WHERE id=15;";
+// Update tenancy 15 status to verification_failed (it was already inserted above; override with UPDATE)
+$sql[] = "UPDATE tenancies SET status='verification_failed' WHERE id=15;";
 
-foreach ($bookings_db as $bid => $b) {
+foreach ($tenancies_db as $bid => $b) {
     if (!in_array($b['bstatus'], $av_trigger_statuses)) continue;
 
     $bstart = $b['start'] ?? $b['created'];
@@ -593,7 +593,7 @@ foreach ($bookings_db as $bid => $b) {
 
     $pm_sql = $prop_match === null ? 'NULL' : qi($prop_match);
 
-    $sql[] = "INSERT IGNORE INTO agent_verifications (id,booking_id,agent_id,started_at,submitted_at,deadline_at,property_matches_listing,property_address_correct,facilities_match,landlord_id_matches,ownership_doc_sighted,inspection_notes,issues_found,issue_severity,outcome,student_proceeded_with_disclosure,student_decision_at) VALUES "
+    $sql[] = "INSERT IGNORE INTO agent_verifications (id,tenancy_id,agent_id,started_at,submitted_at,deadline_at,property_matches_listing,property_address_correct,facilities_match,landlord_id_matches,ownership_doc_sighted,inspection_notes,issues_found,issue_severity,outcome,student_proceeded_with_disclosure,student_decision_at) VALUES "
         . "({$av_id},{$bid},{$b['agent_id']}," . q($started) . "," . $submitted . "," . q($deadline) . ","
         . $pm_sql . ",1," . $pm_sql . ",1,1,"
         . q($notes) . "," . q($issues) . "," . q($severity) . "," . q($outcome) . ",NULL,NULL);";
@@ -611,7 +611,7 @@ $sql[] = "-- ============================================================";
 $contract_id = 1;
 $contract_terms = 'Standard tenancy agreement. Monthly rent payable on the 1st of each month. Security deposit non-refundable for early termination without cause. Property to be maintained in good condition throughout tenancy.';
 
-foreach ($bookings_db as $bid => $b) {
+foreach ($tenancies_db as $bid => $b) {
     if (!in_array($b['bstatus'], ['active','completed','contract_pending'])) continue;
 
     $code   = 'RB-' . strtoupper(substr(md5('contract'.$bid), 0, 8));
@@ -624,7 +624,7 @@ foreach ($bookings_db as $bid => $b) {
     $activated_at   = in_array($cstatus, ['active','completed'])
         ? q(date('Y-m-d H:i:s', strtotime($signed) + 7200)) : 'NULL';
 
-    $sql[] = "INSERT IGNORE INTO contracts (id,contract_code,booking_id,student_id,landlord_id,agent_id,property_id,start_date,end_date,monthly_rent,deposit,terms,student_signed_at,landlord_signed_at,agent_signed_at,generated_at,generated_by,status,activated_at,created_at) VALUES "
+    $sql[] = "INSERT IGNORE INTO contracts (id,contract_code,tenancy_id,student_id,landlord_id,agent_id,property_id,start_date,end_date,monthly_rent,deposit,terms,student_signed_at,landlord_signed_at,agent_signed_at,generated_at,generated_by,status,activated_at,created_at) VALUES "
         . "({$contract_id}," . q($code) . ",{$bid},{$b['student_id']},{$b['landlord_id']},{$b['agent_id']},{$b['prop_id']},"
         . q($b['start']) . ',' . q($b['end']) . ','
         . qf($b['rent']) . ',' . qf($b['rent']*2) . ','
@@ -649,18 +649,18 @@ $reports = [
     [1,  45,  238, 'general', null, 'scam',           'Landlord listed a property that does not exist. Sent fake photos and asked for deposit upfront.',           'pending',  '2024-03-15 10:00:00', null,                   null],
     [2,  50,  62,  'message', 1,    'harassment',     'This student sent threatening messages after I declined to share a house.',                                 'pending',  '2024-04-10 14:30:00', null,                   null],
     [3,  72,  15,  'general', null, 'misconduct',     'Agent was unprofessional during inspection and demanded extra payment for the inspection report.',           'reviewed', '2024-05-20 09:00:00', '2024-06-01 11:00:00', 17],
-    [4,  88,  240, 'booking', 3,    'fake_information','Listing photos show a fully furnished room but actual property has almost no furniture.',                   'actioned', '2024-10-05 16:00:00', '2024-10-20 10:00:00', 17],
-    [5,  95,  244, 'booking', 8,    'fraud',          'Landlord collected RM600 deposit but property was already rented to someone else. Not responding to calls.','actioned', '2024-11-12 08:30:00', '2024-11-25 15:00:00', 17],
+    [4,  88,  240, 'tenancy', 3,    'fake_information','Listing photos show a fully furnished room but actual property has almost no furniture.',                   'actioned', '2024-10-05 16:00:00', '2024-10-20 10:00:00', 17],
+    [5,  95,  244, 'tenancy', 8,    'fraud',          'Landlord collected RM600 deposit but property was already rented to someone else. Not responding to calls.','actioned', '2024-11-12 08:30:00', '2024-11-25 15:00:00', 17],
     [6,  110, 250, 'general', null, 'other',          'Minor dispute over maintenance responsibility. Both parties later resolved it amicably.',                    'dismissed','2025-01-08 12:00:00', '2025-01-15 09:00:00', 17],
     [7,  130, 255, 'general', null, 'scam',           'Landlord asking for 3 months deposit before viewing. Refused to show property first.',                      'pending',  '2025-02-14 10:00:00', null,                   null],
     [8,  140, 58,  'message', 5,    'harassment',     'Repeated unwanted messages and threats after rental dispute.',                                              'pending',  '2025-03-01 11:00:00', null,                   null],
-    [9,  160, 262, 'booking', 12,   'fake_information','Room size stated as 12sqm but actual size is less than 8sqm. Ceiling leaks badly.',                        'reviewed', '2025-03-20 14:00:00', '2025-04-02 10:00:00', 16],
+    [9,  160, 262, 'tenancy', 12,   'fake_information','Room size stated as 12sqm but actual size is less than 8sqm. Ceiling leaks badly.',                        'reviewed', '2025-03-20 14:00:00', '2025-04-02 10:00:00', 16],
     [10, 170, 258, 'general', null, 'fraud',          'Same property listed under multiple accounts at different prices.',                                         'pending',  '2025-04-05 09:30:00', null,                   null],
     [11, 180, 16,  'general', null, 'misconduct',     'Agent contacted landlord directly to negotiate a deal without going through the platform.',                  'reviewed', '2025-04-18 13:00:00', '2025-05-01 10:00:00', 17],
     [12, 190, 46,  'message', 9,    'other',          'Student filed complaint about late reply but misunderstood the response time policy.',                       'dismissed','2025-05-10 10:00:00', '2025-05-12 09:00:00', 16],
     [13, 200, 252, 'general', null, 'scam',           'Property listing copy-pasted from another platform. Photos belong to a different location entirely.',       'actioned', '2025-05-20 11:00:00', '2025-06-01 15:00:00', 17],
-    [14, 210, 75,  'message', 15,   'harassment',     'Landlord keeps calling after student cancelled booking. Very aggressive behavior.',                         'pending',  '2025-06-01 14:00:00', null,                   null],
-    [15, 220, 265, 'booking', 20,   'fake_information','WiFi speed stated as 100Mbps but actual speed never exceeds 5Mbps. Router shared with 20+ tenants.',       'pending',  '2025-06-10 09:00:00', null,                   null],
+    [14, 210, 75,  'message', 15,   'harassment',     'Landlord keeps calling after student cancelled tenancy. Very aggressive behavior.',                         'pending',  '2025-06-01 14:00:00', null,                   null],
+    [15, 220, 265, 'tenancy', 20,   'fake_information','WiFi speed stated as 100Mbps but actual speed never exceeds 5Mbps. Router shared with 20+ tenants.',       'pending',  '2025-06-10 09:00:00', null,                   null],
 ];
 
 foreach ($reports as $r) {
@@ -675,6 +675,6 @@ $sql[] = "";
 $sql[] = "SET FOREIGN_KEY_CHECKS=1;";
 $sql[] = "";
 $sql[] = "-- Seed complete. Check counts:";
-$sql[] = "-- SELECT 'users' tbl, COUNT(*) n FROM users UNION ALL SELECT 'properties',COUNT(*) FROM properties UNION ALL SELECT 'bookings',COUNT(*) FROM bookings UNION ALL SELECT 'reports',COUNT(*) FROM reports;";
+$sql[] = "-- SELECT 'users' tbl, COUNT(*) n FROM users UNION ALL SELECT 'properties',COUNT(*) FROM properties UNION ALL SELECT 'tenancies',COUNT(*) FROM tenancies UNION ALL SELECT 'reports',COUNT(*) FROM reports;";
 
 echo implode("\n", $sql) . "\n";
