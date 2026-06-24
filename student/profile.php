@@ -31,6 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $full_name      = trim($_POST['full_name'] ?? '');
     $preferred_name = trim($_POST['preferred_name'] ?? '');
     $matric_no      = trim($_POST['matric_no'] ?? '');
+    $ic_no          = trim($_POST['ic_no'] ?? '');
     $university     = trim($_POST['university'] ?? 'UTeM');
     $phone          = trim($_POST['phone'] ?? '');
     $looking        = isset($_POST['looking_for_housing']) ? 1 : 0;
@@ -42,6 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($full_name === '')  $errors['full_name'] = 'Full name required';
     if ($matric_no === '')  $errors['matric_no'] = 'Matric number required';
+    if ($ic_no === '')      $errors['ic_no']     = 'IC number required';
     if ($phone === '')      $errors['phone']     = 'Phone required';
     if (strlen($housing_bio) > 255) $errors['housing_bio'] = 'Max 255 characters';
 
@@ -52,6 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                    SET full_name = ?,
                        preferred_name = ?,
                        matric_no = ?,
+                       ic_no = ?,
                        university = ?,
                        phone = ?,
                        allow_whatsapp = ?,
@@ -63,7 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                  WHERE user_id = ?
             ");
             $stmt->execute([
-                $full_name, $preferred_name, $matric_no, $university, $phone,
+                $full_name, $preferred_name, $matric_no, $ic_no, $university, $phone,
                 $allow_whatsapp,
                 $looking,
                 $pref_city ?: null,
@@ -86,6 +89,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'full_name' => $full_name,
         'preferred_name' => $preferred_name,
         'matric_no' => $matric_no,
+        'ic_no' => $ic_no,
         'university' => $university,
         'phone' => $phone,
         'allow_whatsapp' => $allow_whatsapp,
@@ -175,6 +179,13 @@ ob_start();
                            class="form-control <?= isset($errors['matric_no']) ? 'is-invalid' : '' ?>"
                            value="<?= e($student['matric_no']) ?>" required>
                     <?php if (isset($errors['matric_no'])): ?><div class="invalid-feedback"><?= e($errors['matric_no']) ?></div><?php endif; ?>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">IC no. <small class="text-danger">*</small></label>
+                    <input type="text" name="ic_no"
+                           class="form-control <?= isset($errors['ic_no']) ? 'is-invalid' : '' ?>"
+                           value="<?= e($student['ic_no'] ?? '') ?>" placeholder="010203040506" required>
+                    <?php if (isset($errors['ic_no'])): ?><div class="invalid-feedback"><?= e($errors['ic_no']) ?></div><?php endif; ?>
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">University</label>
@@ -281,6 +292,7 @@ ob_start();
                 <tr><th class="text-secondary">Preferred name</th><td><?= e($student['preferred_name']) ?></td></tr>
             <?php endif; ?>
             <tr><th class="text-secondary">Matric number</th><td><code><?= e($student['matric_no']) ?></code></td></tr>
+            <tr><th class="text-secondary">IC no.</th><td><code><?= e($student['ic_no'] ?? '—') ?></code></td></tr>
             <tr><th class="text-secondary">University</th><td><?= e($student['university']) ?></td></tr>
             <tr><th class="text-secondary">Email</th><td><?= e($student['email']) ?></td></tr>
             <tr><th class="text-secondary">Phone</th><td>

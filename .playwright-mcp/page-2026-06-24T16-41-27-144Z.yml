@@ -1,0 +1,183 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - button "Toggle sidebar" [ref=e3] [cursor=pointer]:
+      - generic [ref=e4]: 
+      - text: Hide sidebar
+    - link "R RentBridge · Admin Panel" [ref=e5] [cursor=pointer]:
+      - /url: /rentbridge/admin/dashboard.php
+      - generic [ref=e6]: R
+      - generic [ref=e7]: RentBridge
+      - generic [ref=e8]: ·
+      - generic [ref=e9]: Admin Panel
+    - generic [ref=e11]:
+      - generic [ref=e12]: 
+      - text: Thu 12:41 am
+  - generic [ref=e13]:
+    - complementary [ref=e14]:
+      - navigation [ref=e15]:
+        - link " Dashboard" [ref=e16] [cursor=pointer]:
+          - /url: /rentbridge/admin/dashboard.php
+          - generic [ref=e17]: 
+          - generic [ref=e18]: Dashboard
+        - link " Students" [ref=e19] [cursor=pointer]:
+          - /url: /rentbridge/admin/students.php
+          - generic [ref=e20]: 
+          - generic [ref=e21]: Students
+        - link " Landlords" [ref=e22] [cursor=pointer]:
+          - /url: /rentbridge/admin/landlords.php
+          - generic [ref=e23]: 
+          - generic [ref=e24]: Landlords
+        - link " Agents" [ref=e25] [cursor=pointer]:
+          - /url: /rentbridge/admin/agents.php
+          - generic [ref=e26]: 
+          - generic [ref=e27]: Agents
+        - link " Properties" [ref=e28] [cursor=pointer]:
+          - /url: /rentbridge/admin/properties.php
+          - generic [ref=e29]: 
+          - generic [ref=e30]: Properties
+        - link " Tenancies" [ref=e31] [cursor=pointer]:
+          - /url: /rentbridge/admin/tenancies.php
+          - generic [ref=e32]: 
+          - generic [ref=e33]: Tenancies
+        - link " Flag Reports 7" [ref=e34] [cursor=pointer]:
+          - /url: /rentbridge/admin/reports.php
+          - generic [ref=e35]: 
+          - generic [ref=e36]: Flag Reports
+          - generic [ref=e37]: "7"
+        - link " Statistics" [ref=e38] [cursor=pointer]:
+          - /url: /rentbridge/admin/statistics/summary.php
+          - generic [ref=e39]: 
+          - generic [ref=e40]: Statistics
+        - link " Transfers" [ref=e41] [cursor=pointer]:
+          - /url: /rentbridge/admin/transfers.php
+          - generic [ref=e42]: 
+          - generic [ref=e43]: Transfers
+        - link " Messages" [ref=e44] [cursor=pointer]:
+          - /url: /rentbridge/admin/messages.php
+          - generic [ref=e45]: 
+          - generic [ref=e46]: Messages
+        - button " Help & Info " [ref=e48] [cursor=pointer]:
+          - generic [ref=e49]: 
+          - generic [ref=e50]: Help & Info
+          - generic [ref=e51]: 
+      - link " Sign out" [ref=e53] [cursor=pointer]:
+        - /url: /rentbridge/auth/logout.php
+        - generic [ref=e54]: 
+        - generic [ref=e55]: Sign out
+    - button "Toggle sidebar" [ref=e56] [cursor=pointer]:
+      - generic [ref=e57]: 
+      - text: 
+    - main [ref=e58]:
+      - generic [ref=e59]:
+        - 'heading "Property #138" [level=1] [ref=e61]'
+        - paragraph [ref=e62]:
+          - link " Back to properties" [ref=e63] [cursor=pointer]:
+            - /url: /rentbridge/admin/properties.php
+            - generic [ref=e64]: 
+            - text: Back to properties
+        - generic [ref=e65]:
+          - generic [ref=e66]:
+            - 'heading "UTeM Area Studio #138" [level=2] [ref=e67]'
+            - paragraph [ref=e68]:
+              - generic [ref=e69]: 
+              - text: No. 39, Lorong Tasik 1, Ayer Keroh, Melaka, Ayer Keroh 75450, Melaka
+          - generic [ref=e70]: Rented
+        - button " Hide from listings" [ref=e73] [cursor=pointer]:
+          - generic [ref=e74]: 
+          - text: Hide from listings
+        - heading " Listing photos (2)" [level=5] [ref=e76]:
+          - generic [ref=e77]: 
+          - text: Listing photos (2)
+        - generic [ref=e81]:
+          - heading " Ownership documents Private" [level=5] [ref=e82]:
+            - generic [ref=e83]: 
+            - text: Ownership documents
+            - generic [ref=e84]: Private
+          - paragraph [ref=e85]: Only visible to you, admin, and your assigned agent.
+          - link " ownership_proof.pdf Ownership proof · 200 KB " [ref=e88] [cursor=pointer]:
+            - /url: /rentbridge/uploads/docs/138/ownership.pdf
+            - generic [ref=e89]: 
+            - generic [ref=e90]:
+              - strong [ref=e91]: ownership_proof.pdf
+              - generic [ref=e92]: Ownership proof · 200 KB
+            - generic [ref=e93]: 
+        - generic [ref=e94]:
+          - generic [ref=e96]:
+            - heading " Property details" [level=5] [ref=e97]:
+              - generic [ref=e98]: 
+              - text: Property details
+            - generic [ref=e99]:
+              - generic [ref=e100]:
+                - text: Type
+                - generic [ref=e101]: Studio
+              - generic [ref=e102]:
+                - text: Furnishing
+                - generic [ref=e103]: None
+              - generic [ref=e104]:
+                - text: Monthly rent
+                - generic [ref=e105]: RM 780
+              - generic [ref=e106]:
+                - text: Deposit
+                - generic [ref=e107]: RM 1,560
+              - generic [ref=e108]:
+                - text: Viewing mode
+                - generic [ref=e109]: Landlord led
+              - generic [ref=e110]:
+                - text: Listed on
+                - generic [ref=e111]: 04 Apr 2025
+            - separator [ref=e112]
+            - text: Description
+            - paragraph [ref=e113]: Spacious whole unit suitable for group of students. Near supermarket and food court.
+            - separator [ref=e114]
+            - text: Facilities
+            - paragraph [ref=e115]: WiFi,Air Conditioning,Washing Machine,Refrigerator,Kitchen,Parking
+            - separator [ref=e116]
+            - generic [ref=e117]:
+              - generic [ref=e118]: ✓ Agent-verified
+              - generic [ref=e119]: by Dr. Hairul Bin Anuar on 07 Apr 2025
+          - generic [ref=e121]:
+            - heading " Landlord" [level=5] [ref=e122]:
+              - generic [ref=e123]: 
+              - text: Landlord
+            - generic [ref=e124]: "#265"
+            - generic [ref=e125]:
+              - strong [ref=e126]: Zainab Tan
+              - text: "\"Zainab\""
+            - generic [ref=e127]:
+              - generic [ref=e128]: 
+              - text: "IC:"
+              - code [ref=e129]: 020000265-67-0265
+            - generic [ref=e130]:
+              - generic [ref=e131]: 
+              - text: 015-8395065
+            - generic [ref=e132]:
+              - generic [ref=e133]: 
+              - text: .ainab.an265@gmail.com
+            - link "View landlord profile " [ref=e134] [cursor=pointer]:
+              - /url: /rentbridge/admin/user.php?id=265
+              - text: View landlord profile
+              - generic [ref=e135]: 
+            - separator [ref=e136]
+            - generic [ref=e137]:
+              - generic [ref=e138]: 
+              - text: Verified By
+            - generic [ref=e139]: "#34 · Dr. Hairul Bin Anuar"
+            - generic [ref=e140]:
+              - generic [ref=e141]: 
+              - text: "Staff ID:"
+              - code [ref=e142]: AGT005
+            - generic [ref=e143]:
+              - generic [ref=e144]: 
+              - text: 012-9991111
+            - generic [ref=e145]:
+              - generic [ref=e146]: 
+              - text: inspector5@utem.edu.my
+            - link "View agent profile " [ref=e147] [cursor=pointer]:
+              - /url: /rentbridge/admin/user.php?id=34
+              - text: View agent profile
+              - generic [ref=e148]: 
+        - generic [ref=e149]:
+          - heading " Tenancies on this property (0)" [level=5] [ref=e150]:
+            - generic [ref=e151]: 
+            - text: Tenancies on this property (0)
+          - paragraph [ref=e152]: No tenancies on this property yet.

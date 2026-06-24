@@ -1,6 +1,7 @@
 ﻿<?php
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/tenancies.php';
+require_once __DIR__ . '/../includes/agent_assignment.php';
 require_role('agent');
 
 $caseId = (int)($_GET['id'] ?? $_POST['tenancy_id'] ?? 0);
@@ -143,6 +144,7 @@ function case_status_label(string $status): array {
 }
 [$label, $color] = case_status_label($case['status']);
 
+$agentCaseload = get_agent_caseload(current_user_id());
 $startTs = strtotime($case['start_date']);
 $endTs   = strtotime($case['end_date']);
 $months  = max(1, (int)round(($endTs - $startTs) / (30.44 * 86400)));
@@ -316,6 +318,7 @@ $months  = max(1, (int)round(($endTs - $startTs) / (30.44 * 86400)));
                             </table>
                         <?php endif; ?>
 
+    <?php if (in_array($case['status'], ['agent_verifying', 'contract_pending'], true)): ?>
     <form method="POST" action="/rentbridge/agent/send_cotenant_form.php" class="d-inline">
         <?= csrf_field() ?>
         <input type="hidden" name="tenancy_id" value="<?= (int)$case['id'] ?>">
@@ -324,11 +327,11 @@ $months  = max(1, (int)round(($endTs - $startTs) / (30.44 * 86400)));
             <?= $additionalCount > 0 ? 'Re-send' : 'Send' ?> co-tenant form to student
         </button>
     </form>
-
     <small class="text-secondary d-block mt-2">
         Sends a form in chat for the student to fill in their IC + add additional co-tenants.
         Required before contract generation.
     </small>
+    <?php endif; ?>
 </div>  
 <!-- CONTRACT GENERATION -->
 <?php
@@ -511,6 +514,15 @@ if ($mixedSigningPending): ?>
                             <strong>Reminder:</strong> Accepting means you'll witness this tenancy contract and be the case handler. If you accept then need to back out later, contact admin.
                         </div>
 
+                        <?php if ($agentCaseload >= AGENT_CASELOAD_WARN): ?>
+                        <div class="alert alert-warning small mb-3 py-2">
+                            <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                            <strong>High caseload warning</strong> — you currently have <?= $agentCaseload ?> active properties/cases (recommended max: <?= AGENT_CASELOAD_WARN ?>).
+                            By accepting, you confirm you can fulfil all responsibilities on time.
+                            <strong>Inability to complete assigned duties may result in a report being filed against you.</strong>
+                        </div>
+                        <?php endif; ?>
+
                         <form method="POST">
                             <?= csrf_field() ?>
                             <input type="hidden" name="tenancy_id" value="<?= (int)$case['id'] ?>">
@@ -526,7 +538,10 @@ if ($mixedSigningPending): ?>
                             </div>
 
                             <div class="d-flex gap-2">
-                                <button type="submit" name="action" value="accept" class="btn btn-success">
+                                <button type="submit" name="action" value="accept" class="btn btn-success"
+                                    <?php if ($agentCaseload >= AGENT_CASELOAD_WARN): ?>
+                                    onclick="return confirm('Your caseload is high. You are responsible for completing all accepted cases — failure may result in a report. Accept anyway?')"
+                                    <?php endif; ?>>
                                     <i class="bi bi-check-circle me-1"></i> Accept case
                                 </button>
                                 <button type="submit" name="action" value="reject" class="btn btn-outline-danger"

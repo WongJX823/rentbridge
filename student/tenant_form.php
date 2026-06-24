@@ -78,16 +78,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadySubmitted) {
     $tenantIC    = trim($_POST['tenant_ic'] ?? '');
     $tenantPhone = trim($_POST['tenant_phone'] ?? '');
     $tenantEmail = trim($_POST['tenant_email'] ?? '');
-    $monthlyRent = (float)($_POST['monthly_rent'] ?? 0);
-    $deposit     = (float)($_POST['deposit'] ?? 0);
-    $termMonths  = (int)($_POST['term_months'] ?? 12);
-    $startDate   = trim($_POST['start_date'] ?? '');
-    $notes       = trim($_POST['notes'] ?? '');
 
-    if ($tenantName === '')     $errors['tenant_name'] = 'Full name is required.';
-    if ($tenantIC === '')       $errors['tenant_ic']   = 'NRIC is required.';
-    if ($startDate === '')      $errors['start_date']  = 'Start date is required.';
-    if ($monthlyRent <= 0)      $errors['monthly_rent'] = 'Monthly rent must be greater than 0.';
+    if ($tenantName === '') $errors['tenant_name'] = 'Full name is required.';
+    if ($tenantIC === '')   $errors['tenant_ic']   = 'NRIC is required.';
 
     if (empty($errors['tenant_ic'])) {
         $icClean = preg_replace('/[^0-9]/', '', $tenantIC);
@@ -115,13 +108,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadySubmitted) {
         $coTenants[] = ['name' => $coName, 'ic' => $coIC];
     }
 
+    // Use agent-set terms from metadata (student cannot change these)
+    $terms      = $meta['terms'] ?? [];
+    $monthlyRent = (float)($terms['monthly_rent'] ?? $prop['monthly_rent']);
+    $deposit     = (float)($terms['deposit']      ?? $prop['deposit']);
+    $termMonths  = (int)($terms['term_months']    ?? 12);
+    $startDate   = $terms['start_date']           ?? date('Y-m-d');
+    $notes       = $terms['notes']                ?? '';
+
     if (empty($errors)) {
         try {
             $startDt = new DateTime($startDate);
             $endDt   = (clone $startDt)->modify('+' . $termMonths . ' months');
             $endDate = $endDt->format('Y-m-d');
         } catch (Exception) {
-            $errors['start_date'] = 'Invalid start date.';
+            $errors['start_date'] = 'Invalid start date in form.';
         }
     }
 
@@ -241,8 +242,6 @@ if (empty($prefill['tenant_name']) || empty($prefill['tenant_email'])) {
     $prefill['tenant_name']  = $prefill['tenant_name']  ?: ($me['full_name'] ?? '');
     $prefill['tenant_phone'] = $prefill['tenant_phone'] ?: ($me['phone'] ?? '');
     $prefill['tenant_email'] = $prefill['tenant_email'] ?: ($me['email'] ?? '');
-    $prefill['monthly_rent'] = $prefill['monthly_rent'] ?? $prop['monthly_rent'];
-    $prefill['deposit']      = $prefill['deposit']      ?? $prop['deposit'];
 }
 
 $pageTitle = 'Tenant Info Form';
@@ -409,63 +408,58 @@ ob_start();
                 </button>
             </div>
 
-            <!-- TENANCY TERMS -->
-            <div class="bg-white border rounded-3 p-4 mb-4">
+            <!-- TENANCY TERMS (read-only — set by agent) -->
+            <?php
+            $terms      = $meta['terms'] ?? [];
+            $termMonths = (int)($terms['term_months'] ?? 12);
+            $startDate  = $terms['start_date'] ?? '';
+            $endDate    = $terms['end_date']   ?? '';
+            $termLabel  = match($termMonths) {
+                4  => '4 months (1 semester)',
+                8  => '8 months (2 semesters)',
+                12 => '12 months (1 year)',
+                24 => '24 months (2 years)',
+                default => $termMonths . ' months',
+            };
+            ?>
+            <div class="border rounded-3 p-4 mb-4" style="background:#F4F9FF; border-color:#90BDE0 !important;">
                 <h5 class="mb-3">
-                    <i class="bi bi-file-earmark-text me-1 text-warning"></i>
+                    <i class="bi bi-file-earmark-text me-1 text-primary"></i>
                     Tenancy terms
+                    <span class="badge bg-secondary ms-2 fw-normal" style="font-size:.7rem;">Set by agent</span>
                 </h5>
                 <div class="row g-3">
                     <div class="col-md-4">
-                        <label class="form-label fw-semibold">
-                            Monthly rent (RM) <small class="text-danger">*</small>
-                        </label>
-                        <input type="number" name="monthly_rent"
-                               class="form-control <?= isset($errors['monthly_rent']) ? 'is-invalid' : '' ?>"
-                               value="<?= e($_POST['monthly_rent'] ?? $prefill['monthly_rent']) ?>"
-                               min="0" step="50" required>
-                        <?php if (isset($errors['monthly_rent'])): ?>
-                            <div class="invalid-feedback"><?= e($errors['monthly_rent']) ?></div>
-                        <?php endif; ?>
+                        <div class="small text-secondary">Monthly rent</div>
+                        <div class="fw-semibold">RM <?= number_format((float)($terms['monthly_rent'] ?? $prop['monthly_rent'])) ?></div>
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label fw-semibold">Deposit (RM)</label>
-                        <input type="number" name="deposit"
-                               class="form-control"
-                               value="<?= e($_POST['deposit'] ?? $prefill['deposit']) ?>"
-                               min="0" step="50">
+                        <div class="small text-secondary">Deposit</div>
+                        <div class="fw-semibold">RM <?= number_format((float)($terms['deposit'] ?? $prop['deposit'])) ?></div>
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label fw-semibold">
-                            Term (months) <small class="text-danger">*</small>
-                        </label>
-                        <select name="term_months" class="form-select">
-                            <?php foreach ([4 => '4 months (1 semester)', 8 => '8 months (2 semesters)', 12 => '12 months (1 year)', 24 => '24 months (2 years)'] as $val => $label): ?>
-                            <option value="<?= $val ?>"
-                                <?= (int)($_POST['term_months'] ?? 12) === $val ? 'selected' : '' ?>>
-                                <?= $label ?>
-                            </option>
-                            <?php endforeach; ?>
-                        </select>
+                        <div class="small text-secondary">Term</div>
+                        <div class="fw-semibold"><?= e($termLabel) ?></div>
                     </div>
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">
-                            Start date <small class="text-danger">*</small>
-                        </label>
-                        <input type="date" name="start_date"
-                               class="form-control <?= isset($errors['start_date']) ? 'is-invalid' : '' ?>"
-                               value="<?= e($_POST['start_date'] ?? date('Y-m-d')) ?>"
-                               required>
-                        <?php if (isset($errors['start_date'])): ?>
-                            <div class="invalid-feedback"><?= e($errors['start_date']) ?></div>
-                        <?php endif; ?>
+                    <div class="col-md-4">
+                        <div class="small text-secondary">Start date</div>
+                        <div class="fw-semibold"><?= $startDate ? e(date('d M Y', strtotime($startDate))) : '—' ?></div>
                     </div>
+                    <div class="col-md-4">
+                        <div class="small text-secondary">End date</div>
+                        <div class="fw-semibold"><?= $endDate ? e(date('d M Y', strtotime($endDate))) : '—' ?></div>
+                    </div>
+                    <?php if (!empty($terms['notes'])): ?>
                     <div class="col-12">
-                        <label class="form-label fw-semibold">Special terms / notes</label>
-                        <textarea name="notes" rows="3" class="form-control"
-                                  placeholder="Any special conditions agreed with the agent or landlord."><?= e($_POST['notes'] ?? '') ?></textarea>
+                        <div class="small text-secondary">Special terms</div>
+                        <div class="small"><?= e($terms['notes']) ?></div>
                     </div>
+                    <?php endif; ?>
                 </div>
+                <p class="small text-secondary mt-3 mb-0">
+                    <i class="bi bi-info-circle me-1"></i>
+                    These terms were set by your agent. Contact the agent if anything looks wrong.
+                </p>
             </div>
 
             <div class="alert alert-light border small">

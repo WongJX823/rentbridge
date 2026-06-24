@@ -42,9 +42,10 @@ if (!$prop) {
 
 $landlordId = (int)$prop['landlord_id'];
 
-// Verify conversation is landlord ↔ agent
-$low  = min($landlordId, $agentId);
-$high = max($landlordId, $agentId);
+// Verify the conversation belongs to the correct pair for the recipient role
+$otherParty = ($recipientRole === 'student') ? $studentId : $landlordId;
+$low  = min($agentId, $otherParty);
+$high = max($agentId, $otherParty);
 $stmt = $pdo->prepare("
     SELECT id FROM conversations
      WHERE id = ? AND user_a = ? AND user_b = ?
@@ -55,32 +56,6 @@ if (!$stmt->fetchColumn()) {
     exit;
 }
 
-// Block only if there's an UNANSWERED form for this student
-$stmt = $pdo->prepare("
-    SELECT m.id
-      FROM messages m
-     WHERE m.conversation_id = ? 
-       AND m.message_type = 'tenant_info_form'
-       AND JSON_EXTRACT(m.metadata, '$.student_id') = ?
-       AND NOT EXISTS (
-           SELECT 1 FROM messages r
-            WHERE r.conversation_id = m.conversation_id
-              AND r.message_type = 'tenant_info_response'
-              AND JSON_EXTRACT(r.metadata, '$.source_form_id') = m.id
-       )
-     ORDER BY m.id DESC
-     LIMIT 1
-");
-$stmt->execute([$convId, $studentId]);
-$pendingForm = $stmt->fetchColumn();
-
-if ($pendingForm) {
-    echo json_encode([
-        'ok' => false,
-        'error' => 'An unanswered form (#' . $pendingForm . ') is already pending. Wait for landlord to fill it.'
-    ]);
-    exit;
-}
 try {
     $pdo->beginTransaction();
 
@@ -94,18 +69,47 @@ try {
     $stmt->execute([$studentId]);
     $student = $stmt->fetch() ?: [];
 
+    // Agent-set tenancy terms (only used when sending to student)
+    $agentTerms = [];
+    if ($recipientRole === 'student') {
+        $monthlyRent = (float)($_POST['monthly_rent'] ?? $prop['monthly_rent']);
+        $deposit     = (float)($_POST['deposit']      ?? $prop['deposit']);
+        $termMonths  = (int)($_POST['term_months']    ?? 12);
+        $startDate   = trim($_POST['start_date']      ?? '');
+        $notes       = trim($_POST['notes']           ?? '');
+
+        if ($monthlyRent <= 0) {
+            echo json_encode(['ok' => false, 'error' => 'Monthly rent must be greater than 0.']);
+            exit;
+        }
+        if ($startDate === '' || !strtotime($startDate)) {
+            echo json_encode(['ok' => false, 'error' => 'A valid start date is required.']);
+            exit;
+        }
+
+        $startDt = new DateTime($startDate);
+        $endDt   = (clone $startDt)->modify('+' . $termMonths . ' months');
+        $agentTerms = [
+            'monthly_rent' => $monthlyRent,
+            'deposit'      => $deposit,
+            'term_months'  => $termMonths,
+            'start_date'   => $startDate,
+            'end_date'     => $endDt->format('Y-m-d'),
+            'notes'        => $notes,
+        ];
+    }
+
     $payload = json_encode([
         'property_id'    => $propertyId,
         'property_title' => $prop['title'],
         'student_id'     => $studentId,
-        'recipient_role' => $recipientRole,  // ← NEW
+        'recipient_role' => $recipientRole,
+        'terms'          => $agentTerms,
         'prefill' => [
             'tenant_name'  => $student['full_name'] ?? '',
             'tenant_phone' => $student['phone'] ?? '',
             'tenant_email' => $student['email'] ?? '',
             'matric_no'    => $student['matric_no'] ?? '',
-            'monthly_rent' => $prop['monthly_rent'],
-            'deposit'      => $prop['deposit'],
         ],
     ]);
     $bodyText = 'Tenant info form sent for property "' . $prop['title'] . '"';

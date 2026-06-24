@@ -64,7 +64,7 @@ $stmt->execute($params);
 $properties = $stmt->fetchAll();
 
 
-$pageTitle = 'Property Register';
+$pageTitle = 'Properties';
 $activeNav = 'properties';
 
 function build_landlord_tab_url(string $tab, string $q): string {

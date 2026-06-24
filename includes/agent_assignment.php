@@ -2,12 +2,33 @@
 require_once __DIR__ . '/auth.php';
 
 const ASSIGNMENT_TIMEOUT_HOURS = 24;
+const AGENT_CASELOAD_WARN      = 7;
 
 /**
- * Pick the next agent for a property — FIFO by pending-review workload.
+ * Count an agent's live caseload:
+ *   - Properties they are inspecting (pending/inspecting) or responsible for (available)
+ *   - Tenancy cases in progress (pending acceptance → contract stage)
+ */
+function get_agent_caseload(int $agentId): int {
+    $pdo = db();
+    $stmt = $pdo->prepare("
+        SELECT
+          (SELECT COUNT(*) FROM properties
+            WHERE assigned_agent_id = ?
+              AND (agent_status IN ('pending','inspecting') OR status = 'available'))
+        + (SELECT COUNT(*) FROM tenancies
+            WHERE agent_id = ?
+              AND status IN ('pending_agent','agent_verifying','agent_assigned','contract_pending'))
+    ");
+    $stmt->execute([$agentId, $agentId]);
+    return (int)$stmt->fetchColumn();
+}
+
+/**
+ * Pick the next agent for a property — FIFO by live caseload (inspection + available + tenancies).
  * Strategy:
- *   1. Order agents by number of currently-pending property assignments ASC
- *      (fewest pending reviews goes first), ties broken by user_id ASC.
+ *   1. Order agents by full caseload ASC (fewest active responsibilities goes first),
+ *      ties broken by user_id ASC.
  *   2. Skip the currently-assigned agent.
  *   3. Skip any agent who already has a terminal outcome for this property
  *      (passed, rejected, timeout, reassigned).
@@ -15,18 +36,22 @@ const ASSIGNMENT_TIMEOUT_HOURS = 24;
 function pick_next_agent_for_property(int $propertyId, ?int $currentAgentId = null): ?int {
     $pdo = db();
 
-    // Agents ordered by pending review workload (FIFO)
+    // Agents ordered by full live caseload (FIFO)
     $stmt = $pdo->query("
         SELECT a.user_id
           FROM agents a
           JOIN users u ON u.id = a.user_id
-          LEFT JOIN property_agent_assignments paa
-            ON paa.agent_id = a.user_id AND paa.outcome = 'pending'
          WHERE u.primary_role = 'agent'
            AND u.status = 'active'
            AND a.availability != 'off_duty'
-         GROUP BY a.user_id
-         ORDER BY COUNT(paa.id) ASC, a.user_id ASC
+         ORDER BY (
+             (SELECT COUNT(*) FROM properties p2
+               WHERE p2.assigned_agent_id = a.user_id
+                 AND (p2.agent_status IN ('pending','inspecting') OR p2.status = 'available'))
+           + (SELECT COUNT(*) FROM tenancies t2
+               WHERE t2.agent_id = a.user_id
+                 AND t2.status IN ('pending_agent','agent_verifying','agent_assigned','contract_pending'))
+         ) ASC, a.user_id ASC
     ");
     $allAgents = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
@@ -333,8 +358,8 @@ function agent_pass_property(int $propertyId, int $agentId, string $reason = '')
     if ((int)$prop['assigned_agent_id'] !== $agentId) {
         return ['ok' => false, 'error' => 'You are not the assigned agent'];
     }
-    if ($prop['agent_status'] !== 'pending') {
-        return ['ok' => false, 'error' => 'This assignment is no longer pending'];
+    if (!in_array($prop['agent_status'], ['pending', 'inspecting'], true)) {
+        return ['ok' => false, 'error' => 'This assignment is no longer active'];
     }
 
     // Mark audit row as passed
@@ -362,7 +387,7 @@ function agent_pass_property(int $propertyId, int $agentId, string $reason = '')
  * Agent rejects the listing outright — fake docs, scam, illegal property.
  * Sets status = 'rejected', notifies landlord, no reassignment.
  */
-function agent_reject_listing(int $propertyId, int $agentId, string $reason = ''): array {
+function agent_reject_listing(int $propertyId, int $agentId, string $reason = '', string $evidencePath = ''): array {
     $pdo = db();
 
     $stmt = $pdo->prepare("SELECT assigned_agent_id, agent_status, landlord_id FROM properties WHERE id = ?");
@@ -391,11 +416,12 @@ function agent_reject_listing(int $propertyId, int $agentId, string $reason = ''
         UPDATE property_agent_assignments
            SET outcome = 'rejected_listing',
                responded_at = NOW(),
-               rejection_reason = ?
-         WHERE property_id = ? AND agent_id = ? AND outcome = 'pending'
+               rejection_reason = ?,
+               rejection_evidence_path = ?
+         WHERE property_id = ? AND agent_id = ? AND outcome IN ('pending','accepted')
          ORDER BY id DESC LIMIT 1
     ");
-    $stmt->execute([$reason, $propertyId, $agentId]);
+    $stmt->execute([$reason, $evidencePath ?: null, $propertyId, $agentId]);
 
     // Notify landlord
     $landlordId = (int)$prop['landlord_id'];

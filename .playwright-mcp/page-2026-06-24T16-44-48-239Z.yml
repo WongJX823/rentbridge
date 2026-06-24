@@ -1,0 +1,186 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - button "Toggle sidebar" [ref=e3] [cursor=pointer]:
+      - generic [ref=e4]: 
+      - text: Hide sidebar
+    - link "R RentBridge · Admin Panel" [ref=e5] [cursor=pointer]:
+      - /url: /rentbridge/admin/dashboard.php
+      - generic [ref=e6]: R
+      - generic [ref=e7]: RentBridge
+      - generic [ref=e8]: ·
+      - generic [ref=e9]: Admin Panel
+    - generic [ref=e11]:
+      - generic [ref=e12]: 
+      - text: Thu 12:44 am
+  - generic [ref=e13]:
+    - complementary [ref=e14]:
+      - navigation [ref=e15]:
+        - link " Dashboard" [ref=e16] [cursor=pointer]:
+          - /url: /rentbridge/admin/dashboard.php
+          - generic [ref=e17]: 
+          - generic [ref=e18]: Dashboard
+        - link " Students" [ref=e19] [cursor=pointer]:
+          - /url: /rentbridge/admin/students.php
+          - generic [ref=e20]: 
+          - generic [ref=e21]: Students
+        - link " Landlords" [ref=e22] [cursor=pointer]:
+          - /url: /rentbridge/admin/landlords.php
+          - generic [ref=e23]: 
+          - generic [ref=e24]: Landlords
+        - link " Agents" [ref=e25] [cursor=pointer]:
+          - /url: /rentbridge/admin/agents.php
+          - generic [ref=e26]: 
+          - generic [ref=e27]: Agents
+        - link " Properties" [ref=e28] [cursor=pointer]:
+          - /url: /rentbridge/admin/properties.php
+          - generic [ref=e29]: 
+          - generic [ref=e30]: Properties
+        - link " Tenancies" [ref=e31] [cursor=pointer]:
+          - /url: /rentbridge/admin/tenancies.php
+          - generic [ref=e32]: 
+          - generic [ref=e33]: Tenancies
+        - link " Flag Reports 7" [ref=e34] [cursor=pointer]:
+          - /url: /rentbridge/admin/reports.php
+          - generic [ref=e35]: 
+          - generic [ref=e36]: Flag Reports
+          - generic [ref=e37]: "7"
+        - link " Statistics" [ref=e38] [cursor=pointer]:
+          - /url: /rentbridge/admin/statistics/summary.php
+          - generic [ref=e39]: 
+          - generic [ref=e40]: Statistics
+        - link " Transfers" [ref=e41] [cursor=pointer]:
+          - /url: /rentbridge/admin/transfers.php
+          - generic [ref=e42]: 
+          - generic [ref=e43]: Transfers
+        - link " Messages" [ref=e44] [cursor=pointer]:
+          - /url: /rentbridge/admin/messages.php
+          - generic [ref=e45]: 
+          - generic [ref=e46]: Messages
+        - button " Help & Info " [ref=e48] [cursor=pointer]:
+          - generic [ref=e49]: 
+          - generic [ref=e50]: Help & Info
+          - generic [ref=e51]: 
+      - link " Sign out" [ref=e53] [cursor=pointer]:
+        - /url: /rentbridge/auth/logout.php
+        - generic [ref=e54]: 
+        - generic [ref=e55]: Sign out
+    - button "Toggle sidebar" [ref=e56] [cursor=pointer]:
+      - generic [ref=e57]: 
+      - text: 
+    - main [ref=e58]:
+      - generic [ref=e59]:
+        - 'heading "Property #25" [level=1] [ref=e61]'
+        - paragraph [ref=e62]:
+          - link " Back to properties" [ref=e63] [cursor=pointer]:
+            - /url: /rentbridge/admin/properties.php
+            - generic [ref=e64]: 
+            - text: Back to properties
+        - generic [ref=e65]:
+          - generic [ref=e66]:
+            - heading "Ahmad House 1" [level=2] [ref=e67]
+            - paragraph [ref=e68]:
+              - generic [ref=e69]: 
+              - text: 50, Jalan Sejahtera 4, Durian Tunggal 76100, Melaka
+          - generic [ref=e70]: Pending review
+        - generic [ref=e71]:
+          - heading "Review this listing" [level=5] [ref=e72]
+          - paragraph [ref=e73]: Verify the listing photos, address, and landlord details look legitimate before approving. The agent's physical inspection will happen later at tenancy time.
+          - generic [ref=e74]:
+            - button " Approve listing" [ref=e76] [cursor=pointer]:
+              - generic [ref=e77]: 
+              - text: Approve listing
+            - button " Reject…" [ref=e78] [cursor=pointer]:
+              - generic [ref=e79]: 
+              - text: Reject…
+        - heading " Listing photos (1)" [level=5] [ref=e81]:
+          - generic [ref=e82]: 
+          - text: Listing photos (1)
+        - generic [ref=e85]:
+          - heading " Ownership documents Private" [level=5] [ref=e86]:
+            - generic [ref=e87]: 
+            - text: Ownership documents
+            - generic [ref=e88]: Private
+          - paragraph [ref=e89]: Only visible to you, admin, and your assigned agent.
+          - link " placeholder.pdf Ownership proof · 1,020 KB " [ref=e92] [cursor=pointer]:
+            - /url: /rentbridge/uploads/property_docs/25_1781753147_165a16ea.pdf
+            - generic [ref=e93]: 
+            - generic [ref=e94]:
+              - strong [ref=e95]: placeholder.pdf
+              - generic [ref=e96]: Ownership proof · 1,020 KB
+            - generic [ref=e97]: 
+        - generic [ref=e98]:
+          - generic [ref=e100]:
+            - heading " Property details" [level=5] [ref=e101]:
+              - generic [ref=e102]: 
+              - text: Property details
+            - generic [ref=e103]:
+              - generic [ref=e104]:
+                - text: Type
+                - generic [ref=e105]: Whole unit
+              - generic [ref=e106]:
+                - text: Furnishing
+                - generic [ref=e107]: None
+              - generic [ref=e108]:
+                - text: Monthly rent
+                - generic [ref=e109]: RM 1,000
+              - generic [ref=e110]:
+                - text: Deposit
+                - generic [ref=e111]: RM 1,000
+              - generic [ref=e112]:
+                - text: Viewing mode
+                - generic [ref=e113]: Either
+              - generic [ref=e114]:
+                - text: Listed on
+                - generic [ref=e115]: 18 Jun 2026
+          - generic [ref=e117]:
+            - heading " Landlord" [level=5] [ref=e118]:
+              - generic [ref=e119]: 
+              - text: Landlord
+            - generic [ref=e120]: "#10"
+            - generic [ref=e121]:
+              - strong [ref=e122]: Ahmad Bin Hassan
+              - text: "\"Ahmad\""
+            - generic [ref=e123]:
+              - generic [ref=e124]: 
+              - text: "IC:"
+              - code [ref=e125]: 780512-04-5678
+            - generic [ref=e126]:
+              - generic [ref=e127]: 
+              - text: 012-1112233
+            - generic [ref=e128]:
+              - generic [ref=e129]: 
+              - text: ahmad@landlord.com
+            - link "View landlord profile " [ref=e130] [cursor=pointer]:
+              - /url: /rentbridge/admin/user.php?id=10
+              - text: View landlord profile
+              - generic [ref=e131]: 
+            - separator [ref=e132]
+            - generic [ref=e133]:
+              - generic [ref=e134]: 
+              - text: Pending Acceptance
+            - generic [ref=e135]: "#16 · En. Kumaran A/L Selvam"
+            - generic [ref=e136]:
+              - generic [ref=e137]: 
+              - text: "Staff ID:"
+              - code [ref=e138]: AGT002
+            - generic [ref=e139]:
+              - generic [ref=e140]: 
+              - text: 012-8889900
+            - generic [ref=e141]:
+              - generic [ref=e142]: 
+              - text: inspector2@utem.edu.my
+            - generic [ref=e143]:
+              - generic [ref=e144]: 
+              - strong [ref=e145]: "Assigned:"
+              - text: 24 Jun 2026, 11:29pm
+              - strong [ref=e146]: "Deadline:"
+              - text: 25 Jun 2026, 11:29pm · 22h 44m left
+            - link "View agent profile " [ref=e147] [cursor=pointer]:
+              - /url: /rentbridge/admin/user.php?id=16
+              - text: View agent profile
+              - generic [ref=e148]: 
+        - generic [ref=e149]:
+          - heading " Tenancies on this property (0)" [level=5] [ref=e150]:
+            - generic [ref=e151]: 
+            - text: Tenancies on this property (0)
+          - paragraph [ref=e152]: No tenancies on this property yet.

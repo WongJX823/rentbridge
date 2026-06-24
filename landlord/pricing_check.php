@@ -1,7 +1,6 @@
 <?php
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/pricing.php';
-require_role('landlord');
 
 header('Content-Type: application/json');
 

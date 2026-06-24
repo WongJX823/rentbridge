@@ -53,11 +53,19 @@ if ($tab === 'tenanted') {
 }
 
 if ($searchQuery !== '') {
-    $where .= " AND (s.full_name LIKE ? OR s.matric_no LIKE ? OR u.email LIKE ?)";
     $like = '%' . $searchQuery . '%';
-    $params[] = $like;
-    $params[] = $like;
-    $params[] = $like;
+    if (ctype_digit($searchQuery)) {
+        $where .= " AND (s.full_name LIKE ? OR s.matric_no LIKE ? OR u.email LIKE ? OR u.id = ?)";
+        $params[] = $like;
+        $params[] = $like;
+        $params[] = $like;
+        $params[] = (int)$searchQuery;
+    } else {
+        $where .= " AND (s.full_name LIKE ? OR s.matric_no LIKE ? OR u.email LIKE ?)";
+        $params[] = $like;
+        $params[] = $like;
+        $params[] = $like;
+    }
 }
 
 $stmt = $pdo->prepare("

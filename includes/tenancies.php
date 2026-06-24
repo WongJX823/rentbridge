@@ -17,7 +17,7 @@ require_once __DIR__ . '/auth.php';
  *
  * Rules:
  *   1. Agent must be active (status='active') and available
- *   2. Caseload < max_caseload
+ *   2. Ordered by live caseload (inspection + available properties + active tenancy cases)
  *   3. NOT in this tenancy's rejected_agents history
  *   4. NOT the same person as the landlord (conflict-of-interest)
  *   5. Tie-breaker: lowest caseload first, then random

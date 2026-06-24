@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/agent_assignment.php';
 require_role('admin');
 
 $userId = (int)($_GET['id'] ?? $_POST['user_id'] ?? 0);
@@ -12,7 +13,15 @@ $pdo = db();
 $stmt = $pdo->prepare("
     SELECT u.id, u.email, u.status AS user_status, u.created_at,
            a.full_name, a.staff_id, a.department, a.phone,
-           a.availability, a.current_caseload, a.max_caseload
+           a.availability,
+           (
+               (SELECT COUNT(*) FROM properties pp
+                 WHERE pp.assigned_agent_id = a.user_id
+                   AND (pp.agent_status IN ('pending','inspecting') OR pp.status = 'available'))
+             + (SELECT COUNT(*) FROM tenancies tt
+                 WHERE tt.agent_id = a.user_id
+                   AND tt.status IN ('pending_agent','agent_verifying','agent_assigned','contract_pending'))
+           ) AS live_caseload
       FROM users u
       JOIN agents a ON a.user_id = u.id
      WHERE u.id = ? AND u.primary_role = 'agent'
@@ -140,7 +149,16 @@ function user_status_badge(string $status): array {
                     <?php if ($agent['user_status'] === 'active'): ?>
                     <div class="col-md-6">
                         <small class="text-secondary text-uppercase">Current caseload</small>
-                        <div><?= (int)$agent['current_caseload'] ?> / <?= (int)$agent['max_caseload'] ?></div>
+                        <?php $cl = (int)$agent['live_caseload']; ?>
+                        <div>
+                            <?= $cl ?>
+                            <?php if ($cl >= 7): ?>
+                                <span class="badge bg-danger ms-1">High</span>
+                            <?php elseif ($cl >= 5): ?>
+                                <span class="badge bg-warning text-dark ms-1">Busy</span>
+                            <?php endif; ?>
+                            <span class="text-secondary small">/ <?= AGENT_CASELOAD_WARN ?> recommended</span>
+                        </div>
                     </div>
                     <div class="col-md-6">
                         <small class="text-secondary text-uppercase">Availability</small>
@@ -178,8 +196,8 @@ function user_status_badge(string $status): array {
                     <?php elseif ($agent['user_status'] === 'active'): ?>
                         <p class="text-secondary small">
                             This agent is active. You can suspend them to temporarily block access.
-                            <?php if ((int)$agent['current_caseload'] > 0): ?>
-                                <br><strong class="text-warning">⚠ This agent has <?= (int)$agent['current_caseload'] ?> open case(s).</strong>
+                            <?php if ($cl > 0): ?>
+                                <br><strong class="text-warning">⚠ This agent has <?= $cl ?> open case(s).</strong>
                                 Suspending will not auto-reassign them — handle cases first.
                             <?php endif; ?>
                         </p>

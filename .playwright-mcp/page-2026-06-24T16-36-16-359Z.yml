@@ -1,0 +1,252 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - button "Toggle sidebar" [ref=e3] [cursor=pointer]:
+      - generic [ref=e4]: 
+      - text: Hide sidebar
+    - link "R RentBridge · Admin Panel" [ref=e5] [cursor=pointer]:
+      - /url: /rentbridge/admin/dashboard.php
+      - generic [ref=e6]: R
+      - generic [ref=e7]: RentBridge
+      - generic [ref=e8]: ·
+      - generic [ref=e9]: Admin Panel
+    - generic [ref=e11]:
+      - generic [ref=e12]: 
+      - text: Thu 12:36 am
+  - generic [ref=e13]:
+    - complementary [ref=e14]:
+      - navigation [ref=e15]:
+        - link " Dashboard" [ref=e16] [cursor=pointer]:
+          - /url: /rentbridge/admin/dashboard.php
+          - generic [ref=e17]: 
+          - generic [ref=e18]: Dashboard
+        - link " Students" [ref=e19] [cursor=pointer]:
+          - /url: /rentbridge/admin/students.php
+          - generic [ref=e20]: 
+          - generic [ref=e21]: Students
+        - link " Landlords" [ref=e22] [cursor=pointer]:
+          - /url: /rentbridge/admin/landlords.php
+          - generic [ref=e23]: 
+          - generic [ref=e24]: Landlords
+        - link " Agents" [ref=e25] [cursor=pointer]:
+          - /url: /rentbridge/admin/agents.php
+          - generic [ref=e26]: 
+          - generic [ref=e27]: Agents
+        - link " Properties" [ref=e28] [cursor=pointer]:
+          - /url: /rentbridge/admin/properties.php
+          - generic [ref=e29]: 
+          - generic [ref=e30]: Properties
+        - link " Tenancies" [ref=e31] [cursor=pointer]:
+          - /url: /rentbridge/admin/tenancies.php
+          - generic [ref=e32]: 
+          - generic [ref=e33]: Tenancies
+        - link " Flag Reports 7" [ref=e34] [cursor=pointer]:
+          - /url: /rentbridge/admin/reports.php
+          - generic [ref=e35]: 
+          - generic [ref=e36]: Flag Reports
+          - generic [ref=e37]: "7"
+        - link " Statistics" [ref=e38] [cursor=pointer]:
+          - /url: /rentbridge/admin/statistics/summary.php
+          - generic [ref=e39]: 
+          - generic [ref=e40]: Statistics
+        - link " Transfers" [ref=e41] [cursor=pointer]:
+          - /url: /rentbridge/admin/transfers.php
+          - generic [ref=e42]: 
+          - generic [ref=e43]: Transfers
+        - link " Messages" [ref=e44] [cursor=pointer]:
+          - /url: /rentbridge/admin/messages.php
+          - generic [ref=e45]: 
+          - generic [ref=e46]: Messages
+        - button " Help & Info " [ref=e48] [cursor=pointer]:
+          - generic [ref=e49]: 
+          - generic [ref=e50]: Help & Info
+          - generic [ref=e51]: 
+      - link " Sign out" [ref=e53] [cursor=pointer]:
+        - /url: /rentbridge/auth/logout.php
+        - generic [ref=e54]: 
+        - generic [ref=e55]: Sign out
+    - button "Toggle sidebar" [ref=e56] [cursor=pointer]:
+      - generic [ref=e57]: 
+      - text: 
+    - main [ref=e58]:
+      - generic [ref=e59]:
+        - heading "Tenancies" [level=1] [ref=e60]
+        - link "All 154" [ref=e61] [cursor=pointer]:
+          - /url: "?tab=all"
+          - text: All
+          - generic [ref=e62]: "154"
+        - link "Pending 6" [ref=e63] [cursor=pointer]:
+          - /url: "?tab=pending"
+          - text: Pending
+          - generic [ref=e64]: "6"
+        - link "Inspecting 12" [ref=e65] [cursor=pointer]:
+          - /url: "?tab=inspecting"
+          - text: Inspecting
+          - generic [ref=e66]: "12"
+        - link "Active 63" [ref=e67] [cursor=pointer]:
+          - /url: "?tab=active"
+          - text: Active
+          - generic [ref=e68]: "63"
+        - link "Completed 42" [ref=e69] [cursor=pointer]:
+          - /url: "?tab=completed"
+          - text: Completed
+          - generic [ref=e70]: "42"
+        - link "Cancelled 31" [ref=e71] [cursor=pointer]:
+          - /url: "?tab=cancelled"
+          - text: Cancelled
+          - generic [ref=e72]: "31"
+        - link "Stuck 0" [ref=e73] [cursor=pointer]:
+          - /url: "?tab=stuck"
+          - text: Stuck
+          - generic [ref=e74]: "0"
+        - button " Search" [ref=e75] [cursor=pointer]:
+          - generic [ref=e76]: 
+          - generic [ref=e77]: Search
+      - generic [ref=e79]:
+        - generic [ref=e80]:
+          - generic [ref=e81]: Search
+          - textbox "Property, student or landlord name" [ref=e82]
+        - generic [ref=e83]:
+          - button " Apply" [ref=e84] [cursor=pointer]:
+            - generic [ref=e85]: 
+            - text: Apply
+          - link "Clear" [ref=e86] [cursor=pointer]:
+            - /url: "?tab=pending"
+      - generic [ref=e87]:
+        - table [ref=e89]:
+          - rowgroup [ref=e90]:
+            - row "ID Property Tenants Landlord Agent Status" [ref=e91]:
+              - columnheader "ID" [ref=e92]
+              - columnheader "Property" [ref=e93]
+              - columnheader "Tenants" [ref=e94]
+              - columnheader "Landlord" [ref=e95]
+              - columnheader "Agent" [ref=e96]
+              - columnheader "Status" [ref=e97]
+              - columnheader [ref=e98]
+          - rowgroup [ref=e99]:
+            - 'row "#140 20 Mar 2025 UTeM Area Whole_unit #93  Ayer Keroh Yap Su Lin (no contract yet) Susan Lee Dr. Aminah Binti Yusof Pending landlord View " [ref=e100]':
+              - cell "#140 20 Mar 2025" [ref=e101]:
+                - code [ref=e102]: "#140"
+                - generic [ref=e103]: 20 Mar 2025
+              - 'cell "UTeM Area Whole_unit #93  Ayer Keroh" [ref=e104]':
+                - 'link "UTeM Area Whole_unit #93" [ref=e105] [cursor=pointer]':
+                  - /url: /rentbridge/admin/property.php?id=93
+                  - strong [ref=e106]: "UTeM Area Whole_unit #93"
+                - generic [ref=e107]:
+                  - generic [ref=e108]: 
+                  - text: Ayer Keroh
+              - cell "Yap Su Lin (no contract yet)" [ref=e109]
+              - cell "Susan Lee" [ref=e110]
+              - cell "Dr. Aminah Binti Yusof" [ref=e111]
+              - cell "Pending landlord" [ref=e112]:
+                - generic [ref=e113]: Pending landlord
+              - cell "View " [ref=e114]:
+                - link "View " [ref=e115] [cursor=pointer]:
+                  - /url: /rentbridge/admin/tenancy.php?id=140
+                  - text: View
+                  - generic [ref=e116]: 
+            - 'row "#139 19 Mar 2025 UTeM Area Whole_unit #92  Durian Tunggal Hafiz bin Mansor (no contract yet) Thomas Wong Pn. Salmah Binti Hasan Pending landlord View " [ref=e117]':
+              - cell "#139 19 Mar 2025" [ref=e118]:
+                - code [ref=e119]: "#139"
+                - generic [ref=e120]: 19 Mar 2025
+              - 'cell "UTeM Area Whole_unit #92  Durian Tunggal" [ref=e121]':
+                - 'link "UTeM Area Whole_unit #92" [ref=e122] [cursor=pointer]':
+                  - /url: /rentbridge/admin/property.php?id=92
+                  - strong [ref=e123]: "UTeM Area Whole_unit #92"
+                - generic [ref=e124]:
+                  - generic [ref=e125]: 
+                  - text: Durian Tunggal
+              - cell "Hafiz bin Mansor (no contract yet)" [ref=e126]
+              - cell "Thomas Wong" [ref=e127]
+              - cell "Pn. Salmah Binti Hasan" [ref=e128]
+              - cell "Pending landlord" [ref=e129]:
+                - generic [ref=e130]: Pending landlord
+              - cell "View " [ref=e131]:
+                - link "View " [ref=e132] [cursor=pointer]:
+                  - /url: /rentbridge/admin/tenancy.php?id=139
+                  - text: View
+                  - generic [ref=e133]: 
+            - 'row "#90 29 Jan 2025 UTeM Area Room #43  Durian Tunggal Chin Rui (no contract yet) Zainab a/l Subramaniam Dr. Hairul Bin Anuar Pending landlord View " [ref=e134]':
+              - cell "#90 29 Jan 2025" [ref=e135]:
+                - code [ref=e136]: "#90"
+                - generic [ref=e137]: 29 Jan 2025
+              - 'cell "UTeM Area Room #43  Durian Tunggal" [ref=e138]':
+                - 'link "UTeM Area Room #43" [ref=e139] [cursor=pointer]':
+                  - /url: /rentbridge/admin/property.php?id=43
+                  - strong [ref=e140]: "UTeM Area Room #43"
+                - generic [ref=e141]:
+                  - generic [ref=e142]: 
+                  - text: Durian Tunggal
+              - cell "Chin Rui (no contract yet)" [ref=e143]
+              - cell "Zainab a/l Subramaniam" [ref=e144]
+              - cell "Dr. Hairul Bin Anuar" [ref=e145]
+              - cell "Pending landlord" [ref=e146]:
+                - generic [ref=e147]: Pending landlord
+              - cell "View " [ref=e148]:
+                - link "View " [ref=e149] [cursor=pointer]:
+                  - /url: /rentbridge/admin/tenancy.php?id=90
+                  - text: View
+                  - generic [ref=e150]: 
+            - 'row "#89 28 Jan 2025 UTeM Area Room #42  Ayer Keroh Zulaikha bin Hassan (no contract yet) Siva binti Musa En. Kumaran A/L Selvam Pending landlord View " [ref=e151]':
+              - cell "#89 28 Jan 2025" [ref=e152]:
+                - code [ref=e153]: "#89"
+                - generic [ref=e154]: 28 Jan 2025
+              - 'cell "UTeM Area Room #42  Ayer Keroh" [ref=e155]':
+                - 'link "UTeM Area Room #42" [ref=e156] [cursor=pointer]':
+                  - /url: /rentbridge/admin/property.php?id=42
+                  - strong [ref=e157]: "UTeM Area Room #42"
+                - generic [ref=e158]:
+                  - generic [ref=e159]: 
+                  - text: Ayer Keroh
+              - cell "Zulaikha bin Hassan (no contract yet)" [ref=e160]
+              - cell "Siva binti Musa" [ref=e161]
+              - cell "En. Kumaran A/L Selvam" [ref=e162]
+              - cell "Pending landlord" [ref=e163]:
+                - generic [ref=e164]: Pending landlord
+              - cell "View " [ref=e165]:
+                - link "View " [ref=e166] [cursor=pointer]:
+                  - /url: /rentbridge/admin/tenancy.php?id=89
+                  - text: View
+                  - generic [ref=e167]: 
+            - 'row "#65 13 Sep 2024 UTeM Area Room #68  Durian Tunggal Ahmad bin Othman (no contract yet) Roslan Lim En. Kumaran A/L Selvam Pending landlord View " [ref=e168]':
+              - cell "#65 13 Sep 2024" [ref=e169]:
+                - code [ref=e170]: "#65"
+                - generic [ref=e171]: 13 Sep 2024
+              - 'cell "UTeM Area Room #68  Durian Tunggal" [ref=e172]':
+                - 'link "UTeM Area Room #68" [ref=e173] [cursor=pointer]':
+                  - /url: /rentbridge/admin/property.php?id=68
+                  - strong [ref=e174]: "UTeM Area Room #68"
+                - generic [ref=e175]:
+                  - generic [ref=e176]: 
+                  - text: Durian Tunggal
+              - cell "Ahmad bin Othman (no contract yet)" [ref=e177]
+              - cell "Roslan Lim" [ref=e178]
+              - cell "En. Kumaran A/L Selvam" [ref=e179]
+              - cell "Pending landlord" [ref=e180]:
+                - generic [ref=e181]: Pending landlord
+              - cell "View " [ref=e182]:
+                - link "View " [ref=e183] [cursor=pointer]:
+                  - /url: /rentbridge/admin/tenancy.php?id=65
+                  - text: View
+                  - generic [ref=e184]: 
+            - 'row "#64 12 Sep 2024 UTeM Area Room #67  Durian Tunggal Nisha a/l Krishnan (no contract yet) Muthu Tan Dr. Aminah Binti Yusof Pending landlord View " [ref=e185]':
+              - cell "#64 12 Sep 2024" [ref=e186]:
+                - code [ref=e187]: "#64"
+                - generic [ref=e188]: 12 Sep 2024
+              - 'cell "UTeM Area Room #67  Durian Tunggal" [ref=e189]':
+                - 'link "UTeM Area Room #67" [ref=e190] [cursor=pointer]':
+                  - /url: /rentbridge/admin/property.php?id=67
+                  - strong [ref=e191]: "UTeM Area Room #67"
+                - generic [ref=e192]:
+                  - generic [ref=e193]: 
+                  - text: Durian Tunggal
+              - cell "Nisha a/l Krishnan (no contract yet)" [ref=e194]
+              - cell "Muthu Tan" [ref=e195]
+              - cell "Dr. Aminah Binti Yusof" [ref=e196]
+              - cell "Pending landlord" [ref=e197]:
+                - generic [ref=e198]: Pending landlord
+              - cell "View " [ref=e199]:
+                - link "View " [ref=e200] [cursor=pointer]:
+                  - /url: /rentbridge/admin/tenancy.php?id=64
+                  - text: View
+                  - generic [ref=e201]: 
+        - paragraph [ref=e202]: Showing 6 tenancies

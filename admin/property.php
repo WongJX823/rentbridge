@@ -1,5 +1,6 @@
 ﻿<?php
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/agent_assignment.php';
 require_role('admin');
 
 $propertyId = (int)($_GET['id'] ?? 0);
@@ -10,7 +11,7 @@ if ($propertyId <= 0) {
 
 $pdo = db();
 
-// Fetch property + landlord + verification info
+// Fetch property + landlord + verification info + pre-approval inspector
 $stmt = $pdo->prepare("
     SELECT p.*,
            l.full_name      AS landlord_name,
@@ -19,11 +20,17 @@ $stmt = $pdo->prepare("
            l.phone          AS landlord_phone,
            u.email          AS landlord_email,
            u.id             AS landlord_user_id,
-           va.full_name     AS verifier_name
+           va.full_name     AS verifier_name,
+           aa.full_name     AS inspector_name,
+           aa.staff_id      AS inspector_staff_id,
+           aa.phone         AS inspector_phone,
+           uu.email         AS inspector_email
       FROM properties p
-      JOIN users u    ON u.id = p.landlord_id
+      JOIN users u     ON u.id  = p.landlord_id
       JOIN landlords l ON l.user_id = p.landlord_id
       LEFT JOIN agents va ON va.user_id = p.agent_verified_by
+      LEFT JOIN agents aa ON aa.user_id = p.assigned_agent_id
+      LEFT JOIN users  uu ON uu.id      = p.assigned_agent_id
      WHERE p.id = ?
      LIMIT 1
 ");
@@ -63,6 +70,57 @@ $stmt = $pdo->prepare("
 ");
 $stmt->execute([$propertyId]);
 $tenancies = $stmt->fetchAll();
+
+// Determine which agent to show — priority: property inspector > tenancy agent > verifier
+$assignedAgent   = null;
+$agentLabel      = 'Assigned Agent';
+$agentIsVerifier = false;
+
+// 1. Property-level inspector (pre-approval: pending_approval stage)
+if (!empty($property['assigned_agent_id']) && in_array($property['agent_status'], ['pending', 'inspecting'], true)) {
+    $assignedAgent = [
+        'user_id'  => (int)$property['assigned_agent_id'],
+        'full_name' => $property['inspector_name'],
+        'staff_id'  => $property['inspector_staff_id'],
+        'phone'    => $property['inspector_phone'],
+        'email'    => $property['inspector_email'],
+    ];
+    $agentLabel = $property['agent_status'] === 'pending' ? 'Pending Acceptance' : 'Inspecting';
+}
+
+// 2. Active tenancy-level agent
+if (!$assignedAgent) {
+    $stmt = $pdo->prepare("
+        SELECT a.user_id, a.full_name, a.staff_id, a.phone, u.email, b.status AS tenancy_status
+          FROM tenancies b
+          JOIN agents a ON a.user_id = b.agent_id
+          JOIN users u  ON u.id = b.agent_id
+         WHERE b.property_id = ?
+           AND (
+               b.status IN ('agent_assigned','agent_verifying','contract_pending','active')
+               OR (b.status = 'pending_agent' AND b.agent_id IS NOT NULL)
+           )
+         ORDER BY b.id DESC LIMIT 1
+    ");
+    $stmt->execute([$propertyId]);
+    $assignedAgent = $stmt->fetch() ?: null;
+    if ($assignedAgent && $assignedAgent['tenancy_status'] === 'pending_agent') {
+        $agentLabel = 'Pending Acceptance';
+    }
+}
+
+// 3. Fall back to verifier
+if (!$assignedAgent && !empty($property['agent_verified_by'])) {
+    $assignedAgent = [
+        'user_id'  => (int)$property['agent_verified_by'],
+        'full_name' => $property['inspector_name'] ?: $property['verifier_name'],
+        'staff_id'  => $property['inspector_staff_id'],
+        'phone'    => $property['inspector_phone'],
+        'email'    => $property['inspector_email'],
+    ];
+    $agentLabel      = 'Verified By';
+    $agentIsVerifier = true;
+}
 
 // --- HANDLE ADMIN ACTIONS ---
 $errors = [];
@@ -392,6 +450,7 @@ $documents = get_property_documents($propertyId);
     <div class="col-md-5">
         <div class="bg-white border rounded-3 p-4 h-100">
             <h5 class="mb-3"><i class="bi bi-person me-2"></i>Landlord</h5>
+            <div class="small text-secondary mb-1">#<?= (int)$property['landlord_user_id'] ?></div>
             <div class="mb-2">
                 <strong><?= e($property['landlord_name']) ?></strong>
                 <?php if (!empty($property['landlord_nickname'])): ?>
@@ -411,6 +470,49 @@ $documents = get_property_documents($propertyId);
                class="btn btn-sm btn-outline-dark w-100">
                 View landlord profile <i class="bi bi-arrow-right ms-1"></i>
             </a>
+            <?php if ($assignedAgent): ?>
+                <hr>
+                <div class="small text-secondary fw-semibold text-uppercase mb-2">
+                    <i class="bi bi-person-badge me-1"></i>
+                    <?= e($agentLabel) ?>
+                </div>
+                <div class="small text-secondary mb-1">#<?= (int)$assignedAgent['user_id'] ?> · <?= e($assignedAgent['full_name']) ?></div>
+                <div class="small text-secondary mb-1">
+                    <i class="bi bi-credit-card-2-front"></i> Staff ID: <code><?= e($assignedAgent['staff_id']) ?></code>
+                </div>
+                <div class="small text-secondary mb-1">
+                    <i class="bi bi-telephone"></i> <?= e($assignedAgent['phone']) ?>
+                </div>
+                <div class="small text-secondary mb-1">
+                    <i class="bi bi-envelope"></i> <?= e($assignedAgent['email']) ?>
+                </div>
+                <?php if ($agentLabel === 'Pending Acceptance' && !empty($property['agent_assigned_at'])): ?>
+                    <?php
+                        $assignedTs = strtotime($property['agent_assigned_at']);
+                        $deadlineTs = $assignedTs + (ASSIGNMENT_TIMEOUT_HOURS * 3600);
+                        $secsLeft   = $deadlineTs - time();
+                        $hoursLeft  = floor($secsLeft / 3600);
+                        $minsLeft   = floor(($secsLeft % 3600) / 60);
+                        $isOverdue  = $secsLeft <= 0;
+                    ?>
+                    <div class="small mt-2 mb-3 p-2 rounded-2 <?= $isOverdue ? 'bg-danger bg-opacity-10 text-danger' : 'bg-warning bg-opacity-10 text-warning-emphasis' ?>">
+                        <i class="bi bi-clock me-1"></i>
+                        <strong>Assigned:</strong> <?= e(date('d M Y, g:ia', $assignedTs)) ?><br>
+                        <strong>Deadline:</strong> <?= e(date('d M Y, g:ia', $deadlineTs)) ?>
+                        <?php if ($isOverdue): ?>
+                            <span class="badge bg-danger ms-1">Overdue — will auto-reassign</span>
+                        <?php else: ?>
+                            · <span class="text-muted"><?= $hoursLeft ?>h <?= $minsLeft ?>m left</span>
+                        <?php endif; ?>
+                    </div>
+                <?php else: ?>
+                    <div class="mb-3"></div>
+                <?php endif; ?>
+                <a href="/rentbridge/admin/user.php?id=<?= (int)$assignedAgent['user_id'] ?>"
+                   class="btn btn-sm btn-outline-dark w-100">
+                    View agent profile <i class="bi bi-arrow-right ms-1"></i>
+                </a>
+            <?php endif; ?>
         </div>
     </div>
 </div>

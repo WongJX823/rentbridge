@@ -1,0 +1,78 @@
+- generic [active] [ref=e1]:
+  - paragraph [ref=e2]:
+    - link "Back to properties" [ref=e3] [cursor=pointer]:
+      - /url: /rentbridge/admin/properties.php
+      - text: Back to properties
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - heading "Ahmad House 1" [level=2] [ref=e6]
+      - paragraph [ref=e7]: 50, Jalan Sejahtera 4, Durian Tunggal 76100, Melaka
+    - text: Pending review
+  - generic [ref=e8]:
+    - heading "Review this listing" [level=5] [ref=e9]
+    - paragraph [ref=e10]: Verify the listing photos, address, and landlord details look legitimate before approving. The agent's physical inspection will happen later at tenancy time.
+    - generic [ref=e11]:
+      - button "Approve listing" [ref=e13]: Approve listing
+      - button "Reject…" [ref=e14]: Reject…
+    - generic [ref=e16]:
+      - text: Reason for rejection
+      - textbox "e.g. Photos look fake, address doesn't exist, IC mismatch" [ref=e17]
+      - button "Confirm rejection" [ref=e18]
+  - generic [ref=e19]:
+    - heading "Listing photos (1)" [level=5] [ref=e20]: Listing photos (1)
+    - generic [ref=e25]:
+      - heading "Photo 1 of 1" [level=6] [ref=e26]
+      - button [ref=e27]
+  - generic [ref=e28]:
+    - heading "Ownership documents Private" [level=5] [ref=e29]: Ownership documents Private
+    - paragraph [ref=e30]: Only visible to you, admin, and your assigned agent.
+    - link "placeholder.pdf Ownership proof · 1,020 KB" [ref=e33] [cursor=pointer]:
+      - /url: /rentbridge/uploads/property_docs/25_1781753147_165a16ea.pdf
+      - generic [ref=e34]:
+        - strong [ref=e35]: placeholder.pdf
+        - generic [ref=e36]: Ownership proof · 1,020 KB
+  - generic [ref=e37]:
+    - generic [ref=e39]:
+      - heading "Property details" [level=5] [ref=e40]: Property details
+      - generic [ref=e41]:
+        - generic [ref=e42]:
+          - text: Type
+          - generic [ref=e43]: Whole unit
+        - generic [ref=e44]:
+          - text: Furnishing
+          - generic [ref=e45]: None
+        - generic [ref=e46]:
+          - text: Monthly rent
+          - generic [ref=e47]: RM 1,000
+        - generic [ref=e48]:
+          - text: Deposit
+          - generic [ref=e49]: RM 1,000
+        - generic [ref=e50]:
+          - text: Viewing mode
+          - generic [ref=e51]: Either
+        - generic [ref=e52]:
+          - text: Listed on
+          - generic [ref=e53]: 18 Jun 2026
+    - generic [ref=e55]:
+      - heading "Landlord" [level=5] [ref=e56]: Landlord
+      - generic [ref=e57]: "#10"
+      - generic [ref=e58]:
+        - strong [ref=e59]: Ahmad Bin Hassan
+        - text: "\"Ahmad\""
+      - generic [ref=e60]:
+        - text: "IC:"
+        - code [ref=e61]: 780512-04-5678
+      - generic [ref=e62]: 012-1112233
+      - generic [ref=e63]: ahmad@landlord.com
+      - link "View landlord profile" [ref=e64] [cursor=pointer]:
+        - /url: /rentbridge/admin/user.php?id=10
+        - text: View landlord profile
+      - separator [ref=e65]
+      - generic [ref=e66]: Pending Acceptance
+      - generic [ref=e67]: "#16 · En. Kumaran A/L Selvam"
+      - generic [ref=e68]:
+        - text: "Staff ID:"
+        - code [ref=e69]: AGT002
+      - generic [ref=e70]: 012-8889900
+      - generic [ref=e71]: inspector2@utem.edu.my
+      - text: "Fatal error: Uncaught Error: Undefined constant \"ASSIGNMENT_TIMEOUT_HOURS\" in D:\\Xampp\\htdocs\\rentbridge\\admin\\property.php:491 Stack trace: #0 {main} thrown in D:\\Xampp\\htdocs\\rentbridge\\admin\\property.php on line 491"

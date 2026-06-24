@@ -133,7 +133,7 @@ $pendingRequests = (int)$stmt->fetchColumn();
             <a href="/rentbridge/landlord/properties.php"
                class="sidebar-link <?= $activeNav === 'properties' ? 'active' : '' ?>">
                 <i class="bi bi-buildings-fill"></i>
-                <span class="sidebar-label">Property Register</span>
+                <span class="sidebar-label">Properties</span>
                 <?php if ($pendingRequests > 0): ?>
                     <span class="sidebar-badge"><?= $pendingRequests ?></span>
                 <?php endif; ?>

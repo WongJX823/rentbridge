@@ -52,11 +52,19 @@ if ($tab === 'assigned') {
 }
 
 if ($searchQuery !== '') {
-    $where .= ' AND (a.full_name LIKE ? OR a.staff_id LIKE ? OR u.email LIKE ?)';
     $like = '%' . $searchQuery . '%';
-    $params[] = $like;
-    $params[] = $like;
-    $params[] = $like;
+    if (ctype_digit($searchQuery)) {
+        $where .= ' AND (a.full_name LIKE ? OR a.staff_id LIKE ? OR u.email LIKE ? OR u.id = ?)';
+        $params[] = $like;
+        $params[] = $like;
+        $params[] = $like;
+        $params[] = (int)$searchQuery;
+    } else {
+        $where .= ' AND (a.full_name LIKE ? OR a.staff_id LIKE ? OR u.email LIKE ?)';
+        $params[] = $like;
+        $params[] = $like;
+        $params[] = $like;
+    }
 }
 if ($filterDept !== '') {
     $where .= ' AND a.department = ?';
@@ -65,8 +73,15 @@ if ($filterDept !== '') {
 
 // For "assigned" tab, include property + tenancy details
 $selectCols = "u.id, u.email, u.status, u.created_at,
-               a.full_name, a.staff_id, a.department,
-               a.current_caseload, a.max_caseload, a.availability";
+               a.full_name, a.staff_id, a.department, a.availability,
+               (
+                   (SELECT COUNT(*) FROM properties pp
+                     WHERE pp.assigned_agent_id = a.user_id
+                       AND (pp.agent_status IN ('pending','inspecting') OR pp.status = 'available'))
+                 + (SELECT COUNT(*) FROM tenancies tt
+                     WHERE tt.agent_id = a.user_id
+                       AND tt.status IN ('pending_agent','agent_verifying','agent_assigned','contract_pending'))
+               ) AS live_caseload";
 
 if ($tab === 'assigned') {
     $selectCols .= ",
@@ -288,7 +303,13 @@ ob_start();
                         <td><?= e($r['department']) ?></td>
                         <td><code><?= e($r['staff_id']) ?></code></td>
                         <td>
-                            <?= (int)$r['current_caseload'] ?> / <?= (int)$r['max_caseload'] ?>
+                            <?php $cl = (int)$r['live_caseload']; ?>
+                            <?= $cl ?>
+                            <?php if ($cl >= 7): ?>
+                                <span class="badge bg-danger ms-1" title="Over recommended limit">High</span>
+                            <?php elseif ($cl >= 5): ?>
+                                <span class="badge bg-warning text-dark ms-1">Busy</span>
+                            <?php endif; ?>
                         </td>
                         <td><span class="badge bg-<?= $color ?>"><?= e($label) ?></span></td>
                         <td class="text-end pe-3">

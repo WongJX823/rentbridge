@@ -230,6 +230,15 @@ $pageContent   = $pageContent   ?? '';
     }
     function toggle(freeze) {
         body.classList.toggle('sidebar-collapsed');
+        if (body.classList.contains('sidebar-collapsed')) {
+            document.querySelectorAll('.sidebar-submenu').forEach(function(sub) {
+                sub.style.display = 'none';
+            });
+            document.querySelectorAll('.sidebar-collapsible-toggle').forEach(function(btn) {
+                btn.classList.remove('open');
+            });
+            localStorage.setItem('rb-admin-help-open', '0');
+        }
         if (freeze) {
             localStorage.setItem('rb-admin-sidebar',
                 body.classList.contains('sidebar-collapsed') ? 'collapsed' : 'expanded');

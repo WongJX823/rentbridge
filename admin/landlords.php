@@ -51,10 +51,17 @@ if ($tab === 'active') {
 }
 
 if ($searchQuery !== '') {
-    $where .= " AND (l.full_name LIKE ? OR u.email LIKE ?)";
     $like = '%' . $searchQuery . '%';
-    $params[] = $like;
-    $params[] = $like;
+    if (ctype_digit($searchQuery)) {
+        $where .= " AND (l.full_name LIKE ? OR u.email LIKE ? OR u.id = ?)";
+        $params[] = $like;
+        $params[] = $like;
+        $params[] = (int)$searchQuery;
+    } else {
+        $where .= " AND (l.full_name LIKE ? OR u.email LIKE ?)";
+        $params[] = $like;
+        $params[] = $like;
+    }
 }
 
 $stmt = $pdo->prepare("

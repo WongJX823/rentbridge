@@ -1,0 +1,70 @@
+- generic [active] [ref=e1]:
+  - navigation [ref=e2]:
+    - generic [ref=e3]:
+      - link "R RentBridge" [ref=e4] [cursor=pointer]:
+        - /url: /rentbridge/index.php
+        - generic [ref=e5]: R
+        - text: RentBridge
+      - generic [ref=e6]:
+        - list [ref=e7]:
+          - listitem [ref=e8]:
+            - link "Browse" [ref=e9] [cursor=pointer]:
+              - /url: "#listings"
+          - listitem [ref=e10]:
+            - link "How it works" [ref=e11] [cursor=pointer]:
+              - /url: "#how"
+          - listitem [ref=e12]:
+            - link "Why RentBridge" [ref=e13] [cursor=pointer]:
+              - /url: "#trust"
+        - link "" [ref=e14] [cursor=pointer]:
+          - /url: /rentbridge/chat.php
+          - generic [ref=e15]: 
+        - generic [ref=e16]:
+          - link " admin" [ref=e17] [cursor=pointer]:
+            - /url: /rentbridge/admin/dashboard.php
+            - generic [ref=e18]: 
+            - text: admin
+          - link "Sign out" [ref=e19] [cursor=pointer]:
+            - /url: /rentbridge/auth/logout.php
+  - generic [ref=e22]:
+    - paragraph [ref=e23]:
+      - link " All agents" [ref=e24] [cursor=pointer]:
+        - /url: /rentbridge/admin/agents.php
+        - generic [ref=e25]: 
+        - text: All agents
+    - generic [ref=e26]:
+      - generic [ref=e27]:
+        - heading "En. Kumaran A/L Selvam" [level=1] [ref=e28]
+        - paragraph [ref=e29]: Applied 10 Jan 2026
+      - generic [ref=e30]: Active
+    - generic [ref=e31]:
+      - heading "Application details" [level=6] [ref=e32]
+      - generic [ref=e33]:
+        - generic [ref=e34]:
+          - text: Staff ID
+          - code [ref=e36]: AGT002
+        - generic [ref=e37]:
+          - text: Department / Faculty
+          - generic [ref=e38]: FKE
+        - generic [ref=e39]:
+          - text: UTeM email
+          - generic [ref=e40]: inspector2@utem.edu.my
+        - generic [ref=e41]:
+          - text: Phone
+          - generic [ref=e42]: 012-8889900
+        - generic [ref=e43]:
+          - text: Current caseload
+          - generic [ref=e44]: 3 / 5
+        - generic [ref=e45]:
+          - text: Availability
+          - generic [ref=e46]: Busy
+    - generic [ref=e47]:
+      - heading "Admin actions" [level=6] [ref=e48]
+      - generic [ref=e49]:
+        - paragraph [ref=e50]:
+          - text: This agent is active. You can suspend them to temporarily block access.
+          - strong [ref=e51]: ⚠ This agent has 3 open case(s).
+          - text: Suspending will not auto-reassign them — handle cases first.
+        - button " Suspend account" [ref=e52] [cursor=pointer]:
+          - generic [ref=e53]: 
+          - text: Suspend account

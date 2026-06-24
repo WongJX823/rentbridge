@@ -284,6 +284,12 @@ body.sidebar-collapsed .sidebar-edge-btn .bi-chevron-left  { display: none; }
     justify-content: center;
     padding: 10px 0;
 }
+.sidebar-collapsed .sidebar-submenu {
+    display: none !important;
+}
+body.sidebar-collapsed .sidebar-chevron {
+    display: none !important;
+}
 
 /* ------------------------------------------------------------- */
 /* Main content area                                             */

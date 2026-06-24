@@ -20,7 +20,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $result = agent_accept_property($propertyId, $agentId);
         if ($result['ok']) {
             set_flash('success', 'Case accepted. Go to the conversation and propose an inspection time.');
-            // Redirect to the newly-created agent↔landlord conversation
             header('Location: /rentbridge/chat/conversation.php?id=' . $result['conversation_id']);
         } else {
             set_flash('danger', 'Failed: ' . $result['error']);
@@ -64,11 +63,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($action === 'reject_listing') {
         $reason = trim($_POST['reason'] ?? '');
         if ($reason === '') {
-            set_flash('warning', 'Please provide a reason for rejecting the listing.');
+            set_flash('warning', 'Please provide a rejection reason.');
         } else {
-            $result = agent_reject_listing($propertyId, $agentId, $reason);
+            // Handle evidence photo upload
+            $evidencePath = '';
+            if (!empty($_FILES['evidence_photo']['tmp_name'])) {
+                $file     = $_FILES['evidence_photo'];
+                $allowed  = ['image/jpeg', 'image/png', 'image/webp'];
+                $finfo    = finfo_open(FILEINFO_MIME_TYPE);
+                $mime     = finfo_file($finfo, $file['tmp_name']);
+                finfo_close($finfo);
+                if (!in_array($mime, $allowed, true)) {
+                    set_flash('warning', 'Evidence photo must be JPEG, PNG, or WebP.');
+                    header('Location: /rentbridge/agent/property_review.php?id=' . $propertyId);
+                    exit;
+                }
+                if ($file['size'] > 8 * 1024 * 1024) {
+                    set_flash('warning', 'Evidence photo must be under 8 MB.');
+                    header('Location: /rentbridge/agent/property_review.php?id=' . $propertyId);
+                    exit;
+                }
+                $ext      = ['image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp'][$mime];
+                $filename = 'reject_' . $propertyId . '_' . $agentId . '_' . time() . '.' . $ext;
+                $dest     = __DIR__ . '/../uploads/property_docs/' . $filename;
+                if (!move_uploaded_file($file['tmp_name'], $dest)) {
+                    set_flash('danger', 'Failed to save evidence photo.');
+                    header('Location: /rentbridge/agent/property_review.php?id=' . $propertyId);
+                    exit;
+                }
+                $evidencePath = 'uploads/property_docs/' . $filename;
+            }
+
+            $result = agent_reject_listing($propertyId, $agentId, $reason, $evidencePath);
             if ($result['ok']) {
-                set_flash('success', 'Listing rejected. The landlord has been notified.');
+                set_flash('success', 'Listing rejected with evidence recorded. The landlord has been notified.');
             } else {
                 set_flash('danger', 'Failed: ' . ($result['error'] ?? 'Unknown error'));
             }
@@ -102,6 +130,9 @@ if (!$prop) {
 if ((int)$prop['assigned_agent_id'] !== $agentId && $prop['agent_status'] !== 'accepted') {
     die('You are not assigned to this property.');
 }
+
+// Agent's current caseload (for over-capacity warning)
+$agentCaseload = get_agent_caseload($agentId);
 
 // Photos
 $stmt = $pdo->prepare("SELECT image_path FROM property_images WHERE property_id = ? ORDER BY is_primary DESC, id ASC");
@@ -171,6 +202,27 @@ ob_start();
                 <tr><th>Furnishing</th><td><?= e($prop['furnishing']) ?></td></tr>
                 <tr><th>Monthly rent</th><td>RM <?= number_format((float)$prop['monthly_rent']) ?></td></tr>
                 <tr><th>Deposit</th><td>RM <?= number_format((float)$prop['deposit']) ?></td></tr>
+                <tr>
+                    <th>Viewing mode</th>
+                    <td>
+                        <?php
+                        [$vLabel, $vColor] = match($prop['viewing_mode'] ?? '') {
+                            'agent_led'    => ['Agent-led', 'info'],
+                            'landlord_led' => ['Landlord-led', 'warning'],
+                            'either'       => ['Either', 'secondary'],
+                            default        => ['Not set', 'secondary'],
+                        };
+                        ?>
+                        <span class="badge bg-<?= $vColor ?>"><?= $vLabel ?></span>
+                        <?php if (($prop['viewing_mode'] ?? '') === 'landlord_led'): ?>
+                            <div class="small text-secondary mt-1">Landlord will be present — coordinate before scheduling.</div>
+                        <?php elseif (($prop['viewing_mode'] ?? '') === 'agent_led'): ?>
+                            <div class="small text-secondary mt-1">You arrange access independently (key / lockbox).</div>
+                        <?php else: ?>
+                            <div class="small text-secondary mt-1">Either you or the landlord can facilitate viewings.</div>
+                        <?php endif; ?>
+                    </td>
+                </tr>
                 <tr><th>Address</th><td><?= e($prop['address']) ?>, <?= e($prop['city']) ?> <?= e($prop['postcode']) ?>, <?= e($prop['state']) ?></td></tr>
                 <?php if (!empty($prop['maps_url'])): ?>
                 <tr><th>Maps</th><td><a href="<?= e($prop['maps_url']) ?>" target="_blank">Open on Google Maps <i class="bi bi-box-arrow-up-right"></i></a></td></tr>
@@ -222,42 +274,43 @@ ob_start();
             <hr>
 
             <?php if ($prop['agent_status'] === 'pending'): ?>
-                <!-- Phase 1: Review listing, then accept to start inspection -->
-                <h6 class="text-secondary text-uppercase small mb-3">Step 1 — Accept case</h6>
+                <!-- STEP 1: Acceptance -->
+                <h6 class="text-secondary text-uppercase small mb-3">Step 1 — Accept or Pass</h6>
                 <p class="small text-secondary mb-3">
-                    Review the documents and photos above, then accept to begin the physical inspection process.
-                    Accepting opens a chat with the landlord to schedule a visit.
+                    Review the documents and photos above. Accept to begin the physical inspection and open a chat with the landlord, or pass to the next agent in queue.
                 </p>
+
+                <?php if ($agentCaseload >= AGENT_CASELOAD_WARN): ?>
+                <div class="alert alert-warning small mb-3 py-2">
+                    <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                    <strong>High caseload</strong> — you have <?= $agentCaseload ?> active cases (max recommended: <?= AGENT_CASELOAD_WARN ?>).
+                    Accepting means you are personally responsible for timely completion.
+                    <strong>Failure may result in a report being filed against you.</strong>
+                </div>
+                <?php endif; ?>
 
                 <form method="POST" class="mb-2">
                     <?= csrf_field() ?>
                     <input type="hidden" name="action" value="accept">
                     <button type="submit" class="btn btn-primary w-100"
-                            onclick="return confirm('Accept this case and start the inspection scheduling process?');">
+                            onclick="return confirm('<?= $agentCaseload >= AGENT_CASELOAD_WARN ? 'Your caseload is high. You are responsible for all accepted cases — failure may lead to a report. Accept anyway?' : 'Accept this case and start the inspection scheduling process?' ?>');">
                         <i class="bi bi-clipboard-check me-1"></i> Accept &amp; Schedule inspection
                     </button>
                 </form>
 
-                <button type="button" class="btn btn-outline-warning w-100 mb-2"
+                <button type="button" class="btn btn-outline-warning w-100"
                         data-bs-toggle="modal" data-bs-target="#passModal">
                     <i class="bi bi-arrow-right-circle me-1"></i> Pass to another agent
                 </button>
 
-                <button type="button" class="btn btn-outline-danger w-100"
-                        data-bs-toggle="modal" data-bs-target="#rejectModal">
-                    <i class="bi bi-slash-circle me-1"></i> Reject listing
-                </button>
-
                 <div class="mt-3 p-2 bg-light rounded small text-secondary">
-                    <p class="mb-1"><strong>Pass</strong> — Can't handle this (area, workload) but listing looks valid. Sends to next agent in queue.</p>
-                    <p class="mb-0"><strong>Reject listing</strong> — Fake documents, scam, or illegal property. Permanently rejects, landlord is notified.</p>
+                    <strong>Pass</strong> — Can't handle this (coverage area, workload) but listing looks valid. Sends to the next agent in queue.
                 </div>
 
             <?php elseif ($prop['agent_status'] === 'inspecting'): ?>
-                <!-- Phase 2: Inspection in progress — chat open, schedule visit, mark complete -->
+                <!-- STEP 2: Inspection -->
                 <?php
                 $inspectionDone = !empty($prop['inspection_completed_at']);
-                // Find the chat conversation for this property
                 $lo  = min($agentId, (int)$prop['landlord_id']);
                 $hi  = max($agentId, (int)$prop['landlord_id']);
                 $stmt = $pdo->prepare("SELECT id FROM conversations WHERE user_a = ? AND user_b = ? AND (property_id <=> ?) AND context_type = 'agent_case' LIMIT 1");
@@ -266,15 +319,14 @@ ob_start();
                 ?>
 
                 <?php if (!$inspectionDone): ?>
-                    <h6 class="text-secondary text-uppercase small mb-2">Step 2 — Inspection</h6>
+                    <h6 class="text-secondary text-uppercase small mb-2">Step 2 — Physical inspection</h6>
                     <p class="small text-secondary mb-3">
-                        Use the conversation with the landlord to schedule and confirm an inspection time.
-                        After you've physically visited the property, click below.
+                        Coordinate with the landlord to schedule your visit. After visiting the property in person, mark the inspection complete.
                     </p>
 
                     <?php if ($convoId): ?>
                         <a href="/rentbridge/chat/conversation.php?id=<?= $convoId ?>"
-                           class="btn btn-outline-primary w-100 mb-2">
+                           class="btn btn-outline-primary w-100 mb-3">
                             <i class="bi bi-chat-dots me-1"></i> Open landlord conversation
                         </a>
                     <?php endif; ?>
@@ -282,28 +334,39 @@ ob_start();
                     <form method="POST" class="mb-2">
                         <?= csrf_field() ?>
                         <input type="hidden" name="action" value="complete_inspection">
-                        <button type="submit" class="btn btn-success w-100"
+                        <button type="submit" class="btn btn-success w-100 mb-2"
                                 onclick="return confirm('Mark the physical inspection as complete? Do this only after you have visited the property.');">
                             <i class="bi bi-check2-square me-1"></i> Mark inspection complete
                         </button>
                     </form>
 
-                    <button type="button" class="btn btn-outline-danger w-100"
-                            data-bs-toggle="modal" data-bs-target="#rejectModal">
-                        <i class="bi bi-slash-circle me-1"></i> Reject listing
-                    </button>
+                    <hr class="my-3">
+                    <p class="small text-secondary mb-2">Can't continue this inspection?</p>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-outline-warning flex-fill"
+                                data-bs-toggle="modal" data-bs-target="#passModal">
+                            <i class="bi bi-arrow-right-circle me-1"></i> Pass
+                        </button>
+                        <button type="button" class="btn btn-outline-danger flex-fill"
+                                data-bs-toggle="modal" data-bs-target="#rejectModal">
+                            <i class="bi bi-slash-circle me-1"></i> Reject
+                        </button>
+                    </div>
+                    <div class="mt-2 small text-secondary">
+                        <strong>Pass</strong> — hand to next agent.
+                        <strong>Reject</strong> — failed inspection (with evidence).
+                    </div>
 
                 <?php else: ?>
-                    <!-- Inspection done — approve or reject -->
+                    <!-- Inspection done — final decision -->
                     <div class="alert alert-success small mb-3">
                         <i class="bi bi-check-circle-fill"></i>
                         Inspection completed <?= e(date('d M Y', strtotime($prop['inspection_completed_at']))) ?>.
-                        Make your final decision:
                     </div>
 
                     <h6 class="text-secondary text-uppercase small mb-3">Step 3 — Final decision</h6>
 
-                    <form method="POST" class="mb-2">
+                    <form method="POST" class="mb-3">
                         <?= csrf_field() ?>
                         <input type="hidden" name="action" value="approve_listing">
                         <button type="submit" class="btn btn-success w-100"
@@ -312,10 +375,20 @@ ob_start();
                         </button>
                     </form>
 
-                    <button type="button" class="btn btn-outline-danger w-100"
-                            data-bs-toggle="modal" data-bs-target="#rejectModal">
-                        <i class="bi bi-slash-circle me-1"></i> Reject listing
-                    </button>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-outline-warning flex-fill"
+                                data-bs-toggle="modal" data-bs-target="#passModal">
+                            <i class="bi bi-arrow-right-circle me-1"></i> Pass
+                        </button>
+                        <button type="button" class="btn btn-outline-danger flex-fill"
+                                data-bs-toggle="modal" data-bs-target="#rejectModal">
+                            <i class="bi bi-slash-circle me-1"></i> Reject
+                        </button>
+                    </div>
+                    <div class="mt-2 small text-secondary">
+                        <strong>Pass</strong> — hand to next agent.
+                        <strong>Reject</strong> — failed inspection (requires evidence photo &amp; reason).
+                    </div>
                 <?php endif; ?>
 
             <?php elseif ($prop['agent_status'] === 'accepted'): ?>
@@ -359,7 +432,7 @@ ob_start();
 <!-- Reject listing modal -->
 <div class="modal fade" id="rejectModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
-        <form method="POST" class="modal-content">
+        <form method="POST" enctype="multipart/form-data" class="modal-content">
             <?= csrf_field() ?>
             <input type="hidden" name="action" value="reject_listing">
             <div class="modal-header">
@@ -368,11 +441,18 @@ ob_start();
             </div>
             <div class="modal-body">
                 <div class="alert alert-danger small py-2">
-                    <strong>Permanent action.</strong> The listing will be rejected immediately and the landlord will be notified with your reason. Use this only for fake documents, scam listings, or illegal properties.
+                    <strong>Permanent action.</strong> The listing will be rejected and the landlord notified. Use only for fake documents, scam listings, or properties that failed the physical inspection.
                 </div>
-                <label class="form-label fw-semibold">Reason <small class="text-danger">*</small></label>
-                <textarea name="reason" class="form-control" rows="3" required
-                          placeholder="e.g. Documents appear forged. Photos do not match the stated address."></textarea>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Rejection reason <small class="text-danger">*</small></label>
+                    <textarea name="reason" class="form-control" rows="3" required
+                              placeholder="e.g. Property condition does not match advertised photos. Evidence of structural damage found on-site."></textarea>
+                </div>
+                <div class="mb-1">
+                    <label class="form-label fw-semibold">Evidence photo <small class="text-danger">*</small></label>
+                    <input type="file" name="evidence_photo" class="form-control" accept="image/jpeg,image/png,image/webp" required>
+                    <div class="form-text">Upload a photo taken during your inspection as evidence (JPG/PNG/WebP, max 8 MB).</div>
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>

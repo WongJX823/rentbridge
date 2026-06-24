@@ -92,6 +92,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: /rentbridge/landlord/property.php?id=' . $propertyId);
         exit;
     }
+    if ($action === 'change_viewing_mode') {
+        $newMode = $_POST['viewing_mode'] ?? '';
+        if (!in_array($newMode, ['agent_led','landlord_led','either'], true)) {
+            $errors['viewing_mode'] = 'Invalid viewing mode.';
+        } else {
+            $pdo->prepare("UPDATE properties SET viewing_mode = ? WHERE id = ? AND landlord_id = ?")
+                ->execute([$newMode, $propertyId, $userId]);
+            set_flash('success', 'Viewing mode updated.');
+            header('Location: /rentbridge/landlord/property.php?id=' . $propertyId);
+            exit;
+        }
+    }
     if ($action === 'delete' && in_array($property['status'], ['pending_approval','rejected','hidden'], true)) {
         // Only allow delete if not active anywhere
         $stmt = $pdo->prepare("
@@ -226,6 +238,39 @@ ob_start();
     </div>
 </div>
 <?php endif; ?>
+
+<!-- VIEWING MODE -->
+<div class="bg-white border rounded-3 p-4 mb-4">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+        <div>
+            <h6 class="mb-1"><i class="bi bi-eye me-2"></i>Viewing arrangement</h6>
+            <?php
+            $modeLabel = match($property['viewing_mode']) {
+                'agent_led'    => ['Agent-led', 'info',       'The agent arranges access and conducts viewings independently.'],
+                'landlord_led' => ['Landlord-led', 'warning', 'You will be present for all viewings.'],
+                'either'       => ['Either', 'secondary',     'Either you or the agent can facilitate viewings.'],
+                default        => [$property['viewing_mode'], 'secondary', ''],
+            };
+            [$ml, $mc, $md] = $modeLabel;
+            ?>
+            <span class="badge bg-<?= $mc ?> mb-1"><?= $ml ?></span>
+            <p class="text-secondary small mb-0"><?= $md ?></p>
+            <?php if (!empty($errors['viewing_mode'])): ?>
+                <div class="text-danger small mt-1"><?= e($errors['viewing_mode']) ?></div>
+            <?php endif; ?>
+        </div>
+        <form method="POST" class="d-flex gap-2 align-items-center">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" value="change_viewing_mode">
+            <select name="viewing_mode" class="form-select form-select-sm" style="min-width:220px;">
+                <option value="agent_led"    <?= $property['viewing_mode']==='agent_led'    ? 'selected' : '' ?>>Agent-led</option>
+                <option value="landlord_led" <?= $property['viewing_mode']==='landlord_led' ? 'selected' : '' ?>>Landlord-led (I'll be present)</option>
+                <option value="either"       <?= $property['viewing_mode']==='either'       ? 'selected' : '' ?>>Either</option>
+            </select>
+            <button type="submit" class="btn btn-sm btn-outline-primary">Update</button>
+        </form>
+    </div>
+</div>
 
 <!-- PHOTOS -->
 <?php if (!empty($images)): ?>

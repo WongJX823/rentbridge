@@ -629,8 +629,9 @@ CREATE TABLE `property_agent_assignments` (
   `round_number` int(11) NOT NULL,
   `assigned_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `responded_at` timestamp NULL DEFAULT NULL,
-  `outcome` enum('pending','accepted','rejected','timeout','reassigned') NOT NULL DEFAULT 'pending',
-  `rejection_reason` varchar(500) DEFAULT NULL
+  `outcome` enum('pending','accepted','passed','rejected_listing','timeout','reassigned') NOT NULL DEFAULT 'pending',
+  `rejection_reason` varchar(500) DEFAULT NULL,
+  `rejection_evidence_path` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -767,6 +768,7 @@ CREATE TABLE `students` (
   `preferred_name` varchar(50) NOT NULL DEFAULT '',
   `avatar_path` varchar(255) DEFAULT NULL,
   `matric_no` varchar(20) NOT NULL,
+  `ic_no` varchar(20) NOT NULL DEFAULT '',
   `university` varchar(80) NOT NULL DEFAULT 'UTeM',
   `phone` varchar(20) NOT NULL,
   `allow_whatsapp` tinyint(1) NOT NULL DEFAULT 0,

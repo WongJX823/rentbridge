@@ -31,9 +31,9 @@ foreach ($statusGroups as $key => $statuses) {
     $counts[$key] = (int)$stmt->fetchColumn();
     $counts['all'] += $counts[$key];
 }
-// Stuck: pending_agent with no agent_id
+// Stuck: pending_agent with no agent_id OR inspection_aborted (needs admin resolution)
 $counts['stuck'] = (int)$pdo->query(
-    "SELECT COUNT(*) FROM tenancies WHERE status = 'pending_agent' AND agent_id IS NULL"
+    "SELECT COUNT(*) FROM tenancies WHERE status = 'inspection_aborted' OR (status = 'pending_agent' AND agent_id IS NULL)"
 )->fetchColumn();
 
 // --- BUILD QUERY ---
@@ -41,7 +41,7 @@ $where  = "1 = 1";
 $params = [];
 
 if ($tab === 'stuck') {
-    $where .= " AND b.status = 'pending_agent' AND b.agent_id IS NULL";
+    $where .= " AND (b.status = 'inspection_aborted' OR (b.status = 'pending_agent' AND b.agent_id IS NULL))";
 } elseif ($tab !== 'all' && isset($statusGroups[$tab])) {
     $ph = implode(',', array_fill(0, count($statusGroups[$tab]), '?'));
     $where .= " AND b.status IN ($ph)";

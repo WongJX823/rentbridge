@@ -8,7 +8,7 @@ $role   = current_role();
 $type   = $_GET['type'] ?? '';
 
 if ($type === 'property_inquiry') {
-    // Student → Landlord about a specific property
+    // Student → Agent about a specific property
     if ($role !== 'student') {
         http_response_code(403);
         die('Only students can start property inquiries.');
@@ -17,23 +17,52 @@ if ($type === 'property_inquiry') {
     $propertyId = (int)($_GET['property_id'] ?? 0);
     if ($propertyId <= 0) die('Invalid property.');
 
-    $stmt = db()->prepare("SELECT landlord_id, status FROM properties WHERE id = ? LIMIT 1");
+    $stmt = db()->prepare("
+        SELECT landlord_id, status, assigned_agent_id, agent_status, viewing_mode, title
+          FROM properties WHERE id = ? LIMIT 1
+    ");
     $stmt->execute([$propertyId]);
     $prop = $stmt->fetch();
     if (!$prop) die('Property not found.');
     if ($prop['status'] !== 'available') {
         die('You can only ask about properties that are currently available.');
     }
+    if (empty($prop['assigned_agent_id']) || $prop['agent_status'] !== 'accepted') {
+        die('No agent is currently assigned to this property. Please try again later.');
+    }
+
+    $agentUserId = (int)$prop['assigned_agent_id'];
 
     $convoId = find_or_create_conversation(
         $userId,
-        (int)$prop['landlord_id'],
+        $agentUserId,
         'property_inquiry',
         $propertyId,
         null
     );
 
-    header('Location: /rentbridge/chat.php?id=' . $convoId);
+    // Seed a one-time system notice so the agent knows the viewing mode
+    $viewingMode = $prop['viewing_mode'] ?? 'agent_led';
+    $notice = match ($viewingMode) {
+        'landlord_led' => "📋 Viewing mode: Landlord-led. The landlord will be present during all viewings — coordinate with them before scheduling.",
+        'either'       => "📋 Viewing mode: Either. Both you and the landlord can facilitate viewings — confirm with the landlord who will handle each visit.",
+        default        => "📋 Viewing mode: Agent-led. You are responsible for arranging access and conducting the viewing independently.",
+    };
+
+    $pdo = db();
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM messages WHERE conversation_id = ?");
+    $stmt->execute([$convoId]);
+    if ((int)$stmt->fetchColumn() === 0) {
+        $pdo->prepare("
+            INSERT INTO messages (conversation_id, sender_id, body, message_type, sent_at)
+            VALUES (?, ?, ?, 'system_notice', NOW())
+        ")->execute([$convoId, $agentUserId, $notice]);
+        $pdo->prepare("
+            UPDATE conversations SET last_message_at = NOW(), last_message_preview = ?, last_sender_id = ? WHERE id = ?
+        ")->execute([substr($notice, 0, 120), $agentUserId, $convoId]);
+    }
+
+    header('Location: /rentbridge/chat/conversation.php?id=' . $convoId);
     exit;
 }
 
@@ -48,7 +77,7 @@ elseif ($type === 'friend') {
     }
 
     $convoId = find_or_create_conversation($userId, $friendId, 'friend', null, null);
-    header('Location: /rentbridge/chat.php?id=' . $convoId);
+    header('Location: /rentbridge/chat/conversation.php?id=' . $convoId);
     exit;
 }
 
@@ -75,7 +104,7 @@ elseif ($type === 'agent_case') {
 
     $otherId = $isStudent ? (int)$b['agent_id'] : (int)$b['student_id'];
     $convoId = find_or_create_conversation($userId, $otherId, 'agent_case', null, $tenancyId);
-    header('Location: /rentbridge/chat.php?id=' . $convoId);
+    header('Location: /rentbridge/chat/conversation.php?id=' . $convoId);
     exit;
 }
 elseif ($type === 'partner_inquiry') {
@@ -150,7 +179,7 @@ elseif ($type === 'partner_inquiry') {
         $stmt->execute([$convoId, $userId, $opener]);
     }
 
-    header('Location: /rentbridge/chat.php?id=' . $convoId);
+    header('Location: /rentbridge/chat/conversation.php?id=' . $convoId);
     exit;
 }
 else {

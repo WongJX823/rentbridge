@@ -44,16 +44,24 @@ if ($filterCity !== '') {
     $params[] = $filterCity;
 }
 
-// Build query — JOIN current active tenancy's agent if any
+// Build query
 $stmt = $pdo->prepare("
     SELECT p.*,
            p.landlord_id AS landlord_user_id,
            (SELECT l.full_name FROM landlords l WHERE l.user_id = p.landlord_id LIMIT 1) AS landlord_name,
+           (SELECT b.agent_id
+              FROM tenancies b
+             WHERE b.property_id = p.id
+               AND (b.status IN ('agent_assigned','agent_verifying','contract_pending','active')
+                    OR (b.status = 'pending_agent' AND b.agent_id IS NOT NULL))
+             ORDER BY b.id DESC LIMIT 1
+           ) AS agent_user_id,
            (SELECT a.full_name
               FROM tenancies b
               JOIN agents a ON a.user_id = b.agent_id
              WHERE b.property_id = p.id
-               AND b.status IN ('agent_verifying','agent_assigned','contract_pending','active')
+               AND (b.status IN ('agent_assigned','agent_verifying','contract_pending','active')
+                    OR (b.status = 'pending_agent' AND b.agent_id IS NOT NULL))
              ORDER BY b.id DESC LIMIT 1
            ) AS current_inspector,
            (SELECT ag.full_name
@@ -166,11 +174,10 @@ ob_start();
             <thead style="background:#F4F4EE;">
                 <tr>
                     <th class="ps-3">ID</th>
-                    <th>Property</th>                    
-                    <th>Landlord</th>
+                    <th>Property</th>
+                    <th>Landlord / Agent</th>
                     <th>Rent</th>
                     <th>Status</th>
-                    <th>Inspecting agent</th>
                     <th class="text-end pe-3"></th>
                 </tr>
             </thead>
@@ -194,27 +201,30 @@ ob_start();
                             </div>
                         </td>
                         <td>
+                            <div class="small text-secondary">#<?= (int)$p['landlord_user_id'] ?></div>
                             <a href="/rentbridge/admin/user.php?id=<?= (int)$p['landlord_user_id'] ?>"
-                               class="text-decoration-none text-dark">
+                               class="text-decoration-none text-dark fw-semibold">
                                 <?= e($p['landlord_name']) ?>
                             </a>
+
+                            <?php if (!empty($p['current_inspector'])): ?>
+                                <div class="mt-2 pt-2 border-top small">
+                                    <span class="text-secondary">#<?= (int)$p['agent_user_id'] ?></span>
+                                    <?= e($p['current_inspector']) ?>
+                                </div>
+                            <?php elseif (!empty($p['verifier_name'])): ?>
+                                <div class="mt-2 pt-2 border-top small text-secondary">
+                                    #<?= (int)$p['agent_verified_by'] ?> <?= e($p['verifier_name']) ?>
+                                </div>
+                            <?php else: ?>
+                                <div class="mt-1 small text-secondary">—</div>
+                            <?php endif; ?>
                         </td>
                         <td>
                             <strong>RM <?= number_format((float)$p['monthly_rent']) ?></strong>
                             <div class="small text-secondary">/ month</div>
                         </td>
                         <td><span class="badge bg-<?= $color ?>"><?= e($label) ?></span></td>
-                        <td class="small">
-                            <?php if (!empty($p['current_inspector'])): ?>
-                                <?= e($p['current_inspector']) ?>
-                            <?php elseif (!empty($p['verifier_name'])): ?>
-                                <span class="text-secondary">
-                                    ✓ <?= e($p['verifier_name']) ?>
-                                </span>
-                            <?php else: ?>
-                                <span class="text-secondary">—</span>
-                            <?php endif; ?>
-                        </td>
                         <td class="text-end pe-3">
                             <a href="/rentbridge/admin/property.php?id=<?= (int)$p['id'] ?>"
                                class="btn btn-sm btn-outline-dark">

@@ -18,8 +18,7 @@ $counts = [
 $attention = [
     'pending_agents'      => (int)$pdo->query("SELECT COUNT(*) FROM users WHERE primary_role = 'agent' AND status = 'pending'")->fetchColumn(),
     'pending_properties'  => (int)$pdo->query("SELECT COUNT(*) FROM properties WHERE status = 'pending_approval'")->fetchColumn(),
-    'needs_admin_props'   => (int)$pdo->query("SELECT COUNT(*) FROM properties WHERE status = 'needs_admin'")->fetchColumn(),
-    'aborted_inspections' => (int)$pdo->query("SELECT COUNT(*) FROM tenancies WHERE status = 'inspection_aborted'")->fetchColumn(),
+    'aborted_inspections' => (int)$pdo->query("SELECT COUNT(*) FROM tenancies WHERE status = 'inspection_aborted' OR (status = 'pending_agent' AND agent_id IS NULL)")->fetchColumn(),
     'pending_transfers'   => (int)$pdo->query("SELECT COUNT(*) FROM agent_transfer_requests WHERE status = 'pending_admin'")->fetchColumn(),
     'pending_reports'     => (int)$pdo->query("SELECT COUNT(*) FROM reports WHERE status = 'pending'")->fetchColumn(),
 ];
@@ -48,25 +47,19 @@ ob_start();
                     </a>
                 <?php endif; ?>
                 <?php if ($attention['pending_properties'] > 0): ?>
-                    <a href="/rentbridge/admin/properties.php?status=pending_approval" class="badge bg-warning text-dark text-decoration-none">
+                    <a href="/rentbridge/admin/properties.php?tab=pending" class="badge bg-warning text-dark text-decoration-none">
                         <i class="bi bi-house me-1"></i>
                         <?= $attention['pending_properties'] ?> propert<?= $attention['pending_properties'] === 1 ? 'y' : 'ies' ?> pending review
                     </a>
                 <?php endif; ?>
-                <?php if ($attention['needs_admin_props'] > 0): ?>
-                    <a href="/rentbridge/admin/properties.php?status=needs_admin" class="badge bg-danger text-white text-decoration-none">
-                        <i class="bi bi-exclamation-circle me-1"></i>
-                        <?= $attention['needs_admin_props'] ?> propert<?= $attention['needs_admin_props'] === 1 ? 'y' : 'ies' ?> — no agents available
-                    </a>
-                <?php endif; ?>
                 <?php if ($attention['aborted_inspections'] > 0): ?>
-                    <a href="/rentbridge/admin/tenancies.php?status=inspection_aborted" class="badge bg-danger text-white text-decoration-none">
+                    <a href="/rentbridge/admin/tenancies.php?tab=stuck" class="badge bg-danger text-white text-decoration-none">
                         <i class="bi bi-x-octagon me-1"></i>
-                        <?= $attention['aborted_inspections'] ?> inspection<?= $attention['aborted_inspections'] === 1 ? '' : 's' ?> aborted — needs resolution
+                        <?= $attention['aborted_inspections'] ?> tenanc<?= $attention['aborted_inspections'] === 1 ? 'y' : 'ies' ?> stuck — needs resolution
                     </a>
                 <?php endif; ?>
                 <?php if ($attention['pending_transfers'] > 0): ?>
-                    <a href="/rentbridge/admin/transfers.php?filter=pending_admin" class="badge bg-warning text-dark text-decoration-none">
+                    <a href="/rentbridge/admin/transfers.php?filter=pending" class="badge bg-warning text-dark text-decoration-none">
                         <i class="bi bi-arrow-left-right me-1"></i>
                         <?= $attention['pending_transfers'] ?> case transfer<?= $attention['pending_transfers'] === 1 ? '' : 's' ?> awaiting review
                     </a>

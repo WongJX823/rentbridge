@@ -286,8 +286,8 @@ if (
 ) {
     // Verify this is an agent-led property AND I am the assigned agent
     $stmt = $pdo->prepare("
-        SELECT viewing_mode, assigned_agent_id, agent_status 
-          FROM properties 
+        SELECT viewing_mode, assigned_agent_id, agent_status, monthly_rent, deposit
+          FROM properties
          WHERE id = ?
     ");
     $stmt->execute([$propId]);
@@ -295,7 +295,7 @@ if (
     
     if (
         $propRow &&
-        in_array($propRow['viewing_mode'], ['agent_led', 'either'], true) &&
+        in_array($propRow['viewing_mode'], ['landlord_led', 'agent_led', 'either'], true) &&
         (int)$propRow['assigned_agent_id'] === current_user_id() &&
         $propRow['agent_status'] === 'accepted'
     ) {
@@ -335,9 +335,12 @@ if (
                 </p>
                 <button type="button" id="agentSendFormBtn"
                         class="btn btn-success fw-semibold"
+                        data-bs-toggle="modal" data-bs-target="#agentTermsModal"
                         data-conv-id="<?= (int)$convData['id'] ?>"
                         data-property-id="<?= (int)$propId ?>"
-                        data-student-id="<?= (int)$otherId ?>">
+                        data-student-id="<?= (int)$otherId ?>"
+                        data-monthly-rent="<?= (float)($propRow['monthly_rent'] ?? 0) ?>"
+                        data-deposit="<?= (float)($propRow['deposit'] ?? 0) ?>">
                     <i class="bi bi-send me-1"></i>
                     Send tenant info form to student
                 </button>
@@ -858,6 +861,63 @@ if (
 
 </div>
 
+<!-- AGENT: Set tenancy terms before sending tenant info form to student -->
+<div class="modal fade" id="agentTermsModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <form id="agentTermsForm" class="modal-content">
+            <input type="hidden" name="_csrf" value="<?= csrf_token() ?>">
+            <input type="hidden" name="conversation_id" id="atm_conv_id">
+            <input type="hidden" name="property_id"    id="atm_property_id">
+            <input type="hidden" name="student_id"     id="atm_student_id">
+            <input type="hidden" name="recipient_role" value="student">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-file-earmark-text text-warning me-2"></i>Set tenancy terms</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="small text-secondary mb-3">
+                    Set the agreed terms before sending the form. The student will see these as read-only and only fill in their personal details.
+                </p>
+                <div class="row g-3">
+                    <div class="col-6">
+                        <label class="form-label fw-semibold">Monthly rent (RM) <small class="text-danger">*</small></label>
+                        <input type="number" name="monthly_rent" id="atm_monthly_rent" class="form-control" min="0" step="50" required>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label fw-semibold">Deposit (RM)</label>
+                        <input type="number" name="deposit" id="atm_deposit" class="form-control" min="0" step="50">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label fw-semibold">Term <small class="text-danger">*</small></label>
+                        <select name="term_months" class="form-select" required>
+                            <option value="4">4 months (1 semester)</option>
+                            <option value="8">8 months (2 semesters)</option>
+                            <option value="12" selected>12 months (1 year)</option>
+                            <option value="24">24 months (2 years)</option>
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label fw-semibold">Start date <small class="text-danger">*</small></label>
+                        <input type="date" name="start_date" id="atm_start_date" class="form-control" required>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Special terms / notes</label>
+                        <textarea name="notes" class="form-control" rows="2"
+                                  placeholder="Any conditions agreed with the landlord or student."></textarea>
+                    </div>
+                </div>
+                <div id="atmError" class="alert alert-danger small d-none mt-3"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-success" id="atmSubmitBtn">
+                    <i class="bi bi-send me-1"></i> Send to student
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <!-- AGENT: Send inspection schedule request modal -->
 <div class="modal fade" id="sendInspectionScheduleModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
@@ -969,7 +1029,7 @@ if (
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form id="coTenantForm" method="POST"
-                  action="/rentbridge/chat/submit_tenant_form.php.php">
+                  action="/rentbridge/chat/submit_cotenants.php">
                 <?= csrf_field() ?>
                 <input type="hidden" name="tenancy_id" id="coTenantTenancyId">
 
@@ -1591,51 +1651,135 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+// ============================================================
+// AGENT TERMS MODAL — populate & submit
+// ============================================================
 document.addEventListener('DOMContentLoaded', function() {
-    const btn = document.getElementById('agentSendFormBtn');
-    if (!btn) return;
+    const modal = document.getElementById('agentTermsModal');
+    if (!modal) return;
 
-    btn.addEventListener('click', async function() {
-        if (!confirm('Send tenant info form to the student? The student will fill in their own details and any co-tenants. Only proceed if you have agreed to move forward.')) return;
+    // Pre-fill fields when modal opens (triggered by agentSendFormBtn)
+    modal.addEventListener('show.bs.modal', function (e) {
+        const btn = e.relatedTarget;
+        if (!btn) return;
+        document.getElementById('atm_conv_id').value     = btn.dataset.convId     || '';
+        document.getElementById('atm_property_id').value = btn.dataset.propertyId || '';
+        document.getElementById('atm_student_id').value  = btn.dataset.studentId  || '';
+        document.getElementById('atm_monthly_rent').value = btn.dataset.monthlyRent || '';
+        document.getElementById('atm_deposit').value      = btn.dataset.deposit     || '';
+        document.getElementById('atm_start_date').value   = new Date().toISOString().slice(0, 10);
+        document.getElementById('atmError').classList.add('d-none');
+    });
 
-        this.disabled = true;
-        this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Sending...';
+    document.getElementById('agentTermsForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const errBox   = document.getElementById('atmError');
+        const submitBtn = document.getElementById('atmSubmitBtn');
+        errBox.classList.add('d-none');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Sending...';
 
         try {
-            const formData = new FormData();
-            formData.append('_csrf', '<?= csrf_token() ?>');
-            formData.append('conversation_id', this.dataset.convId);
-            formData.append('property_id', this.dataset.propertyId);
-            formData.append('student_id', this.dataset.studentId);
-            formData.append('recipient_role', 'student');  // ← key parameter
-
             const resp = await fetch('/rentbridge/chat/send_tenant_form.php', {
-                method: 'POST',
-                body: formData,
+                method: 'POST', body: new FormData(this)
             });
-            const text = await resp.text();
-            let data;
-            try { data = JSON.parse(text); }
-            catch (e) {
-                alert('Server returned non-JSON: ' + text.substring(0, 300));
-                return;
-            }
-
+            const data = await resp.json();
             if (data.ok) {
-                alert(data.message);
+                bootstrap.Modal.getInstance(modal).hide();
                 location.reload();
             } else {
-                alert('Failed: ' + data.error);
-                this.disabled = false;
-                this.innerHTML = '<i class="bi bi-send me-1"></i> Send tenant info form to student';
+                errBox.textContent = data.error || 'Failed to send form.';
+                errBox.classList.remove('d-none');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="bi bi-send me-1"></i> Send to student';
             }
         } catch (err) {
-            alert('Network error: ' + err.message);
-            this.disabled = false;
-            this.innerHTML = '<i class="bi bi-send me-1"></i> Send tenant info form to student';
+            errBox.textContent = 'Network error: ' + err.message;
+            errBox.classList.remove('d-none');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="bi bi-send me-1"></i> Send to student';
         }
     });
 });
+
+
+// ============================================================
+// CHAT FORM — send message via AJAX
+// ============================================================
+(function () {
+    const form    = document.getElementById('chatForm');
+    const textarea = document.getElementById('chatTextarea');
+    const sendBtn  = document.getElementById('chatSendBtn');
+    const feed     = document.getElementById('chatBody');
+    if (!form || !textarea || !sendBtn) return;
+
+    // Auto-resize textarea
+    textarea.addEventListener('input', function () {
+        this.style.height = 'auto';
+        this.style.height = Math.min(this.scrollHeight, 160) + 'px';
+    });
+
+    // Send on Ctrl+Enter / Cmd+Enter
+    textarea.addEventListener('keydown', function (e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            e.preventDefault();
+            form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+        }
+    });
+
+    // Quick reply chips — fill textarea and send immediately
+    document.querySelectorAll('.quick-reply-chip').forEach(chip => {
+        chip.addEventListener('click', function () {
+            textarea.value = this.dataset.reply || '';
+            textarea.dispatchEvent(new Event('input'));
+            form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+        });
+    });
+
+    form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        const body = textarea.value.trim();
+        if (!body) return;
+
+        sendBtn.disabled = true;
+        sendBtn.textContent = '…';
+
+        try {
+            const fd = new FormData(this);
+            const resp = await fetch('/rentbridge/chat/send.php', { method: 'POST', body: fd });
+            const data = await resp.json();
+
+            if (data.ok && data.message) {
+                textarea.value = '';
+                textarea.style.height = 'auto';
+
+                // Append the new bubble immediately
+                if (feed) {
+                    const msg   = data.message;
+                    const d     = new Date(msg.sent_at.replace(' ', 'T'));
+                    const time  = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    const div   = document.createElement('div');
+                    div.style.display = 'flex';
+                    div.style.flexDirection = 'column';
+                    div.style.alignItems = 'flex-end';
+                    div.innerHTML = `
+                        <div class="chat-message mine">${msg.body.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>')}</div>
+                        <div class="chat-meta">You &bull; ${time}</div>`;
+                    feed.appendChild(div);
+                    feed.scrollTop = feed.scrollHeight;
+                }
+            } else {
+                alert(data.error || 'Failed to send message.');
+            }
+        } catch (err) {
+            alert('Network error: ' + err.message);
+        } finally {
+            sendBtn.disabled = false;
+            sendBtn.textContent = 'Send';
+        }
+    });
+})();
 
 <?php if ($isGroupChat && !empty($groupParticipants)): ?>
 // ============================================================

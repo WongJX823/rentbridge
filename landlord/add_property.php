@@ -103,8 +103,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors['furnishing'] = 'Invalid furnishing option.';
     }
 
-    // Validate viewing_mode (no "either")
-    if (!in_array($old['viewing_mode'], ['landlord_led','agent_led'], true)) {
+    if (!in_array($old['viewing_mode'], ['landlord_led','agent_led','either'], true)) {
         $errors['viewing_mode'] = 'Please select a viewing arrangement.';
     }
 
@@ -558,9 +557,10 @@ ob_start();
             <select name="viewing_mode"
                     class="form-select <?= isset($errors['viewing_mode']) ? 'is-invalid' : '' ?>"
                     required>
-                <option value="" disabled <?= !in_array($old['viewing_mode'],['landlord_led','agent_led']) ? 'selected' : '' ?>>— Select an option —</option>
+                <option value="" disabled <?= !in_array($old['viewing_mode'],['landlord_led','agent_led','either']) ? 'selected' : '' ?>>— Select an option —</option>
                 <option value="landlord_led" <?= $old['viewing_mode']==='landlord_led'?'selected':'' ?>>I (landlord) will be present for all viewings</option>
                 <option value="agent_led"    <?= $old['viewing_mode']==='agent_led'?'selected':'' ?>>Agent-led — I will hand over a key or lockbox code for agent access</option>
+                <option value="either"       <?= $old['viewing_mode']==='either'?'selected':'' ?>>Either — agent or I can facilitate viewings</option>
             </select>
             <?php if (isset($errors['viewing_mode'])): ?>
                 <div class="invalid-feedback"><?= e($errors['viewing_mode']) ?></div>
@@ -1039,6 +1039,8 @@ ob_start();
 
 </form>
 <script>
+let benchmarkSuggested = null;
+
 (function() {
     const benchmarkBox = document.getElementById('pricingBenchmark');
     const noDataBox    = document.getElementById('pricingNoData');
@@ -1047,10 +1049,10 @@ ob_start();
     const bodyEl       = document.getElementById('benchmarkBody');
     const iconEl       = document.getElementById('benchmarkIcon');
 
-    const cityInput  = document.querySelector('input[name="city"]');
-    const typeInput  = document.querySelector('select[name="property_type"]');
-    const furnInput  = document.querySelector('select[name="furnishing"]');
-    const rentInput  = document.getElementById('monthlyRentInput');
+    const citySelect      = document.querySelector('select[name="city"]');
+    const typeInput       = document.querySelector('select[name="property_type"]');
+    const furnInput       = document.querySelector('select[name="furnishing"]');
+    const rentInput       = document.getElementById('monthlyRentInput');
     const facilitiesInput = document.querySelector('textarea[name="facilities"]');
     const mapsUrlInput    = document.getElementById('mapsUrlInput');
     const mapsStatusEl    = document.getElementById('mapsUrlStatus');
@@ -1058,18 +1060,17 @@ ob_start();
     let lastQuery = '';
     let timer = null;
 
-async function fetchBenchmark() {
-        const city = (cityInput?.value || '').trim();
+    async function fetchBenchmark() {
+        const city = (citySelect?.value || '').trim();
         const type = typeInput?.value || '';
         const furn = furnInput?.value || '';
         const facilities = (facilitiesInput?.value || '').trim();
         const mapsUrl = (mapsUrlInput?.value || '').trim();
         const query = `${city}|${type}|${furn}|${facilities}|${mapsUrl}`;
-        
+
         if (query === lastQuery) return;
         lastQuery = query;
 
-        // Don't bother fetching if NOTHING is filled in
         const anyInput = city || facilities || mapsUrl;
         if (!anyInput) {
             benchmarkBox.classList.add('d-none');
@@ -1084,9 +1085,7 @@ async function fetchBenchmark() {
             });
             const resp = await fetch('/rentbridge/landlord/pricing_check.php?' + params);
             const data = await resp.json();
-            console.log('[pricing] response:', data);
 
-            // Show maps URL status
             if (mapsStatusEl) {
                 if (mapsUrl && data.coords_extracted) {
                     mapsStatusEl.innerHTML = `<i class="bi bi-check-circle text-success"></i> Coordinates extracted · ${data.distance_km} km from UTeM`;
@@ -1108,7 +1107,8 @@ async function fetchBenchmark() {
             }
 
             noDataBox.classList.add('d-none');
-            benchmarkBox.classList.remove('d-none');    
+            benchmarkBox.classList.remove('d-none');
+            benchmarkSuggested = data.suggested > 0 ? data.suggested : null;
 
             const tierLabel = data.match_tier === 'exact'
                 ? 'exact match'
@@ -1128,7 +1128,6 @@ async function fetchBenchmark() {
             confidenceEl.className = `badge bg-${confColor}`;
             confidenceEl.textContent = `${data.confidence} confidence`;
 
-            // Build breakdown
             let breakdown = '';
             if (data.has_data) {
                 breakdown += `
@@ -1167,7 +1166,6 @@ async function fetchBenchmark() {
 
             bodyEl.innerHTML = breakdown;
 
-            // Color tinting based on user's current rent vs benchmark
             const currentRent = parseFloat(rentInput?.value || 0);
             if (currentRent > 0) {
                 if (currentRent > data.max * 1.15) {
@@ -1201,27 +1199,17 @@ async function fetchBenchmark() {
         timer = setTimeout(fetchBenchmark, 400);
     }
 
-    cityInput?.addEventListener('input', debouncedFetch);
+    citySelect?.addEventListener('change', debouncedFetch);
     typeInput?.addEventListener('change', debouncedFetch);
     furnInput?.addEventListener('change', debouncedFetch);
     rentInput?.addEventListener('input', debouncedFetch);
     facilitiesInput?.addEventListener('input', debouncedFetch);
     mapsUrlInput?.addEventListener('input', debouncedFetch);
 
-// Force initial fetch always (avoids stale state)
     setTimeout(fetchBenchmark, 200);
+})();
 
-    // Sanity log
-    console.log('[pricing] inputs:', {
-        city: !!cityInput,
-        type: !!typeInput,
-        furn: !!furnInput,
-        rent: !!rentInput,
-        facilities: !!facilitiesInput,
-        maps: !!mapsUrlInput,
-    });})();
-
-    document.querySelectorAll('.delete-doc-btn').forEach(btn => {
+document.querySelectorAll('.delete-doc-btn').forEach(btn => {
     btn.addEventListener('click', function() {
         const form = document.createElement('form');
         form.method = 'POST';
@@ -1241,18 +1229,25 @@ async function fetchBenchmark() {
 });
 
 document.querySelector('form').addEventListener('submit', function(e) {
-    // Count existing photos that aren't being deleted + newly selected files
     const existingPhotos = document.querySelectorAll('#existingPhotosGrid > div').length;
     const fileInput = document.querySelector('input[name="photos[]"]');
     const newPhotos = fileInput ? fileInput.files.length : 0;
-    
-    const total = existingPhotos + newPhotos;
-    
-    if (total < 1) {
+
+    if (existingPhotos + newPhotos < 1) {
         e.preventDefault();
         alert('Please upload at least 1 photo of the property.');
         fileInput?.scrollIntoView({behavior: 'smooth', block: 'center'});
         fileInput?.focus();
+        return;
+    }
+
+    const rent = parseFloat(document.getElementById('monthlyRentInput').value || 0);
+    if (benchmarkSuggested !== null && rent > 0 && rent < benchmarkSuggested - 150) {
+        const diff = Math.round(benchmarkSuggested - rent);
+        const ok = confirm(
+            `Your monthly rent of RM${Math.round(rent).toLocaleString('en-MY')} is RM${diff} below the suggested market price of RM${Math.round(benchmarkSuggested).toLocaleString('en-MY')}.\n\nAre you sure you want to list at this price?`
+        );
+        if (!ok) e.preventDefault();
     }
 });
 </script>

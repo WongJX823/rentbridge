@@ -7,6 +7,7 @@ $old = [
     'full_name'      => '',
     'preferred_name' => '',
     'matric_no'      => '',
+    'ic_no'          => '',
     'phone'          => '',
 ];
 
@@ -18,6 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $old['full_name']      = trim($_POST['full_name'] ?? '');
     $old['preferred_name'] = trim($_POST['preferred_name'] ?? '');
     $old['matric_no']      = strtoupper(trim($_POST['matric_no'] ?? ''));
+    $old['ic_no']          = trim($_POST['ic_no'] ?? '');
     $old['phone']          = trim($_POST['phone'] ?? '');
     $password              = $_POST['password'] ?? '';
     $confirm               = $_POST['password_confirm'] ?? '';
@@ -29,6 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($old['full_name']      === '') $errors['full_name']      = 'Full name is required.';
     if ($old['preferred_name'] === '') $errors['preferred_name'] = 'Nickname is required.';
     if ($old['matric_no']      === '') $errors['matric_no']      = 'Matric number is required.';
+    if ($old['ic_no']          === '') $errors['ic_no']          = 'IC number is required.';
     if ($old['phone']          === '') $errors['phone']          = 'Phone number is required.';
 
     $pwError = validate_password($password);
@@ -65,14 +68,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $userId = (int)$pdo->lastInsertId();
 
                 $stmt = $pdo->prepare(
-                    'INSERT INTO students (user_id, full_name, preferred_name, matric_no, university, phone)
-                     VALUES (?, ?, ?, ?, "UTeM", ?)'
+                    'INSERT INTO students (user_id, full_name, preferred_name, matric_no, ic_no, university, phone)
+                     VALUES (?, ?, ?, ?, ?, "UTeM", ?)'
                 );
                 $stmt->execute([
                     $userId,
                     $old['full_name'],
                     $old['preferred_name'],
                     $old['matric_no'],
+                    $old['ic_no'],
                     $old['phone']
                 ]);
 
@@ -166,6 +170,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                    value="<?= e($old['matric_no']) ?>" required>
                             <?php if (isset($errors['matric_no'])): ?>
                                 <div class="invalid-feedback"><?= e($errors['matric_no']) ?></div>
+                            <?php endif; ?>
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label fw-semibold">IC no. <small class="text-secondary fw-normal">— MyKad number</small></label>
+                            <input type="text" name="ic_no"
+                                   class="form-control <?= isset($errors['ic_no']) ? 'is-invalid' : '' ?>"
+                                   placeholder="010203040506"
+                                   value="<?= e($old['ic_no']) ?>" required>
+                            <?php if (isset($errors['ic_no'])): ?>
+                                <div class="invalid-feedback"><?= e($errors['ic_no']) ?></div>
                             <?php endif; ?>
                         </div>
                         <div class="col-sm-6">

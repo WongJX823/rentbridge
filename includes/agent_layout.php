@@ -15,7 +15,16 @@ $pageContent   = $pageContent   ?? '';
 
 $userId = current_user_id();
 $pdo = db();
-$stmt = $pdo->prepare("SELECT preferred_name, full_name, staff_id, department, current_caseload FROM agents WHERE user_id = ?");
+$stmt = $pdo->prepare("SELECT preferred_name, full_name, staff_id, department,
+    (
+        (SELECT COUNT(*) FROM properties pp
+          WHERE pp.assigned_agent_id = agents.user_id
+            AND (pp.agent_status IN ('pending','inspecting') OR pp.status = 'available'))
+      + (SELECT COUNT(*) FROM tenancies tt
+          WHERE tt.agent_id = agents.user_id
+            AND tt.status IN ('pending_agent','agent_verifying','agent_assigned','contract_pending'))
+    ) AS live_caseload
+FROM agents WHERE user_id = ?");
 $stmt->execute([$userId]);
 $me = $stmt->fetch();
 $myName = $me['preferred_name'] ?: $me['full_name'];
