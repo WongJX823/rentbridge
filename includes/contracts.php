@@ -114,6 +114,99 @@ function create_contract_from_tenancy(int $tenancyId): ?int {
 }
 
 /**
+ * Ensure a contract has its corresponding commission row.
+ * Idempotent: safe to call from any activation path or backfill.
+ */
+function ensure_agent_commission_for_contract(int $contractId, string $status = 'earned'): bool {
+    $validStatuses = ['pending', 'earned', 'released', 'paid'];
+    if (!in_array($status, $validStatuses, true)) {
+        $status = 'earned';
+    }
+
+    $pdo = db();
+
+    $stmt = $pdo->prepare('SELECT id FROM agent_commissions WHERE contract_id = ? LIMIT 1');
+    $stmt->execute([$contractId]);
+    if ($stmt->fetchColumn()) {
+        return true;
+    }
+
+    $stmt = $pdo->prepare('
+        SELECT id, agent_id, monthly_rent, activated_at, created_at
+          FROM contracts
+         WHERE id = ?
+         LIMIT 1
+    ');
+    $stmt->execute([$contractId]);
+    $contract = $stmt->fetch();
+
+    if (!$contract || (int)$contract['agent_id'] <= 0) {
+        return false;
+    }
+
+    $baseRent = (float)$contract['monthly_rent'];
+    if ($baseRent <= 0) {
+        return false;
+    }
+
+    $commissionAmt = $baseRent;
+    $sstAmt = round($commissionAmt * 0.06, 2);
+    $totalPayable = round($commissionAmt + $sstAmt, 2);
+    $earnedAt = $status === 'pending'
+        ? null
+        : ($contract['activated_at'] ?: ($contract['created_at'] ?: date('Y-m-d H:i:s')));
+
+    try {
+        $stmt = $pdo->prepare('
+            INSERT INTO agent_commissions
+                (contract_id, agent_id, base_rent, commission_pct, commission_amt,
+                 sst_pct, sst_amt, total_payable, status, earned_at)
+            VALUES (?, ?, ?, 100.00, ?, 6.00, ?, ?, ?, ?)
+        ');
+        $stmt->execute([
+            $contractId,
+            (int)$contract['agent_id'],
+            $baseRent,
+            $commissionAmt,
+            $sstAmt,
+            $totalPayable,
+            $status,
+            $earnedAt,
+        ]);
+        return true;
+    } catch (PDOException $e) {
+        if ($e->getCode() === '23000') {
+            return true;
+        }
+        throw $e;
+    }
+}
+
+/**
+ * Backfill commissions for active/completed contracts that predate commission creation.
+ */
+function backfill_agent_commissions_for_active_contracts(): int {
+    $pdo = db();
+    $stmt = $pdo->query("
+        SELECT c.id
+          FROM contracts c
+          LEFT JOIN agent_commissions ac ON ac.contract_id = c.id
+         WHERE c.status IN ('active', 'completed')
+           AND ac.id IS NULL
+         ORDER BY c.activated_at ASC, c.id ASC
+    ");
+
+    $created = 0;
+    foreach ($stmt->fetchAll() as $row) {
+        if (ensure_agent_commission_for_contract((int)$row['id'], 'earned')) {
+            $created++;
+        }
+    }
+
+    return $created;
+}
+
+/**
  * Helpers for "who can do what" on a contract.
  */
 function contract_can_view(array $contract, int $userId, string $role): bool {
@@ -281,6 +374,7 @@ function apply_signature(int $contractId, int $userId, string $dataUrl): array {
                 ->execute([$contractId]);
             $pdo->prepare('UPDATE tenancies SET status = "active" WHERE id = ?')
                 ->execute([(int)$contract['tenancy_id']]);
+            ensure_agent_commission_for_contract($contractId, 'earned');
         }
 
         $pdo->commit();
@@ -783,7 +877,7 @@ function generate_contract_pdf_legacy_dompdf(int $contractId): ?string {
     <body>
 
     <div class="center">
-        <h3 class="muted">Tripartite Tenancy Agreement</h3>
+        <h3 class="muted">Bilateral Tenancy Agreement</h3>
         <h1>RentBridge Contract</h1>
         <div class="small">
             Contract code: <strong><?= $h($c['contract_code']) ?></strong>

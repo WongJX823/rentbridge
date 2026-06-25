@@ -1,5 +1,6 @@
 ﻿<?php
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/contracts.php';
 require_role('agent');
 
 $pdo = db();
@@ -97,20 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $contractId = (int)$contractIdRow->fetchColumn();
 
                 if ($contractId > 0) {
-                    $dupCheck = $pdo->prepare("SELECT id FROM agent_commissions WHERE contract_id = ? LIMIT 1");
-                    $dupCheck->execute([$contractId]);
-                    if (!$dupCheck->fetchColumn()) {
-                        $baseRent      = (float)$tenancy['monthly_rent'];
-                        $commissionAmt = $baseRent;
-                        $sstAmt        = round($commissionAmt * 0.06, 2);
-                        $totalPayable  = round($commissionAmt + $sstAmt, 2);
-                        $pdo->prepare("
-                            INSERT INTO agent_commissions
-                                (contract_id, agent_id, base_rent, commission_pct, commission_amt,
-                                 sst_pct, sst_amt, total_payable, status, earned_at)
-                            VALUES (?, ?, ?, 100.00, ?, 6.00, ?, ?, 'earned', NOW())
-                        ")->execute([$contractId, $agentId, $baseRent, $commissionAmt, $sstAmt, $totalPayable]);
-                    }
+                    ensure_agent_commission_for_contract($contractId, 'earned');
                 }
 
                 // Mark property as rented

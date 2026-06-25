@@ -17,22 +17,25 @@ $stmt = $pdo->prepare("
 $stmt->execute([$userId]);
 $commissions = $stmt->fetchAll();
 
-$totals = [
-    'pending'  => 0.0,
-    'earned'   => 0.0,
-    'released' => 0.0,
-    'paid'     => 0.0,
-];
+$pendingBaseRent = 0.0;
 $totalBaseRent = 0.0;
+$claimableBaseRent = 0.0;
 foreach ($commissions as $c) {
-    $totals[$c['status']] += (float)$c['total_payable'];
+    if ($c['status'] === 'pending') {
+        $pendingBaseRent += (float)$c['base_rent'];
+    }
     if (in_array($c['status'], ['earned','released','paid'])) {
         $totalBaseRent += (float)$c['base_rent'];
+    }
+    if (in_array($c['status'], ['earned','released'])) {
+        $claimableBaseRent += (float)$c['base_rent'];
     }
 }
 
 // 70/30 split: agent receives 30% of base rent per contract
+$pendingPotential = $pendingBaseRent * 0.30;
 $agentShare   = $totalBaseRent * 0.30;
+$claimablePayout = $claimableBaseRent * 0.30;
 $utemShare    = $totalBaseRent * 0.70;
 
 $pageTitle = 'Earnings';
@@ -53,15 +56,16 @@ ob_start();
 
 <div class="row g-3 mb-4">
     <div class="col-md-3">
-        <div class="bg-white border rounded-3 p-3">
-            <div class="small text-secondary">Pending</div>
+        <div class="bg-white border rounded-3 p-3 h-100">
+            <div class="small text-secondary">Pending potential</div>
             <div style="font-family:'Fraunces',serif; font-size:1.4rem; font-weight:600; color:#7C5E0A;">
-                RM <?= number_format($totals['pending'], 2) ?>
+                RM <?= number_format($pendingPotential, 2) ?>
             </div>
+            <div class="small text-secondary mt-1">Possible 30% share</div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="bg-white border rounded-3 p-3">
+        <div class="bg-white border rounded-3 p-3 h-100">
             <div class="small text-secondary">Earned (30% share)</div>
             <div style="font-family:'Fraunces',serif; font-size:1.4rem; font-weight:600; color:#0F2C52;">
                 RM <?= number_format($agentShare, 2) ?>
@@ -70,7 +74,7 @@ ob_start();
         </div>
     </div>
     <div class="col-md-3">
-        <div class="bg-white border rounded-3 p-3">
+        <div class="bg-white border rounded-3 p-3 h-100">
             <div class="small text-secondary">UTeM share (70%)</div>
             <div style="font-family:'Fraunces',serif; font-size:1.4rem; font-weight:600; color:#6c757d;">
                 RM <?= number_format($utemShare, 2) ?>
@@ -78,11 +82,12 @@ ob_start();
         </div>
     </div>
     <div class="col-md-3">
-        <div class="bg-white border rounded-3 p-3" style="background:linear-gradient(135deg,#fff,#F4FBF7);">
-            <div class="small text-secondary">Paid out</div>
+        <div class="bg-white border rounded-3 p-3 h-100" style="background:linear-gradient(135deg,#fff,#F4FBF7);">
+            <div class="small text-secondary">Claimable payout</div>
             <div style="font-family:'Fraunces',serif; font-size:1.4rem; font-weight:600; color:#2E8B57;">
-                RM <?= number_format($totals['paid'], 2) ?>
+                RM <?= number_format($claimablePayout, 2) ?>
             </div>
+            <div class="small text-secondary mt-1">Available from earned/released contracts</div>
         </div>
     </div>
 </div>

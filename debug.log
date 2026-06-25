@@ -61,3 +61,10 @@
 [25-Jun-2026 08:54:35 Asia/Kuala_Lumpur] [send_tenant_form] execute returned: true
 [25-Jun-2026 08:54:35 Asia/Kuala_Lumpur] [send_tenant_form] inserted message id: 48
 [25-Jun-2026 08:54:35 Asia/Kuala_Lumpur] [send_tenant_form] readback metadata: '{"property_id":140,"property_title":"djkkfgdghjghjff","student_id":4,"recipient_role":"student","terms":{"monthly_rent":1200,"deposit":3000,"term_months":13,"start_date":"2026-06-29","end_date":"2027-07-29","notes":""},"prefill":{"tenant_name":"Ali Bin Abdullah","tenant_phone":"013-1234567","tenant_email":"alibaba@student.utem.edu.my","matric_no":"B032310234"}}'
+[25-Jun-2026 11:59:58 Asia/Kuala_Lumpur] [send_tenant_form] payload='{"property_id":141,"property_title":"A room near UTEm 00001","student_id":2,"recipient_role":"student","terms":{"monthly_rent":1200,"deposit":1800,"term_months":13,"start_date":"2026-06-29","end_date":"2027-07-29","notes":""},"prefill":{"tenant_name":"Wong Jia Xi","tenant_phone":"012-3456789","tenant_email":"jiaxi@student.utem.edu.my","matric_no":"B032310495"}}'
+[25-Jun-2026 11:59:58 Asia/Kuala_Lumpur] [send_tenant_form] is_string=yes
+[25-Jun-2026 11:59:58 Asia/Kuala_Lumpur] [send_tenant_form] strlen=363
+[25-Jun-2026 11:59:58 Asia/Kuala_Lumpur] [send_tenant_form] json_valid=yes
+[25-Jun-2026 11:59:58 Asia/Kuala_Lumpur] [send_tenant_form] execute returned: true
+[25-Jun-2026 11:59:58 Asia/Kuala_Lumpur] [send_tenant_form] inserted message id: 59
+[25-Jun-2026 11:59:58 Asia/Kuala_Lumpur] [send_tenant_form] readback metadata: '{"property_id":141,"property_title":"A room near UTEm 00001","student_id":2,"recipient_role":"student","terms":{"monthly_rent":1200,"deposit":1800,"term_months":13,"start_date":"2026-06-29","end_date":"2027-07-29","notes":""},"prefill":{"tenant_name":"Wong Jia Xi","tenant_phone":"012-3456789","tenant_email":"jiaxi@student.utem.edu.my","matric_no":"B032310495"}}'

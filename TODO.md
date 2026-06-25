@@ -40,6 +40,9 @@ is `('1_semester','2_semesters','1_year','custom')`. Map form key -> enum value
 on insert.
 
 ---
+New
+Property-Pending
+   May do a status progress bar to show status 1 pending -> 2 wait for inspection -> inspection complete -> 4 available now
 
 ### Done (interim) — Option B + C
 - `tenancies/new.php`: 1 sem = +18 weeks, 2 sem = +39 weeks (~9 months); cards relabelled.

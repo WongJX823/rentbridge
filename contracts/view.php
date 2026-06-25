@@ -135,7 +135,7 @@ $statusBadge = match ($contract['status']) {
             <div class="bg-white border rounded-3 p-4 p-md-5 mb-4">
                 <div class="text-center mb-4">
                     <small class="text-secondary text-uppercase fw-semibold" style="letter-spacing:.15em;">
-                        Tripartite Tenancy Agreement
+                        Bilateral Tenancy Agreement
                     </small>
                     <h1 class="mt-2 mb-1">RentBridge Contract</h1>
                     <p class="text-secondary mb-0">

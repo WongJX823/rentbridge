@@ -76,13 +76,13 @@ $stmt = $pdo->prepare("SELECT COUNT(*) FROM tenancies WHERE agent_id = ? AND sta
 $stmt->execute([$userId]);
 $counts['completed'] = (int)$stmt->fetchColumn();
 
-// Total commission earned (lifetime)
+// Agent's claimable payout: 30% share from earned/released commissions.
 $stmt = $pdo->prepare("
-    SELECT COALESCE(SUM(total_payable), 0) FROM agent_commissions
-     WHERE agent_id = ? AND status IN ('earned','released','paid')
+    SELECT COALESCE(SUM(commission_amt), 0) * 0.30 FROM agent_commissions
+     WHERE agent_id = ? AND status IN ('earned','released')
 ");
 $stmt->execute([$userId]);
-$totalEarned = (float)$stmt->fetchColumn();
+$claimablePayout = (float)$stmt->fetchColumn();
 
 // Urgent cases (need action)
 $stmt = $pdo->prepare("
@@ -207,14 +207,14 @@ ob_start();
                                 border-radius:10px; display:flex; align-items:center; justify-content:center;">
                         <i class="bi bi-cash-stack"></i>
                     </div>
-                    <div class="small text-secondary mt-2">Total commission earned</div>
+                    <div class="small text-secondary mt-2">Claimable payout</div>
                 </div>
                 <i class="bi bi-arrow-right text-secondary"></i>
             </div>
             <div style="font-family:'Fraunces',serif; font-size:2rem; font-weight:600; margin-top:12px; color:#2E8B57;">
-                RM <?= number_format($totalEarned, 2) ?>
+                RM <?= number_format($claimablePayout, 2) ?>
             </div>
-            <small class="text-secondary">View commission history →</small>
+            <small class="text-secondary">View earnings details →</small>
         </a>
     </div>
 
