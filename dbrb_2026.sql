@@ -334,6 +334,7 @@ CREATE TABLE `co_tenancy_posts` (
   `title` varchar(150) DEFAULT NULL COMMENT 'optional headline, defaults to property title',
   `message` text NOT NULL COMMENT 'why they want housemates, lifestyle preferences',
   `housemates_needed` int(11) NOT NULL DEFAULT 1 COMMENT 'how many more co-tenants wanted',
+  `semesters_needed` tinyint(3) UNSIGNED NOT NULL DEFAULT 1 COMMENT 'How many semesters the poster intends to rent (1-6)',
   `status` enum('open','filled','cancelled','expired') NOT NULL DEFAULT 'open',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
@@ -344,8 +345,8 @@ CREATE TABLE `co_tenancy_posts` (
 -- Dumping data for table `co_tenancy_posts`
 --
 
-INSERT INTO `co_tenancy_posts` (`id`, `poster_id`, `property_id`, `title`, `message`, `housemates_needed`, `status`, `created_at`, `updated_at`, `group_conversation_id`) VALUES
-(2, 3, 1, NULL, '1234', 5, 'open', '2026-06-18 03:34:53', '2026-06-18 03:34:53', NULL);
+INSERT INTO `co_tenancy_posts` (`id`, `poster_id`, `property_id`, `title`, `message`, `housemates_needed`, `semesters_needed`, `status`, `created_at`, `updated_at`, `group_conversation_id`) VALUES
+(2, 3, 1, NULL, '1234', 5, 3, 'open', '2026-06-18 03:34:53', '2026-06-18 03:34:53', NULL);
 
 -- --------------------------------------------------------
 
