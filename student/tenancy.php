@@ -28,14 +28,16 @@ $stmt = $pdo->prepare("
            a.department     AS agent_department,
            a.phone          AS agent_phone,
            ua.email         AS agent_email,
-           ct.id                 AS contract_id,
-           ct.contract_code      AS contract_code,
-           ct.status             AS contract_status,
-           ct.contract_pdf_path  AS contract_pdf,
-           ct.student_signed_at  AS c_student_signed,
-           ct.landlord_signed_at AS c_landlord_signed,
-           ct.agent_signed_at    AS c_agent_signed,
-           ct.activated_at       AS c_activated_at,
+           ct.id                  AS contract_id,
+           ct.contract_code       AS contract_code,
+           ct.status              AS contract_status,
+           ct.contract_pdf_path   AS contract_pdf,
+           ct.generated_pdf_path  AS generated_pdf,
+           ct.signed_pdf_path     AS signed_pdf,
+           ct.student_signed_at   AS c_student_signed,
+           ct.landlord_signed_at  AS c_landlord_signed,
+           ct.agent_signed_at     AS c_agent_signed,
+           ct.activated_at        AS c_activated_at,
            (SELECT image_path FROM property_images
              WHERE property_id = p.id
              ORDER BY is_primary DESC, id ASC LIMIT 1) AS image_path
@@ -244,8 +246,9 @@ $months  = max(1, (int)round(($endTs - $startTs) / (30.44 * 86400)));
                         'terminated'         => 'danger',
                         default              => 'secondary',
                     };
-                    $pdfFullPath = !empty($tenancy['contract_pdf']) ? __DIR__ . '/../' . $tenancy['contract_pdf'] : null;
-                    $cacheBust = ($pdfFullPath && file_exists($pdfFullPath)) ? '?v=' . filemtime($pdfFullPath) : '';
+                    $bestPdf     = $tenancy['contract_pdf'] ?? $tenancy['signed_pdf'] ?? $tenancy['generated_pdf'] ?? null;
+                    $pdfFullPath = $bestPdf ? __DIR__ . '/../' . $bestPdf : null;
+                    $cacheBust   = ($pdfFullPath && file_exists($pdfFullPath)) ? '?v=' . filemtime($pdfFullPath) : '';
                     $myTurn = !empty($tenancy['contract_id'])
                               && $contractStatus === 'pending_signatures'
                               && empty($tenancy['c_student_signed']);
@@ -313,8 +316,8 @@ $months  = max(1, (int)round(($endTs - $startTs) / (30.44 * 86400)));
                         <?php endif; ?>
 
                         <div class="d-flex gap-2 flex-wrap">
-                            <?php if (!empty($tenancy['contract_pdf']) && $pdfFullPath && file_exists($pdfFullPath)): ?>
-                                <a href="/rentbridge/<?= e($tenancy['contract_pdf']) ?><?= $cacheBust ?>"
+                            <?php if ($bestPdf && $pdfFullPath && file_exists($pdfFullPath)): ?>
+                                <a href="/rentbridge/<?= e($bestPdf) ?><?= $cacheBust ?>"
                                    target="_blank" class="btn btn-success">
                                     <i class="bi bi-download me-1"></i> Download PDF
                                 </a>

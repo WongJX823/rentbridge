@@ -30,14 +30,16 @@ $stmt = $pdo->prepare("
            a.phone          AS agent_phone,
            a.allow_whatsapp AS agent_allow_whatsapp,
            au.email         AS agent_email,
-           c.id             AS contract_id,
+           c.id                  AS contract_id,
            c.contract_code,
-           c.status         AS contract_status,
+           c.status              AS contract_status,
            c.student_signed_at,
            c.landlord_signed_at,
            c.agent_signed_at,
            c.contract_pdf_path,
-           c.created_at     AS contract_created_at,
+           c.generated_pdf_path,
+           c.signed_pdf_path,
+           c.created_at          AS contract_created_at,
            v.id             AS verification_id,
            v.outcome        AS verification_outcome,
            v.issue_severity AS verification_severity
@@ -477,11 +479,21 @@ ob_start();
         </div>
     </div>
 
+    <?php
+        $bestLandlordPdf = $tenancy['contract_pdf_path'] ?? $tenancy['signed_pdf_path'] ?? $tenancy['generated_pdf_path'] ?? null;
+        $landlordPdfFull = $bestLandlordPdf ? __DIR__ . '/../' . $bestLandlordPdf : null;
+    ?>
     <div class="d-flex gap-2 flex-wrap">
         <a href="/rentbridge/contracts/view.php?id=<?= (int)$tenancy['contract_id'] ?>"
            class="btn btn-sm btn-primary">
             View contract <i class="bi bi-arrow-right ms-1"></i>
         </a>
+        <?php if ($bestLandlordPdf && $landlordPdfFull && file_exists($landlordPdfFull)): ?>
+            <a href="/rentbridge/<?= e($bestLandlordPdf) ?>" target="_blank"
+               class="btn btn-sm btn-outline-success">
+                <i class="bi bi-download me-1"></i> Download PDF
+            </a>
+        <?php endif; ?>
         <?php if (empty($tenancy['landlord_signed_at']) && $tenancy['contract_status'] === 'pending_signatures'): ?>
             <a href="/rentbridge/contracts/sign.php?id=<?= (int)$tenancy['contract_id'] ?>"
                class="btn btn-sm btn-success">

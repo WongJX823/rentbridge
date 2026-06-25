@@ -33,6 +33,8 @@ function standard_tenancy_terms(): string {
 7. The Agent (UTeM staff) serves as a neutral witness to this Agreement and as the first point of contact for any dispute. The Agent does not assume financial liability for the Tenant's or Landlord's obligations.
 
 8. All disputes arising shall first be referred to the Agent for mediation. If unresolved, parties may seek redress through the Tribunal Tuntutan Penyewa dan Penyewa Rumah (TPPR) under Malaysian tenancy law.
+
+9. The rental period runs continuously from the Start Date to the End Date stated in this Agreement, inclusive of any mid-semester or inter-semester break that falls within this period. Monthly rent is payable for every month of the period regardless of academic breaks, and the Tenant retains possession of the property throughout.
 TERMS;
 }
 
@@ -116,38 +118,44 @@ function create_contract_from_tenancy(int $tenancyId): ?int {
  */
 function contract_can_view(array $contract, int $userId, string $role): bool {
     if ($role === 'admin') return true;
-    return in_array($userId, [
-        (int)$contract['student_id'],
-        (int)$contract['landlord_id'],
-        (int)$contract['agent_id'],
-    ], true);
+    if (in_array($userId, [(int)$contract['landlord_id'], (int)$contract['agent_id']], true)) return true;
+    $pdo = db();
+    $stmt = $pdo->prepare("SELECT id FROM co_tenants WHERE tenancy_id = ? AND student_id = ? LIMIT 1");
+    $stmt->execute([(int)$contract['tenancy_id'], $userId]);
+    return (bool)$stmt->fetchColumn();
 }
 
 /**
- * Determine whose turn it is to sign (based on strict order: student → landlord → agent).
- * Returns: 'student' | 'landlord' | 'agent' | 'all_done'
+ * Determine whose turn it is to sign (order: all co-tenants by sign_order → landlord).
+ * Returns: ['role' => 'tenant'|'landlord'|'all_done', 'co_tenant_id' => ?int, 'user_id' => ?int, 'name' => string]
  */
-function contract_next_signer(array $contract): string {
-    if (empty($contract['student_signed_at']))  return 'student';
-    if (empty($contract['landlord_signed_at'])) return 'landlord';
-    if (empty($contract['agent_signed_at']))    return 'agent';
-    return 'all_done';
+function contract_next_signer(array $contract): array {
+    $pdo = db();
+    $stmt = $pdo->prepare("
+        SELECT id, student_id, full_name FROM co_tenants
+         WHERE tenancy_id = ? AND status != 'signed'
+         ORDER BY sign_order ASC, id ASC
+         LIMIT 1
+    ");
+    $stmt->execute([(int)$contract['tenancy_id']]);
+    $next = $stmt->fetch();
+
+    if ($next) {
+        return ['role' => 'tenant', 'co_tenant_id' => (int)$next['id'], 'user_id' => (int)$next['student_id'], 'name' => $next['full_name']];
+    }
+    if (empty($contract['landlord_signed_at'])) {
+        return ['role' => 'landlord', 'co_tenant_id' => null, 'user_id' => (int)$contract['landlord_id'], 'name' => 'Landlord'];
+    }
+    return ['role' => 'all_done', 'co_tenant_id' => null, 'user_id' => null, 'name' => ''];
 }
 
 /**
  * Can this specific user sign right now?
- * Enforces the strict student → landlord → agent order.
  */
 function contract_can_sign(array $contract, int $userId): bool {
     $next = contract_next_signer($contract);
-    if ($next === 'all_done') return false;
-
-    return match ($next) {
-        'student'  => $userId === (int)$contract['student_id']  && empty($contract['student_signed_at']),
-        'landlord' => $userId === (int)$contract['landlord_id'] && empty($contract['landlord_signed_at']),
-        'agent'    => $userId === (int)$contract['agent_id']    && empty($contract['agent_signed_at']),
-        default    => false,
-    };
+    if ($next['role'] === 'all_done') return false;
+    return $userId === $next['user_id'];
 }
 
 /* ============================================================
@@ -217,15 +225,17 @@ function apply_signature(int $contractId, int $userId, string $dataUrl): array {
     }
 
     // Enforce strict order
-    if (!contract_can_sign($contract, $userId)) {
+    $nextInfo = contract_next_signer($contract);
+    if ($nextInfo['role'] === 'all_done') {
+        return ['success' => false, 'all_signed' => false, 'message' => 'Contract is already fully signed.'];
+    }
+    if ($userId !== $nextInfo['user_id']) {
         return ['success' => false, 'all_signed' => false, 'message' => 'It is not your turn to sign, or you are not a party to this contract.'];
     }
 
-    // Determine which role this user has in the contract
-    if      ($userId === (int)$contract['student_id'])  $role = 'student';
-    elseif  ($userId === (int)$contract['landlord_id']) $role = 'landlord';
-    elseif  ($userId === (int)$contract['agent_id'])    $role = 'agent';
-    else    return ['success' => false, 'all_signed' => false, 'message' => 'You are not a party.'];
+    $isTenant   = $nextInfo['role'] === 'tenant';
+    $coTenantId = $nextInfo['co_tenant_id'];
+    $role       = $isTenant ? 'tenant_' . $coTenantId : 'landlord';
 
     // Save the signature image
     try {
@@ -234,72 +244,69 @@ function apply_signature(int $contractId, int $userId, string $dataUrl): array {
         return ['success' => false, 'all_signed' => false, 'message' => $e->getMessage()];
     }
 
-    // Update DB
     $ip = $_SERVER['REMOTE_ADDR'] ?? null;
-
-    $sigCol  = $role . '_signature';
-    $timeCol = $role . '_signed_at';
-    $ipCol   = $role . '_sign_ip';
 
     try {
         $pdo->beginTransaction();
 
-        $stmt = $pdo->prepare("
-            UPDATE contracts
-               SET $sigCol = ?, $timeCol = NOW(), $ipCol = ?
-             WHERE id = ?
-        ");
-        $stmt->execute([$sigPath, $ip, $contractId]);
+        if ($isTenant) {
+            // Save to co_tenants table
+            $pdo->prepare("
+                UPDATE co_tenants
+                   SET status = 'signed', signed_at = NOW(), signature_data = ?
+                 WHERE id = ?
+            ")->execute([$sigPath, $coTenantId]);
+        } else {
+            // Save to contracts table (landlord)
+            $pdo->prepare("
+                UPDATE contracts
+                   SET landlord_signature = ?, landlord_signed_at = NOW(), landlord_sign_ip = ?
+                 WHERE id = ?
+            ")->execute([$sigPath, $ip, $contractId]);
+        }
 
-        // Refresh contract to check final state
+        // Refresh contract + check all co_tenants signed
         $stmt = $pdo->prepare('SELECT * FROM contracts WHERE id = ? LIMIT 1');
         $stmt->execute([$contractId]);
         $contract = $stmt->fetch();
 
-        $allSigned = !empty($contract['student_signed_at'])
-                  && !empty($contract['landlord_signed_at'])
-                  && !empty($contract['agent_signed_at']);
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM co_tenants WHERE tenancy_id = ? AND status != 'signed'");
+        $stmt->execute([(int)$contract['tenancy_id']]);
+        $unsignedTenants = (int)$stmt->fetchColumn();
+
+        $allSigned = ($unsignedTenants === 0) && !empty($contract['landlord_signed_at']);
 
         if ($allSigned) {
-            // Activate the contract
-            $stmt = $pdo->prepare(
-                'UPDATE contracts SET status = "active", activated_at = NOW() WHERE id = ?'
-            );
-            $stmt->execute([$contractId]);
-
-            // Bump tenancy too
-            $stmt = $pdo->prepare(
-                'UPDATE tenancies SET status = "active" WHERE id = ?'
-            );
-            $stmt->execute([(int)$contract['tenancy_id']]);
+            $pdo->prepare('UPDATE contracts SET status = "active", activated_at = NOW() WHERE id = ?')
+                ->execute([$contractId]);
+            $pdo->prepare('UPDATE tenancies SET status = "active" WHERE id = ?')
+                ->execute([(int)$contract['tenancy_id']]);
         }
 
         $pdo->commit();
 
-        // ─── Notify the right people ───────────────────────────────
+        // Notifications
         if ($allSigned) {
-            // Auto-generate the signed PDF
             $pdfPath = generate_contract_pdf($contractId);
-
             $msg = 'Tenancy contract ' . $contract['contract_code'] . ' is now active!'
                 . ($pdfPath ? ' The signed PDF is now downloadable.' : '');
 
-            foreach (['student_id', 'landlord_id', 'agent_id'] as $col) {
-                notify(
-                    (int)$contract[$col],
-                    'contract_active',
-                    'Contract activated',
-                    $msg,
-                    '/rentbridge/contracts/view.php?id=' . $contractId
-                );
+            foreach ([(int)$contract['landlord_id'], (int)$contract['agent_id']] as $uid) {
+                notify($uid, 'contract_active', 'Contract activated', $msg,
+                    '/rentbridge/contracts/view.php?id=' . $contractId);
             }
-            // (Module 9.3 will also auto-generate the PDF here.)
+            // Notify all co-tenants
+            $stmt = $pdo->prepare("SELECT student_id FROM co_tenants WHERE tenancy_id = ?");
+            $stmt->execute([(int)$contract['tenancy_id']]);
+            foreach ($stmt->fetchAll() as $ct) {
+                notify((int)$ct['student_id'], 'contract_active', 'Contract activated', $msg,
+                    '/rentbridge/contracts/view.php?id=' . $contractId);
+            }
         } else {
-            // Notify the NEXT signer
+            // Notify the next signer
             $next = contract_next_signer($contract);
-            $nextUserId = (int)$contract[$next . '_id'];
             notify(
-                $nextUserId,
+                $next['user_id'],
                 'contract_your_turn',
                 'It is your turn to sign',
                 'Contract ' . $contract['contract_code'] . ' is ready for your signature.',
@@ -308,16 +315,230 @@ function apply_signature(int $contractId, int $userId, string $dataUrl): array {
         }
 
         return [
-            'success'     => true,
-            'all_signed'  => $allSigned,
-            'message'     => $allSigned ? 'Contract activated!' : 'Signature saved.',
+            'success'    => true,
+            'all_signed' => $allSigned,
+            'message'    => $allSigned ? 'Contract activated!' : 'Signature saved.',
         ];
 
     } catch (Throwable $e) {
         if ($pdo->inTransaction()) $pdo->rollBack();
-        // Clean up the orphan file
         @unlink(__DIR__ . '/../' . $sigPath);
         return ['success' => false, 'all_signed' => false, 'message' => 'Database error: ' . $e->getMessage()];
+    }
+}
+
+/* ============================================================
+ *  Formal tenancy-agreement template (shared)
+ *  Single source of truth for BOTH the agent-generated blank
+ *  agreement and the final signed download. Pass signature image
+ *  paths in $d to embed them on the signature lines.
+ * ============================================================ */
+
+/**
+ * Build the full formal tenancy-agreement HTML (for mPDF).
+ *
+ * $d keys: contract_code, today, landlord_name, landlord_ic, landlord_phone,
+ *          property_type, property_address, term_label, start_short, end_short,
+ *          monthly_rent, security_deposit, utility_deposit, tenancy_label,
+ *          landlord_sig_img (?abs path), landlord_sig_date (?string),
+ *          co_tenants[] => [full_name, ic_number, phone, is_primary,
+ *                           sig_img (?abs path), sig_date (?string)]
+ */
+function rb_agreement_html(array $d): string {
+    $esc = fn($v) => htmlspecialchars((string)($v ?? ''), ENT_QUOTES, 'UTF-8');
+
+    // One signature block — embeds the signature image when provided.
+    $block = function (string $role, string $name, string $ic, string $phone,
+                       ?string $sigImg, ?string $sigDate) use ($esc): string {
+        $ph = $phone !== '' ? '<br>Contact: ' . $esc($phone) : '';
+        if ($sigImg) {
+            $sigCell = '<img src="' . $esc($sigImg) . '" style="height:45pt; max-width:180pt;"><br>'
+                     . '<span style="font-size:9pt;">' . $esc($sigDate) . '</span>'
+                     . '<br>Signature &amp; Date';
+        } else {
+            $sigCell = '_______________________<br>Signature &amp; Date';
+        }
+        return '<div style="margin-bottom: 44pt;">'
+             . '<p><strong>SIGNED BY ' . $esc($role) . '</strong></p>'
+             . '<table width="100%" style="margin-top: 18pt;">'
+             . '<tr><td width="50%">NAME: ' . $esc($name) . '<br>NRIC: ' . $esc($ic) . $ph . '</td>'
+             . '<td width="50%" style="text-align:right; vertical-align:bottom;">' . $sigCell . '</td></tr>'
+             . '</table></div>';
+    };
+
+    // Part 3 tenant list + signature blocks
+    $tenantListHtml = '';
+    $signatureBlocksHtml = $block(
+        'LANDLORD', $d['landlord_name'], $d['landlord_ic'], $d['landlord_phone'] ?? '',
+        $d['landlord_sig_img'] ?? null, $d['landlord_sig_date'] ?? null
+    );
+    foreach (($d['co_tenants'] ?? []) as $idx => $ct) {
+        $label = ((int)$ct['is_primary'] === 1) ? 'Primary Tenant' : 'Co-Tenant #' . $idx;
+        $tenantListHtml .= '<p style="margin-bottom:4px;"><strong>' . $esc($ct['full_name']) . '</strong> '
+                         . '(' . $esc($label) . ')<br>NRIC: ' . $esc($ct['ic_number']);
+        if (!empty($ct['phone'])) $tenantListHtml .= ' &nbsp; · &nbsp; Tel: ' . $esc($ct['phone']);
+        $tenantListHtml .= '</p>';
+        $role = ((int)$ct['is_primary'] === 1) ? 'TENANT (Primary)' : 'CO-TENANT';
+        $signatureBlocksHtml .= $block(
+            $role, $ct['full_name'], $ct['ic_number'], $ct['phone'] ?? '',
+            $ct['sig_img'] ?? null, $ct['sig_date'] ?? null
+        );
+    }
+
+    $cc   = $esc($d['contract_code']);
+    $tod  = $esc($d['today']);
+    $lname = $esc($d['landlord_name']);
+    $lic   = $esc($d['landlord_ic']);
+    $lphone = $esc($d['landlord_phone'] ?? '');
+    $ptype = $esc($d['property_type']);
+    $paddr = $esc($d['property_address']);
+    $term  = $esc($d['term_label']);
+    $startS = $esc($d['start_short']);
+    $endS   = $esc($d['end_short']);
+    $rent   = $esc($d['monthly_rent']);
+    $secDep = $esc($d['security_deposit']);
+    $utilDep = $esc($d['utility_deposit']);
+    $tlabel = $esc($d['tenancy_label'] ?? 'TENANTS');
+
+    return <<<HTML
+<style>
+body { font-family: serif; font-size: 12pt; line-height: 1.5; }
+h1, h2 { text-align: center; font-family: serif; }
+.cover { text-align: center; padding-top: 200pt; }
+.cover h1 { font-size: 28pt; letter-spacing: 4pt; }
+.section-title { font-weight: bold; margin-top: 18pt; margin-bottom: 6pt; }
+.schedule-item { margin-bottom: 12pt; }
+.schedule-item strong { display: inline-block; min-width: 200pt; }
+.center { text-align: center; }
+table.parties { width: 100%; margin: 20pt 0; }
+table.parties td { padding: 8pt; vertical-align: top; }
+.footer-code { font-size: 9pt; color: #999; text-align: center; }
+</style>
+
+<div class="cover">
+    <h1>TENANCY AGREEMENT</h1>
+    <div style="margin-top: 80pt; font-size: 11pt; color: #666;">
+        Contract Reference<br>
+        <strong style="font-size: 14pt; letter-spacing: 2pt;">{$cc}</strong>
+    </div>
+</div>
+
+<pagebreak />
+
+<h2>TENANCY AGREEMENT</h2>
+<p class="center"><strong>DATED THIS {$tod}</strong></p>
+
+<table class="parties">
+    <tr><td class="center"><strong>{$lname}</strong><br>{$lic}<br><em>(LANDLORD)</em></td></tr>
+    <tr><td class="center" style="padding: 30pt 0;"><strong>AND</strong></td></tr>
+    <tr><td class="center"><em>({$tlabel})</em><br><br>{$tenantListHtml}</td></tr>
+</table>
+
+<pagebreak />
+
+<h2>TENANCY AGREEMENT</h2>
+<p><strong>AN AGREEMENT</strong> made on {$tod}</p>
+<p><strong>Between</strong></p>
+<p>The party whose name and particulars appear in Part Two of The First Schedule (<strong>"Landlord"</strong>) of the other part.</p>
+<p><strong>And</strong></p>
+<p>The parties whose names and particulars appear in Part Three of The First Schedule (<strong>"Tenants"</strong>) of the other part.</p>
+
+<p class="section-title">WHEREAS:</p>
+<p>1. The Landlord is the registered and/or beneficial owner of the property described in Part Four of The First Schedule ("the Demised Premises").</p>
+<p>2. The Landlord is desirous of letting and the Tenants are desirous of taking a tenancy of the Demised Premises upon the terms and subject to the conditions stipulated herein.</p>
+
+<p class="section-title">NOW IT IS HEREBY AGREED as follows:</p>
+
+<p class="section-title">1. Agreement</p>
+<p>In consideration of the rent hereinafter reserved and the covenants on the part of the Tenants hereinafter contained, the Landlord hereby lets to the Tenants the whole of the Demised Premises for a term stated in Part Five of The First Schedule commencing on the day and year set out in Part Six of The First Schedule and terminating on the day and year set out in Part Seven of the same at the monthly rent and payable in the manner stipulated in Part Eight of The First Schedule.</p>
+
+<p class="section-title">2. Tenant's Covenants</p>
+<p>The Tenants hereby jointly and severally covenant with the Landlord as follows:</p>
+<p>(a) To pay the reserved rent on the days and in the manner aforesaid;</p>
+<p>(b) To pay on the execution of this Agreement the Rental Deposit and Utility Deposit in respect of electricity, water, indah water and other amenities supplied to and consumed by the Demised Premises as set out in Part Nine of The First Schedule (hereinafter collectively referred to as "the Deposit Sum") to the Landlord as security for the due observance and performance by the Tenants of the stipulated terms and conditions of this Agreement.</p>
+<p>(c) The Tenants agree to rent the said Demised Premises for the full term as set out in Part Five, failing which the Landlord shall be entitled to forfeit the Security Deposit.</p>
+<p>(d) Any notice requiring to be served hereunder shall be in writing and shall be sufficiently served on the Tenants if left addressed to them at the Demised Premises or forwarded by registered post to the last known address.</p>
+<p>(e) The costs and expenses incidental to this Agreement including stamp duty shall be borne and paid by the Tenants.</p>
+<p>(f) To use the Demised Premises for residential purposes only.</p>
+<p>(g) Not to assign or sub-let the Said Premises without the prior written consent of the Landlord.</p>
+<p>(h) To keep the interior of the Demised Premises in good and tenantable repair.</p>
+<p>(i) To permit the Landlord and his duly authorized agents at all reasonable times to enter upon Demised Premises to view the state and conditions thereof.</p>
+
+<p class="section-title">3. Landlord's Covenants</p>
+<p>The Landlord hereby covenants with the Tenants as follows:</p>
+<p>(a) To permit the Tenants, if they punctually pay the rent and observe the covenants herein, peaceably to hold and enjoy the Premises during this Tenancy without disturbances.</p>
+<p>(b) To pay all Assessment and Quit Rent from time to time due in respect of the Demised Premises.</p>
+<p>(c) To insure and keep insured the Demised Premises from loss or damage by fire.</p>
+<p>(d) Upon termination of the Tenancy, the Landlord shall refund to the Tenants the Deposit Sum free of interest after due deductions for damages and arrears.</p>
+
+<p class="section-title">4. Joint and Several Liability</p>
+<p>Where there are multiple Tenants, all named Tenants in Part Three of The First Schedule shall be jointly and severally liable for the obligations under this Agreement. Each Tenant acknowledges responsibility for the full rental amount and all covenants, regardless of internal arrangements between the Tenants.</p>
+
+<p class="section-title">5. Mutual Covenants</p>
+<p>(a) If the rent shall be in arrears for fourteen (14) days, the Landlord may serve a forfeiture notice and re-enter the Demised Premises.</p>
+<p>(b) The Tenants shall not use the Premises for any illegal or unlawful purpose.</p>
+<p>(c) The Tenants shall pay all charges for electricity, water, sewerage, and other utilities consumed during the term.</p>
+
+<pagebreak />
+
+<h2>THE FIRST SCHEDULE</h2>
+<p class="center"><em>(Which is to be taken and construed as an essential and integral part of this Agreement)</em></p>
+
+<div class="schedule-item"><strong>1. Date of Agreement:</strong> {$tod}</div>
+<div class="schedule-item"><strong>2. Landlord:</strong><br>NAME: {$lname}<br>NRIC: {$lic}<br>CONTACT: {$lphone}</div>
+<div class="schedule-item"><strong>3. Tenants:</strong><div style="margin-left: 20pt; margin-top: 8pt;">{$tenantListHtml}</div></div>
+<div class="schedule-item"><strong>4. Demised Premises:</strong><br>TYPE: {$ptype}<br>ADDRESS: {$paddr}</div>
+<div class="schedule-item"><strong>5. Term:</strong> {$term}</div>
+<div class="schedule-item"><strong>6. Commencement:</strong> {$startS}</div>
+<div class="schedule-item"><strong>7. Termination:</strong> {$endS}</div>
+<div class="schedule-item"><strong>8. Monthly Rental:</strong> RM {$rent}<br><strong>Payment:</strong> Before the 10th of every month</div>
+<div class="schedule-item"><strong>9. Deposits:</strong><br>Security Deposit: RM {$secDep} (equivalent to 2 months rental)<br>Utility Deposit: RM {$utilDep}</div>
+<div class="schedule-item"><strong>10. Authorized Use:</strong> For Residential Use only</div>
+<div class="schedule-item"><strong>11. Renewal:</strong> Renewable subject to market price at the time of renewal</div>
+
+<pagebreak />
+
+<h2>SIGNATURES</h2>
+<p>THE PARTIES HERETO HAVE SET THEIR HANDS ON THE DAY AND YEAR FIRST ABOVE WRITTEN.</p>
+
+<div style="margin-top: 30pt;">{$signatureBlocksHtml}</div>
+
+<div class="footer-code">Contract Reference: {$cc} · {$tod}</div>
+HTML;
+}
+
+/**
+ * Render a formal-agreement HTML string to a PDF file via mPDF.
+ * Returns the relative path, or null on failure.
+ */
+function rb_render_agreement_pdf(string $html, string $contractCode, string $subDir = 'generated_contracts'): ?string {
+    require_once __DIR__ . '/../vendor/autoload.php';
+    try {
+        $mpdf = new \Mpdf\Mpdf([
+            'tempDir' => sys_get_temp_dir(),
+            'format' => 'A4',
+            'margin_left' => 20, 'margin_right' => 20,
+            'margin_top' => 25, 'margin_bottom' => 25,
+        ]);
+        $mpdf->SetTitle('Tenancy Agreement ' . $contractCode);
+        $mpdf->SetAuthor('RentBridge');
+        $mpdf->SetWatermarkText($contractCode);
+        $mpdf->showWatermarkText = true;
+        $mpdf->watermark_font = 'DejaVuSansCondensed';
+        $mpdf->watermarkTextAlpha = 0.04;
+        $mpdf->SetHTMLHeader('<div style="text-align: right; font-size: 8pt; color: #999;">Contract Reference: ' . htmlspecialchars($contractCode) . '</div>');
+        $mpdf->SetHTMLFooter('<div style="text-align: center; font-size: 8pt; color: #999;">Page {PAGENO} of {nbpg} · ' . htmlspecialchars($contractCode) . '</div>');
+        $mpdf->WriteHTML($html);
+
+        $absDir = __DIR__ . '/../uploads/' . $subDir;
+        if (!is_dir($absDir) && !mkdir($absDir, 0755, true) && !is_dir($absDir)) return null;
+        $filename = $contractCode . '_' . time() . '.pdf';
+        $relPath  = 'uploads/' . $subDir . '/' . $filename;
+        $mpdf->Output(__DIR__ . '/../' . $relPath, \Mpdf\Output\Destination::FILE);
+        return $relPath;
+    } catch (Throwable $e) {
+        error_log('Agreement PDF render failed: ' . $e->getMessage());
+        return null;
     }
 }
 
@@ -373,11 +594,13 @@ function generate_contract_pdf(int $contractId): ?string {
     $c = $stmt->fetch();
     if (!$c) return null;
 
-    // Build absolute paths to signature images (dompdf needs absolute paths)
-    $base = __DIR__ . '/../';
-    $sigStudent  = !empty($c['student_signature'])  ? realpath($base . $c['student_signature'])  : null;
-$sigLandlord = !empty($c['landlord_signature']) ? realpath($base . $c['landlord_signature']) : null;
-$sigAgent    = !empty($c['agent_signature'])    ? realpath($base . $c['agent_signature'])    : null;
+    // Fetch co-tenants with their signatures
+    $ctStmt = $pdo->prepare("SELECT * FROM co_tenants WHERE tenancy_id = ? ORDER BY sign_order ASC, id ASC");
+    $ctStmt->execute([(int)$c['tenancy_id']]);
+    $coTenants = $ctStmt->fetchAll();
+
+    $base        = __DIR__ . '/../';
+    $sigLandlord = !empty($c['landlord_signature']) ? realpath($base . $c['landlord_signature']) : null;
 
     // Helper for safe HTML escape
     $h = fn(?string $v): string => htmlspecialchars($v ?? '', ENT_QUOTES, 'UTF-8');
@@ -441,20 +664,15 @@ $sigAgent    = !empty($c['agent_signature'])    ? realpath($base . $c['agent_sig
                 <?= $h($c['landlord_email']) ?><br>
                 <?= $h($c['landlord_phone']) ?>
             </td>
+            <?php foreach ($coTenants as $idx => $ct): $num = $idx + 2; ?>
             <td class="party">
-                <h3>2. Tenant</h3>
-                <strong><?= $h($c['student_name']) ?></strong><br>
-                Matric: <?= $h($c['student_matric']) ?><br>
-                <?= $h($c['student_email']) ?><br>
-                <?= $h($c['student_phone']) ?>
+                <h3><?= $num ?>. <?= ((int)$ct['is_primary'] ? 'Primary Tenant' : 'Co-Tenant') ?></h3>
+                <strong><?= $h($ct['full_name']) ?></strong><br>
+                NRIC: <?= $h($ct['ic_number']) ?><br>
+                <?= $h($ct['email']) ?><br>
+                <?= $h($ct['phone']) ?>
             </td>
-            <td class="party">
-                <h3>3. Witness Agent</h3>
-                <strong><?= $h($c['agent_name']) ?></strong><br>
-                UTeM Staff ID: <?= $h($c['agent_staff_id']) ?><br>
-                <?= $h($c['agent_department']) ?><br>
-                <?= $h($c['agent_email']) ?>
-            </td>
+            <?php endforeach; ?>
         </tr>
     </table>
 
@@ -482,7 +700,7 @@ $sigAgent    = !empty($c['agent_signature'])    ? realpath($base . $c['agent_sig
         <tr>
             <td><h3>Start Date</h3><strong><?= $h(date('d M Y', $startTs)) ?></strong></td>
             <td><h3>End Date</h3><strong><?= $h(date('d M Y', $endTs)) ?></strong></td>
-            <td><h3>Duration</h3><strong><?= $months ?> month<?= $months===1?'':'s' ?></strong></td>
+            <td><h3>Duration</h3><strong><?= $months ?> month<?= $months===1?'':'s' ?></strong><br><span class="small">Continuous period, incl. any semester break</span></td>
         </tr>
         <tr>
             <td><h3>Monthly Rent</h3><strong class="accent">RM <?= number_format((float)$c['monthly_rent']) ?></strong></td>
@@ -500,39 +718,29 @@ $sigAgent    = !empty($c['agent_signature'])    ? realpath($base . $c['agent_sig
             <td class="sig-box party">
                 <h3>Landlord</h3>
                 <?php if ($sigLandlord && file_exists($sigLandlord)): ?>
-                    <img class="sig-img" src="file://<?= str_replace('\\', '/', $sigLandlord) ?>" alt="">
+                    <img class="sig-img" src="file:///<?= str_replace('\\', '/', $sigLandlord) ?>" alt="">
                 <?php else: ?>
                     <div class="muted small">(not signed)</div>
                 <?php endif; ?>
                 <div class="sig-meta">
-                    <?= !empty($c['landlord_signed_at']) ? $h(date('d M Y, H:i', strtotime($c['landlord_signed_at']))) : '—' ?><br>
-                    IP: <?= $h($c['landlord_sign_ip'] ?? '—') ?>
+                    <?= !empty($c['landlord_signed_at']) ? $h(date('d M Y, H:i', strtotime($c['landlord_signed_at']))) : '—' ?>
                 </div>
             </td>
+            <?php foreach ($coTenants as $ct):
+                $sigFile = !empty($ct['signature_data']) ? realpath($base . $ct['signature_data']) : null;
+            ?>
             <td class="sig-box party">
-                <h3>Tenant</h3>
-                <?php if ($sigStudent && file_exists($sigStudent)): ?>
-                    <img class="sig-img" src="file://<?= str_replace('\\', '/', $sigStudent) ?>" alt="">                
-                    <?php else: ?>
-                    <div class="muted small">(not signed)</div>
-                <?php endif; ?>
-                <div class="sig-meta">
-                    <?= !empty($c['student_signed_at']) ? $h(date('d M Y, H:i', strtotime($c['student_signed_at']))) : '—' ?><br>
-                    IP: <?= $h($c['student_sign_ip'] ?? '—') ?>
-                </div>
-            </td>
-            <td class="sig-box party">
-                <h3>Witness Agent</h3>
-                <?php if ($sigAgent && file_exists($sigAgent)): ?>
-                    <img class="sig-img" src="file://<?= str_replace('\\', '/', $sigAgent) ?>" alt="">
+                <h3><?= (int)$ct['is_primary'] ? 'Primary Tenant' : 'Co-Tenant' ?></h3>
+                <?php if ($sigFile && file_exists($sigFile)): ?>
+                    <img class="sig-img" src="file:///<?= str_replace('\\', '/', $sigFile) ?>" alt="">
                 <?php else: ?>
                     <div class="muted small">(not signed)</div>
                 <?php endif; ?>
                 <div class="sig-meta">
-                    <?= !empty($c['agent_signed_at']) ? $h(date('d M Y, H:i', strtotime($c['agent_signed_at']))) : '—' ?><br>
-                    IP: <?= $h($c['agent_sign_ip'] ?? '—') ?>
+                    <?= !empty($ct['signed_at']) ? $h(date('d M Y, H:i', strtotime($ct['signed_at']))) : '—' ?>
                 </div>
             </td>
+            <?php endforeach; ?>
         </tr>
     </table>
 

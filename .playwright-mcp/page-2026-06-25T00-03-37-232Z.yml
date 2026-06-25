@@ -1,0 +1,37 @@
+- generic [ref=e4]:
+  - link "R RentBridge" [ref=e6] [cursor=pointer]:
+    - /url: ../index.php
+    - generic [ref=e7]: R
+    - text: RentBridge
+  - generic [ref=e8]:
+    - heading "Welcome back" [level=1] [ref=e9]
+    - paragraph [ref=e10]: Log in to continue.
+    - generic [ref=e11]:
+      - generic [ref=e12]: 
+      - text: Invalid email or password.
+    - generic [ref=e13]:
+      - generic [ref=e14]:
+        - generic [ref=e15]: Email
+        - textbox "you@student.utem.edu.my" [active] [ref=e16]: inspector5@utem.edu.my
+      - generic [ref=e17]:
+        - generic [ref=e18]: Password
+        - textbox [ref=e19]
+      - generic [ref=e20]:
+        - generic [ref=e21]:
+          - checkbox "Remember me" [ref=e22]
+          - text: Remember me
+        - link "Forgot password?" [ref=e23] [cursor=pointer]:
+          - /url: "#"
+      - button "Log in " [ref=e24] [cursor=pointer]:
+        - text: Log in
+        - generic [ref=e25]: 
+    - separator [ref=e26]
+    - paragraph [ref=e27]:
+      - text: New to RentBridge?
+      - link "Create an account" [ref=e28] [cursor=pointer]:
+        - /url: register.php
+  - paragraph [ref=e29]:
+    - link " Back to home" [ref=e30] [cursor=pointer]:
+      - /url: ../index.php
+      - generic [ref=e31]: 
+      - text: Back to home

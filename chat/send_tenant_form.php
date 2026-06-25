@@ -59,6 +59,28 @@ if (!$stmt->fetchColumn()) {
 try {
     $pdo->beginTransaction();
 
+    // Cancel any existing pending (unanswered, not already cancelled) forms for this student
+    $stmt = $pdo->prepare("
+        SELECT id, metadata FROM messages
+         WHERE conversation_id = ?
+           AND message_type = 'tenant_info_form'
+           AND JSON_EXTRACT(metadata, '$.student_id') = ?
+           AND (JSON_EXTRACT(metadata, '$.cancelled') IS NULL OR JSON_EXTRACT(metadata, '$.cancelled') = false)
+           AND NOT EXISTS (
+               SELECT 1 FROM messages r
+                WHERE r.conversation_id = messages.conversation_id
+                  AND r.message_type = 'tenant_info_response'
+                  AND JSON_EXTRACT(r.metadata, '$.source_form_id') = messages.id
+           )
+    ");
+    $stmt->execute([$convId, $studentId]);
+    foreach ($stmt->fetchAll() as $old) {
+        $oldMeta = json_decode($old['metadata'], true) ?? [];
+        $oldMeta['cancelled'] = true;
+        $pdo->prepare("UPDATE messages SET metadata = ? WHERE id = ?")
+            ->execute([json_encode($oldMeta), $old['id']]);
+    }
+
     // Pre-fetch student info for pre-fill
     $stmt = $pdo->prepare("
         SELECT s.full_name, s.preferred_name, s.matric_no, s.phone, u.email

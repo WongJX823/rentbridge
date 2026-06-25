@@ -40,9 +40,14 @@ if (!contract_can_sign($contract, current_user_id())) {
 }
 
 // Determine which role for the page label
-if      (current_user_id() === (int)$contract['student_id'])  { $role = 'student';  $roleLabel = 'Tenant'; }
-elseif  (current_user_id() === (int)$contract['landlord_id']) { $role = 'landlord'; $roleLabel = 'Landlord'; }
-else                                                           { $role = 'agent';    $roleLabel = 'Witness Agent'; }
+if (current_user_id() === (int)$contract['landlord_id']) {
+    $roleLabel = 'Landlord';
+} else {
+    $stmt = $pdo->prepare("SELECT full_name, is_primary FROM co_tenants WHERE tenancy_id = ? AND student_id = ? LIMIT 1");
+    $stmt->execute([(int)$contract['tenancy_id'], current_user_id()]);
+    $ctRow = $stmt->fetch();
+    $roleLabel = $ctRow ? ((int)$ctRow['is_primary'] ? 'Primary Tenant' : 'Co-Tenant') : 'Tenant';
+}
 
 $errors = [];
 

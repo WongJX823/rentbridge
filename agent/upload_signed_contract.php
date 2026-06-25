@@ -128,21 +128,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 // Notify all parties
                 if (function_exists('notify')) {
-                    // Student
                     notify(
                         (int)$tenancy['student_id'],
                         'contract_signed',
                         'Contract activated',
-                        'Signed contract for "' . $tenancy['property_title'] . '" has been uploaded. Tenancy is now active.',
-                        '/rentbridge/student/dashboard.php'
+                        'Signed contract for "' . $tenancy['property_title'] . '" has been uploaded. Your tenancy is now active.',
+                        '/rentbridge/student/tenancy.php?id=' . $tenancyId
                     );
-                    // Landlord
                     notify(
                         (int)$tenancy['landlord_id'],
                         'contract_signed',
                         'Contract activated',
-                        'Signed contract for "' . $tenancy['property_title'] . '" is on file. Tenancy is now active.',
-                        '/rentbridge/landlord/properties.php'
+                        'Signed contract for "' . $tenancy['property_title'] . '" is on file. The tenancy is now active.',
+                        '/rentbridge/landlord/tenancy.php?id=' . $tenancyId
                     );
                 }
 

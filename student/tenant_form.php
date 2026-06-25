@@ -38,6 +38,12 @@ if ((int)($meta['student_id'] ?? 0) !== $userId) {
     exit;
 }
 
+if (!empty($meta['cancelled'])) {
+    set_flash('warning', 'This form has been replaced by the agent. Please check the chat for the latest form.');
+    header('Location: /rentbridge/chat/conversation.php?id=' . $convId);
+    exit;
+}
+
 // Already submitted?
 $stmt = $pdo->prepare("
     SELECT COUNT(*) FROM messages
@@ -91,21 +97,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadySubmitted) {
 
     // Co-tenants
     $coTenants = [];
-    $coNames = $_POST['cotenant_name'] ?? [];
-    $coICs   = $_POST['cotenant_ic'] ?? [];
+    $seenStudentIds = [$userId]; // seed with primary tenant so co-tenants can't duplicate them
+    $coNames  = $_POST['cotenant_name']  ?? [];
+    $coICs    = $_POST['cotenant_ic']    ?? [];
+    $coPhones = $_POST['cotenant_phone'] ?? [];
+    $coEmails = $_POST['cotenant_email'] ?? [];
     foreach ($coNames as $i => $coName) {
-        $coName = trim($coName);
-        $coIC   = trim($coICs[$i] ?? '');
-        if ($coName === '' && $coIC === '') continue;
-        if ($coName === '' || $coIC === '') {
-            $errors['cotenant_' . $i] = "Co-tenant #" . ($i + 1) . ": both name and NRIC are required.";
-            continue;
+        $coName  = trim($coName);
+        $coIC    = trim($coICs[$i]    ?? '');
+        $coPhone = trim($coPhones[$i] ?? '');
+        $coEmail = trim($coEmails[$i] ?? '');
+        if ($coName === '' && $coIC === '' && $coPhone === '' && $coEmail === '') continue;
+        if ($coName === '')  $errors['cotenant_' . $i]        = "Co-tenant #" . ($i + 1) . ": full name is required.";
+        if ($coIC === '')    $errors['cotenant_ic_' . $i]     = "Co-tenant #" . ($i + 1) . ": NRIC is required.";
+        if ($coPhone === '') $errors['cotenant_phone_' . $i]  = "Co-tenant #" . ($i + 1) . ": contact number is required.";
+        if ($coEmail === '') $errors['cotenant_email_' . $i]  = "Co-tenant #" . ($i + 1) . ": RentBridge account email is required.";
+        if ($coIC !== '') {
+            $coICClean = preg_replace('/[^0-9]/', '', $coIC);
+            if (strlen($coICClean) !== 12) {
+                $errors['cotenant_ic_' . $i] = "Co-tenant #" . ($i + 1) . ": NRIC must be 12 digits.";
+            }
         }
-        $coICClean = preg_replace('/[^0-9]/', '', $coIC);
-        if (strlen($coICClean) !== 12) {
-            $errors['cotenant_ic_' . $i] = "Co-tenant #" . ($i + 1) . ": invalid NRIC.";
+        $coStudentId = null;
+        if ($coEmail !== '') {
+            $lkStmt = $pdo->prepare("SELECT id FROM users WHERE email = ? AND primary_role = 'student' LIMIT 1");
+            $lkStmt->execute([$coEmail]);
+            $found = $lkStmt->fetchColumn();
+            if (!$found) {
+                $errors['cotenant_email_' . $i] = "Co-tenant #" . ($i + 1) . ": no RentBridge account found for this email.";
+            } else {
+                $coStudentId = (int)$found;
+                if (in_array($coStudentId, $seenStudentIds, true)) {
+                    $errors['cotenant_email_' . $i] = $coStudentId === $userId
+                        ? "Co-tenant #" . ($i + 1) . ": you cannot add yourself as a co-tenant."
+                        : "Co-tenant #" . ($i + 1) . ": this account is already listed in the form.";
+                    $coStudentId = null;
+                } else {
+                    $seenStudentIds[] = $coStudentId;
+                }
+            }
         }
-        $coTenants[] = ['name' => $coName, 'ic' => $coIC];
+        $coTenants[] = ['name' => $coName, 'ic' => $coIC, 'phone' => $coPhone, 'email' => $coEmail, 'student_id' => $coStudentId];
     }
 
     // Use agent-set terms from metadata (student cannot change these)
@@ -130,7 +162,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadySubmitted) {
         $durationType = match(true) {
             $termMonths <= 5  => '1_semester',
             $termMonths <= 10 => '2_semesters',
-            $termMonths === 12 => '1_year',
+            $termMonths <= 14 => '3_semesters',
+            $termMonths <= 20 => '4_semesters',
+            $termMonths <= 26 => '2_years',
+            $termMonths <= 38 => '3_years',
             default           => 'custom',
         };
 
@@ -172,10 +207,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadySubmitted) {
             foreach ($coTenants as $co) {
                 $stmt = $pdo->prepare("
                     INSERT INTO co_tenants
-                        (tenancy_id, student_id, is_primary, full_name, ic_number, sign_order, added_by, status)
-                    VALUES (?, NULL, 0, ?, ?, ?, ?, 'pending')
+                        (tenancy_id, student_id, is_primary, full_name, ic_number, phone, email, sign_order, added_by, status)
+                    VALUES (?, ?, 0, ?, ?, ?, ?, ?, ?, 'pending')
                 ");
-                $stmt->execute([$tenancyId, $co['name'], $co['ic'], $order, $userId]);
+                $stmt->execute([$tenancyId, $co['student_id'], $co['name'], $co['ic'], $co['phone'] ?: null, $co['email'] ?: null, $order, $userId]);
                 $order++;
             }
 
@@ -366,38 +401,65 @@ ob_start();
                 </h5>
                 <p class="text-secondary small mb-3">
                     Others who will share this rental. All names and NRICs appear on the contract.
+                    Each co-tenant needs a RentBridge account to e-sign — registration is free.
                 </p>
 
                 <div id="coTenantsList">
                     <?php
-                    $oldCoNames = $_POST['cotenant_name'] ?? [];
-                    $oldCoICs   = $_POST['cotenant_ic']   ?? [];
+                    $oldCoNames  = $_POST['cotenant_name']  ?? [];
+                    $oldCoICs    = $_POST['cotenant_ic']    ?? [];
+                    $oldCoPhones = $_POST['cotenant_phone'] ?? [];
+                    $oldCoEmails = $_POST['cotenant_email'] ?? [];
                     foreach ($oldCoNames as $i => $oldName):
-                        if (trim($oldName) === '' && trim($oldCoICs[$i] ?? '') === '') continue;
+                        if (trim($oldName) === '' && trim($oldCoICs[$i] ?? '') === '' && trim($oldCoPhones[$i] ?? '') === '') continue;
                     ?>
-                    <div class="row g-2 mb-3 align-items-start cotenant-row">
-                        <div class="col-md-5">
-                            <input type="text" name="cotenant_name[]"
-                                   class="form-control form-control-sm <?= isset($errors['cotenant_'.$i]) ? 'is-invalid' : '' ?>"
-                                   value="<?= e($oldName) ?>"
-                                   placeholder="Full name (as per NRIC)">
-                            <?php if (isset($errors['cotenant_'.$i])): ?>
-                                <div class="invalid-feedback"><?= e($errors['cotenant_'.$i]) ?></div>
-                            <?php endif; ?>
-                        </div>
-                        <div class="col-md-5">
-                            <input type="text" name="cotenant_ic[]"
-                                   class="form-control form-control-sm <?= isset($errors['cotenant_ic_'.$i]) ? 'is-invalid' : '' ?>"
-                                   value="<?= e($oldCoICs[$i] ?? '') ?>"
-                                   placeholder="NRIC (12 digits)">
-                            <?php if (isset($errors['cotenant_ic_'.$i])): ?>
-                                <div class="invalid-feedback"><?= e($errors['cotenant_ic_'.$i]) ?></div>
-                            <?php endif; ?>
-                        </div>
-                        <div class="col-md-2">
-                            <button type="button" class="btn btn-sm btn-outline-danger remove-cotenant w-100">
+                    <div class="border rounded-3 p-3 mb-3 cotenant-card">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="fw-semibold small">Co-tenant <?= $i + 1 ?></span>
+                            <button type="button" class="btn btn-sm btn-outline-danger remove-cotenant">
                                 <i class="bi bi-x"></i> Remove
                             </button>
+                        </div>
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <label class="form-label form-label-sm">Full name <span class="text-danger">*</span></label>
+                                <input type="text" name="cotenant_name[]"
+                                       class="form-control form-control-sm <?= isset($errors['cotenant_'.$i]) ? 'is-invalid' : '' ?>"
+                                       value="<?= e($oldName) ?>" placeholder="As per NRIC">
+                                <?php if (isset($errors['cotenant_'.$i])): ?>
+                                    <div class="invalid-feedback"><?= e($errors['cotenant_'.$i]) ?></div>
+                                <?php endif; ?>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label form-label-sm">NRIC <span class="text-danger">*</span></label>
+                                <input type="text" name="cotenant_ic[]"
+                                       class="form-control form-control-sm <?= isset($errors['cotenant_ic_'.$i]) ? 'is-invalid' : '' ?>"
+                                       value="<?= e($oldCoICs[$i] ?? '') ?>" placeholder="020815-04-1234">
+                                <?php if (isset($errors['cotenant_ic_'.$i])): ?>
+                                    <div class="invalid-feedback"><?= e($errors['cotenant_ic_'.$i]) ?></div>
+                                <?php endif; ?>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label form-label-sm">Contact number <span class="text-danger">*</span></label>
+                                <input type="text" name="cotenant_phone[]"
+                                       class="form-control form-control-sm <?= isset($errors['cotenant_phone_'.$i]) ? 'is-invalid' : '' ?>"
+                                       value="<?= e($oldCoPhones[$i] ?? '') ?>" placeholder="01X-XXXXXXX">
+                                <?php if (isset($errors['cotenant_phone_'.$i])): ?>
+                                    <div class="invalid-feedback"><?= e($errors['cotenant_phone_'.$i]) ?></div>
+                                <?php endif; ?>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label form-label-sm">RentBridge account email <span class="text-danger">*</span></label>
+                                <input type="email" name="cotenant_email[]"
+                                       class="form-control form-control-sm <?= isset($errors['cotenant_email_'.$i]) ? 'is-invalid' : '' ?>"
+                                       value="<?= e($oldCoEmails[$i] ?? '') ?>"
+                                       placeholder="student@utem.edu.my">
+                                <?php if (isset($errors['cotenant_email_'.$i])): ?>
+                                    <div class="invalid-feedback"><?= e($errors['cotenant_email_'.$i]) ?></div>
+                                <?php else: ?>
+                                    <div class="form-text">They must have a RentBridge account to e-sign.</div>
+                                <?php endif; ?>
+                            </div>
                         </div>
                     </div>
                     <?php endforeach; ?>
@@ -417,8 +479,12 @@ ob_start();
             $termLabel  = match($termMonths) {
                 4  => '4 months (1 semester)',
                 8  => '8 months (2 semesters)',
+                9  => '9 months (2 semesters, incl. semester break)',
                 12 => '12 months (1 year)',
+                13 => '13 months (3 semesters)',
+                18 => '18 months (4 semesters)',
                 24 => '24 months (2 years)',
+                36 => '36 months (3 years)',
                 default => $termMonths . ' months',
             };
             ?>
@@ -485,34 +551,45 @@ ob_start();
 (function () {
     let count = <?= count(array_filter($oldCoNames ?? [], fn($n) => trim($n) !== '')) ?>;
 
-    function addRow() {
+    function addCard() {
+        count++;
         const list = document.getElementById('coTenantsList');
-        const row  = document.createElement('div');
-        row.className = 'row g-2 mb-3 align-items-start cotenant-row';
-        row.innerHTML = `
-            <div class="col-md-5">
-                <input type="text" name="cotenant_name[]"
-                       class="form-control form-control-sm"
-                       placeholder="Full name (as per NRIC)">
-            </div>
-            <div class="col-md-5">
-                <input type="text" name="cotenant_ic[]"
-                       class="form-control form-control-sm"
-                       placeholder="NRIC (12 digits)">
-            </div>
-            <div class="col-md-2">
-                <button type="button" class="btn btn-sm btn-outline-danger remove-cotenant w-100">
+        const card = document.createElement('div');
+        card.className = 'border rounded-3 p-3 mb-3 cotenant-card';
+        card.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="fw-semibold small">Co-tenant ${count}</span>
+                <button type="button" class="btn btn-sm btn-outline-danger remove-cotenant">
                     <i class="bi bi-x"></i> Remove
                 </button>
+            </div>
+            <div class="row g-2">
+                <div class="col-md-6">
+                    <label class="form-label form-label-sm">Full name <span class="text-danger">*</span></label>
+                    <input type="text" name="cotenant_name[]" class="form-control form-control-sm" placeholder="As per NRIC">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label form-label-sm">NRIC <span class="text-danger">*</span></label>
+                    <input type="text" name="cotenant_ic[]" class="form-control form-control-sm" placeholder="020815-04-1234">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label form-label-sm">Contact number <span class="text-danger">*</span></label>
+                    <input type="text" name="cotenant_phone[]" class="form-control form-control-sm" placeholder="01X-XXXXXXX">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label form-label-sm">RentBridge account email <span class="text-danger">*</span></label>
+                    <input type="email" name="cotenant_email[]" class="form-control form-control-sm" placeholder="student@utem.edu.my">
+                    <div class="form-text">They must have a RentBridge account to e-sign.</div>
+                </div>
             </div>`;
-        list.appendChild(row);
-        row.querySelector('.remove-cotenant').addEventListener('click', () => row.remove());
+        list.appendChild(card);
+        card.querySelector('.remove-cotenant').addEventListener('click', () => card.remove());
     }
 
-    document.getElementById('addCoTenantBtn').addEventListener('click', addRow);
+    document.getElementById('addCoTenantBtn').addEventListener('click', addCard);
 
     document.querySelectorAll('.remove-cotenant').forEach(btn => {
-        btn.addEventListener('click', () => btn.closest('.cotenant-row').remove());
+        btn.addEventListener('click', () => btn.closest('.cotenant-card').remove());
     });
 })();
 </script>

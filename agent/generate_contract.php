@@ -123,12 +123,14 @@ $startDate  = date('jS \\d\\a\\y \\o\\f F Y', strtotime($tenancy['start_date']))
 $startShort = date('d/m/Y', strtotime($tenancy['start_date']));
 $endShort   = date('d/m/Y', strtotime($tenancy['end_date']));
 $today      = date('jS \\d\\a\\y \\o\\f F Y');
-$termWeeks  = (int)round((strtotime($booking['end_date']) - strtotime($booking['start_date'])) / (7 * 86400));
-$termLabel  = match($booking['duration_type']) {
-    'semester_4'   => '14 weeks (1 semester)',
-    'academic_8'   => '8 months (academic year)',
-    'full_year_12' => '12 months (full year)',
-    default        => $termWeeks . ' weeks',
+$termMonths = (int)round((strtotime($tenancy['end_date']) - strtotime($tenancy['start_date'])) / (30.44 * 86400));
+$termLabel  = match($tenancy['duration_type']) {
+    'three_semesters' => '13 months (3 semesters)',
+    'four_semesters'  => '18 months (4 semesters)',
+    'two_years'       => '24 months (2 years)',
+    'three_years'     => '36 months (3 years)',
+    'custom'          => $termMonths . ' months',
+    default           => $termMonths . ' months',
 };
 $monthlyRent = number_format((float)$tenancy['monthly_rent'], 2);
 $securityDeposit = number_format((float)$tenancy['deposit'], 2);
@@ -154,25 +156,13 @@ foreach ($coTenants as $idx => $ct) {
     $role = ((int)$ct['is_primary'] === 1) ? 'TENANT (Primary)' : 'CO-TENANT';
     $signatureBlocksHtml .= buildSignatureBlock($role, $ct['full_name'], $ct['ic_number'], $ct['phone'] ?? '');
 }
-// Agent witness block
-if (!empty($tenancy['agent_name'])) {
-    $signatureBlocksHtml .= buildSignatureBlock(
-        'WITNESSED BY AGENT',
-        $tenancy['agent_name'],
-        $tenancy['agent_staff_id'] ?? '',
-        '',
-        true
-    );
-}
-
-function buildSignatureBlock(string $role, string $name, string $ic, string $phone = '', bool $isWitness = false): string {
+function buildSignatureBlock(string $role, string $name, string $ic, string $phone = ''): string {
     $ph = $phone ? '<br>Contact: ' . htmlspecialchars($phone) : '';
-    $icLabel = $isWitness ? 'Staff ID' : 'NRIC';
     return '<div style="margin-bottom: 50px;">'
          . '<p><strong>SIGNED BY ' . htmlspecialchars($role) . '</strong></p>'
          . '<table width="100%" style="margin-top: 20px;">'
          . '<tr><td width="50%">NAME: ' . htmlspecialchars($name) . '<br>'
-         . $icLabel . ': ' . htmlspecialchars($ic) . $ph
+         . 'NRIC: ' . htmlspecialchars($ic) . $ph
          . '</td><td width="50%" style="text-align: right;">_______________________<br>Signature & Date</td></tr>'
          . '</table>'
          . '</div>';
@@ -343,7 +333,7 @@ table.parties td { padding: 8pt; vertical-align: top; }
 
 <!-- SIGNATURES -->
 <h2>SIGNATURES</h2>
-<p>IN WITNESS WHEREOF THE PARTIES HERETO HAVE HEREUNTO SET THEIR HANDS DAY AND YEAR FIRST ABOVE WRITTEN.</p>
+<p>THE PARTIES HERETO HAVE SET THEIR HANDS ON THE DAY AND YEAR FIRST ABOVE WRITTEN.</p>
 
 <div style="margin-top: 30pt;">
     {$signatureBlocksHtml}

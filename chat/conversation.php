@@ -37,7 +37,7 @@ $property = null;
 if (!empty($convo['property_id'])) {
     $pdo = db();
     $stmt = $pdo->prepare("
-        SELECT p.id, p.title, p.city, p.monthly_rent, p.property_type,
+        SELECT p.id, p.title, p.city, p.monthly_rent, p.property_type, p.landlord_id,
                (SELECT image_path FROM property_images
                  WHERE property_id = p.id
                  ORDER BY is_primary DESC, id LIMIT 1) AS image_path
@@ -174,6 +174,14 @@ ob_start();
                         <i class="bi bi-flag me-1"></i>Report
                     </button>
                     <?php endif; ?>
+                    <?php if ($currentRole === 'agent' && !empty($property['landlord_id']) && (int)$property['landlord_id'] !== $otherUserId): ?>
+                    <a href="/rentbridge/chat/open_with_landlord.php?property_id=<?= (int)$property['id'] ?>"
+                       class="btn btn-sm btn-outline-primary"
+                       style="font-size:.75rem; padding:2px 8px;"
+                       onclick="event.stopPropagation();">
+                        <i class="bi bi-chat-dots me-1"></i>Chat with landlord
+                    </a>
+                    <?php endif; ?>
                 </div>
             </a>
         <?php else: ?>
@@ -299,24 +307,7 @@ if (
         (int)$propRow['assigned_agent_id'] === current_user_id() &&
         $propRow['agent_status'] === 'accepted'
     ) {
-        // Check: no unanswered form already pending for this student
-        $stmt = $pdo->prepare("
-            SELECT m.id
-              FROM messages m
-             WHERE m.conversation_id = ? 
-               AND m.message_type = 'tenant_info_form'
-               AND JSON_EXTRACT(m.metadata, '$.student_id') = ?
-               AND NOT EXISTS (
-                   SELECT 1 FROM messages r
-                    WHERE r.conversation_id = m.conversation_id
-                      AND r.message_type = 'tenant_info_response'
-                      AND JSON_EXTRACT(r.metadata, '$.source_form_id') = m.id
-               )
-             LIMIT 1
-        ");
-        $stmt->execute([(int)$convData['id'], $otherId]);
-        $pendingForm = $stmt->fetchColumn();
-        $showAgentSendFormBtn = !$pendingForm;
+        $showAgentSendFormBtn = true;
     }
 }
 ?>
@@ -643,32 +634,46 @@ if (
                     </div>
                 </div>
 
-                <?php elseif ($msgType === 'tenant_info_form'): 
+                <?php elseif ($msgType === 'tenant_info_form'):
                     $recipientRole = $meta['recipient_role'] ?? 'landlord';
                     $isReceiver = !$isMine && current_role() === $recipientRole;
+                    $isCancelled = !empty($meta['cancelled']);
                     $hasResponded = false;
-                    // Check if landlord already submitted this form
-                    $stmt = $pdo->prepare("
-                        SELECT COUNT(*) FROM messages
-                        WHERE conversation_id = ?
-                        AND message_type = 'tenant_info_response'
-                        AND JSON_EXTRACT(metadata, '$.source_form_id') = ?
-                    ");
-                    $stmt->execute([$msg['conversation_id'], $msg['id']]);
-                    $hasResponded = (int)$stmt->fetchColumn() > 0;
+                    if (!$isCancelled) {
+                        $stmt = $pdo->prepare("
+                            SELECT COUNT(*) FROM messages
+                            WHERE conversation_id = ?
+                            AND message_type = 'tenant_info_response'
+                            AND JSON_EXTRACT(metadata, '$.source_form_id') = ?
+                        ");
+                        $stmt->execute([$msg['conversation_id'], $msg['id']]);
+                        $hasResponded = (int)$stmt->fetchColumn() > 0;
+                    }
                 ?>
                     <div class="my-3 d-flex justify-content-center">
-                        <div class="card border-warning" style="max-width: 520px; background: #FFF4D6;">
+                        <div class="card <?= $isCancelled ? 'border-secondary' : 'border-warning' ?>"
+                             style="max-width: 520px; background: <?= $isCancelled ? '#F8F8F8' : '#FFF4D6' ?>;">
                             <div class="card-body">
                                 <div class="d-flex gap-2 align-items-start mb-2">
-                                    <i class="bi bi-clipboard-data fs-4 text-warning"></i>
+                                    <i class="bi bi-clipboard-data fs-4 <?= $isCancelled ? 'text-secondary' : 'text-warning' ?>"></i>
                                     <div>
-                                        <h6 class="mb-0">Tenant info form</h6>
+                                        <h6 class="mb-0 <?= $isCancelled ? 'text-secondary' : '' ?>">
+                                            Tenant info form
+                                            <?php if ($isCancelled): ?>
+                                                <span class="badge bg-secondary ms-1 fw-normal" style="font-size:.7rem;">Superseded</span>
+                                            <?php endif; ?>
+                                        </h6>
                                         <small class="text-secondary">
                                             Property: <strong><?= e($meta['property_title'] ?? '—') ?></strong>
                                         </small>
                                     </div>
                                 </div>
+
+                                <?php if ($isCancelled): ?>
+                                    <p class="small text-secondary mb-0">
+                                        This form was replaced by a newer version. Please use the latest form.
+                                    </p>
+                                <?php else: ?>
                                 <p class="small text-secondary mb-3">
                                     Please fill in the tenant (and any co-tenants') details.
                                     This information appears on the legal contract.
@@ -696,17 +701,38 @@ if (
                                 <?php else: ?>
                                     <span class="badge bg-secondary">Awaiting student</span>
                                 <?php endif; ?>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>
-                    <?php elseif ($msgType === 'tenant_info_response'): 
-                        // Fetch current tenancy status to decide which buttons to show
-                        $tenancyStatus = null;
+                    <?php elseif ($msgType === 'tenant_info_response'):
+                        $tenancyStatus  = null;
+                        $contractPdfUrl = null;
                         if (!empty($meta['tenancy_id'])) {
-                            $stmt = $pdo->prepare("SELECT status FROM tenancies WHERE id = ?");
+                            $stmt = $pdo->prepare("
+                                SELECT t.status,
+                                       COALESCE(c.contract_pdf_path, c.signed_pdf_path, c.generated_pdf_path) AS pdf_path
+                                  FROM tenancies t
+                                  LEFT JOIN contracts c ON c.tenancy_id = t.id
+                                 WHERE t.id = ?
+                                 LIMIT 1
+                            ");
                             $stmt->execute([(int)$meta['tenancy_id']]);
-                            $tenancyStatus = $stmt->fetchColumn();
+                            $tRow = $stmt->fetch();
+                            $tenancyStatus  = $tRow['status'] ?? null;
+                            $contractPdfUrl = !empty($tRow['pdf_path']) ? '/rentbridge/' . $tRow['pdf_path'] : null;
                         }
+                        // Hide action buttons if agent has sent a newer active form after this response
+                        $chkStmt = $pdo->prepare("
+                            SELECT COUNT(*) FROM messages
+                             WHERE conversation_id = ?
+                               AND message_type = 'tenant_info_form'
+                               AND id > ?
+                               AND (JSON_EXTRACT(metadata, '$.cancelled') IS NULL
+                                    OR JSON_EXTRACT(metadata, '$.cancelled') = false)
+                        ");
+                        $chkStmt->execute([$msg['conversation_id'], $msg['id']]);
+                        $responseSuperseded = (int)$chkStmt->fetchColumn() > 0;
                     ?>
                         <div class="my-3 d-flex justify-content-center">
                             <div class="card border-success" style="max-width: 500px; background: #E4F2EA;">
@@ -718,26 +744,47 @@ if (
                                             <small class="text-secondary"><?= e($msg['body']) ?></small>
                                         </div>
                                     </div>
-                                    
-                                    <?php if (current_role() === 'agent' && !empty($meta['tenancy_id'])): ?>
+
+                                    <?php if ($responseSuperseded): ?>
+                                        <span class="badge bg-secondary">
+                                            <i class="bi bi-arrow-repeat me-1"></i> New form sent — awaiting updated details
+                                        </span>
+                                    <?php elseif (current_role() === 'agent' && !empty($meta['tenancy_id'])): ?>
                                         <?php if ($tenancyStatus === 'active'): ?>
                                             <span class="badge bg-success">
                                                 <i class="bi bi-check2-all"></i> Tenancy active
                                             </span>
+                                            <?php if ($contractPdfUrl): ?>
+                                                <a href="<?= e($contractPdfUrl) ?>" target="_blank"
+                                                   class="btn btn-sm btn-outline-success ms-2">
+                                                    <i class="bi bi-download me-1"></i> Download signed PDF
+                                                </a>
+                                            <?php endif; ?>
                                         <?php elseif ($tenancyStatus === 'contract_pending'): ?>
                                             <div class="d-flex gap-2 flex-wrap">
+                                                <?php if ($contractPdfUrl): ?>
+                                                    <a href="<?= e($contractPdfUrl) ?>" target="_blank"
+                                                       class="btn btn-primary btn-sm">
+                                                        <i class="bi bi-download me-1"></i> Download PDF
+                                                    </a>
+                                                    <a href="/rentbridge/agent/generate_contract.php?tenancy_id=<?= (int)$meta['tenancy_id'] ?>"
+                                                       class="btn btn-outline-secondary btn-sm">
+                                                        <i class="bi bi-arrow-clockwise me-1"></i> Regenerate
+                                                    </a>
+                                                <?php else: ?>
+                                                    <a href="/rentbridge/agent/generate_contract.php?tenancy_id=<?= (int)$meta['tenancy_id'] ?>"
+                                                       class="btn btn-outline-success btn-sm">
+                                                        <i class="bi bi-file-earmark-pdf me-1"></i> Generate contract
+                                                    </a>
+                                                <?php endif; ?>
                                                 <a href="/rentbridge/agent/upload_signed_contract.php?tenancy_id=<?= (int)$meta['tenancy_id'] ?>"
-                                                class="btn btn-success btn-sm">
+                                                   class="btn btn-success btn-sm">
                                                     <i class="bi bi-upload me-1"></i> Upload signed contract
-                                                </a>
-                                                <a href="/rentbridge/agent/generate_contract.php?tenancy_id=<?= (int)$meta['tenancy_id'] ?>"
-                                                class="btn btn-outline-success btn-sm">
-                                                    <i class="bi bi-arrow-clockwise me-1"></i> Regenerate
                                                 </a>
                                             </div>
                                         <?php else: ?>
                                             <a href="/rentbridge/agent/generate_contract.php?tenancy_id=<?= (int)$meta['tenancy_id'] ?>"
-                                            class="btn btn-success btn-sm">
+                                               class="btn btn-success btn-sm">
                                                 <i class="bi bi-file-earmark-pdf me-1"></i> Generate contract
                                             </a>
                                         <?php endif; ?>
@@ -746,7 +793,9 @@ if (
                                             <i class="bi bi-check2-all"></i> Tenancy active
                                         </span>
                                     <?php else: ?>
-                                        <span class="badge bg-success">Ready for contract</span>
+                                        <span class="badge bg-warning text-dark">
+                                            <i class="bi bi-hourglass-split me-1"></i> Contract being prepared
+                                        </span>
                                     <?php endif; ?>
                                 </div>
                             </div>
@@ -881,19 +930,19 @@ if (
                 <div class="row g-3">
                     <div class="col-6">
                         <label class="form-label fw-semibold">Monthly rent (RM) <small class="text-danger">*</small></label>
-                        <input type="number" name="monthly_rent" id="atm_monthly_rent" class="form-control" min="0" step="50" required>
+                        <input type="number" name="monthly_rent" id="atm_monthly_rent" class="form-control" min="0" step="1" required>
                     </div>
                     <div class="col-6">
                         <label class="form-label fw-semibold">Deposit (RM)</label>
-                        <input type="number" name="deposit" id="atm_deposit" class="form-control" min="0" step="50">
+                        <input type="number" name="deposit" id="atm_deposit" class="form-control" min="0" step="1">
                     </div>
                     <div class="col-6">
                         <label class="form-label fw-semibold">Term <small class="text-danger">*</small></label>
                         <select name="term_months" class="form-select" required>
-                            <option value="4">4 months (1 semester)</option>
-                            <option value="8">8 months (2 semesters)</option>
-                            <option value="12" selected>12 months (1 year)</option>
-                            <option value="24">24 months (2 years)</option>
+                            <option value="13">13 months (3 semesters)</option>
+                            <option value="18">18 months (4 semesters)</option>
+                            <option value="24" selected>24 months (2 years)</option>
+                            <option value="36">36 months (3 years)</option>
                         </select>
                     </div>
                     <div class="col-6">
@@ -1154,12 +1203,12 @@ if (
                     <div class="col-md-4">
                         <label class="form-label small fw-semibold">Monthly rent (RM) <small class="text-danger">*</small></label>
                         <input type="number" name="monthly_rent" id="tf_monthly_rent"
-                               class="form-control form-control-sm" min="0" step="50" required>
+                               class="form-control form-control-sm" min="0" step="1" required>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label small fw-semibold">Deposit (RM)</label>
                         <input type="number" name="deposit" id="tf_deposit"
-                               class="form-control form-control-sm" min="0" step="50">
+                               class="form-control form-control-sm" min="0" step="1">
                     </div>
                     <div class="col-md-4">
                         <label class="form-label small fw-semibold">Term (months) <small class="text-danger">*</small></label>

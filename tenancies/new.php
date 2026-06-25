@@ -29,7 +29,7 @@ if (!$prop) {
 $errors = [];
 $old = [
     'start_date'    => '',
-    'duration_type' => 'semester_4',
+    'duration_type' => 'two_years',
     'end_date'      => '',
     'student_note'  => '',
 ];
@@ -61,14 +61,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $endTs   = null;
 
         switch ($old['duration_type']) {
-            case 'semester_4':
-                $endTs = strtotime('+98 days', $startTs); // 14 weeks
+            case 'three_semesters':
+                $endTs = strtotime('+13 months', $startTs);
                 break;
-            case 'academic_8':
-                $endTs = strtotime('+8 months', $startTs);
+            case 'four_semesters':
+                $endTs = strtotime('+18 months', $startTs);
                 break;
-            case 'full_year_12':
-                $endTs = strtotime('+12 months', $startTs);
+            case 'two_years':
+                $endTs = strtotime('+24 months', $startTs);
                 break;
             case 'custom':
                 if ($old['end_date'] === '') {
@@ -81,8 +81,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $errors['end_date'] = 'End date must be after the start date.';
                     } else {
                         $diffDays = ($endTs - $startTs) / 86400;
-                        if ($diffDays < 28) {
-                            $errors['end_date'] = 'Minimum tenancy is 1 month (28 days).';
+                        if ($diffDays < 390) {
+                            $errors['end_date'] = 'Minimum tenancy is 3 semesters (about 13 months).';
                         }
                     }
                 }
@@ -245,10 +245,10 @@ $today = date('Y-m-d');
                         <div class="row g-3">
                             <?php
                             $options = [
-                                'semester_4'   => ['1 Semester',     '14 weeks',  'days',   98],
-                                'academic_8'   => ['Academic Year',  '8 months',  'months',  8],
-                                'full_year_12' => ['Full Year',      '12 months', 'months', 12],
-                                'custom'       => ['Custom range',   'You pick',  null,    null],
+                                'three_semesters' => ['3 Semesters', '≈ 13 months (incl. breaks)', 'months', 13],
+                                'four_semesters'  => ['4 Semesters', '≈ 18 months',                'months', 18],
+                                'two_years'       => ['2 Years',     '24 months',                  'months', 24],
+                                'custom'          => ['Custom range', 'Min. 3 semesters',           null,     null],
                             ];
                             foreach ($options as $key => [$label, $sub, $unit, $value]):
                             ?>

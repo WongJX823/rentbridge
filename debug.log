@@ -19,3 +19,45 @@
 [25-Jun-2026 02:02:45 Asia/Kuala_Lumpur] [send_tenant_form] execute returned: true
 [25-Jun-2026 02:02:45 Asia/Kuala_Lumpur] [send_tenant_form] inserted message id: 32
 [25-Jun-2026 02:02:45 Asia/Kuala_Lumpur] [send_tenant_form] readback metadata: '{"property_id":139,"property_title":"asdfasdgsadfg","student_id":3,"recipient_role":"student","prefill":{"tenant_name":"Lim Mei Ling","tenant_phone":"012-9876543","tenant_email":"meiling@student.utem.edu.my","matric_no":"B032310123","monthly_rent":"220.00","deposit":"1200.00"}}'
+[25-Jun-2026 07:44:01 Asia/Kuala_Lumpur] [send_tenant_form] payload='{"property_id":139,"property_title":"asdfasdgsadfg","student_id":2,"recipient_role":"student","terms":{"monthly_rent":220,"deposit":1200,"term_months":13,"start_date":"2026-06-26","end_date":"2027-07-26","notes":""},"prefill":{"tenant_name":"Wong Jia Xi","tenant_phone":"012-3456789","tenant_email":"jiaxi@student.utem.edu.my","matric_no":"B032310495"}}'
+[25-Jun-2026 07:44:01 Asia/Kuala_Lumpur] [send_tenant_form] is_string=yes
+[25-Jun-2026 07:44:01 Asia/Kuala_Lumpur] [send_tenant_form] strlen=353
+[25-Jun-2026 07:44:01 Asia/Kuala_Lumpur] [send_tenant_form] json_valid=yes
+[25-Jun-2026 07:44:01 Asia/Kuala_Lumpur] [send_tenant_form] execute returned: true
+[25-Jun-2026 07:44:01 Asia/Kuala_Lumpur] [send_tenant_form] inserted message id: 38
+[25-Jun-2026 07:44:01 Asia/Kuala_Lumpur] [send_tenant_form] readback metadata: '{"property_id":139,"property_title":"asdfasdgsadfg","student_id":2,"recipient_role":"student","terms":{"monthly_rent":220,"deposit":1200,"term_months":13,"start_date":"2026-06-26","end_date":"2027-07-26","notes":""},"prefill":{"tenant_name":"Wong Jia Xi","tenant_phone":"012-3456789","tenant_email":"jiaxi@student.utem.edu.my","matric_no":"B032310495"}}'
+[25-Jun-2026 07:49:46 Asia/Kuala_Lumpur] [send_tenant_form] payload='{"property_id":139,"property_title":"asdfasdgsadfg","student_id":2,"recipient_role":"student","terms":{"monthly_rent":220,"deposit":1200,"term_months":13,"start_date":"2026-06-26","end_date":"2027-07-26","notes":""},"prefill":{"tenant_name":"Wong Jia Xi","tenant_phone":"012-3456789","tenant_email":"jiaxi@student.utem.edu.my","matric_no":"B032310495"}}'
+[25-Jun-2026 07:49:46 Asia/Kuala_Lumpur] [send_tenant_form] is_string=yes
+[25-Jun-2026 07:49:46 Asia/Kuala_Lumpur] [send_tenant_form] strlen=353
+[25-Jun-2026 07:49:46 Asia/Kuala_Lumpur] [send_tenant_form] json_valid=yes
+[25-Jun-2026 07:49:46 Asia/Kuala_Lumpur] [send_tenant_form] execute returned: true
+[25-Jun-2026 07:49:46 Asia/Kuala_Lumpur] [send_tenant_form] inserted message id: 39
+[25-Jun-2026 07:49:46 Asia/Kuala_Lumpur] [send_tenant_form] readback metadata: '{"property_id":139,"property_title":"asdfasdgsadfg","student_id":2,"recipient_role":"student","terms":{"monthly_rent":220,"deposit":1200,"term_months":13,"start_date":"2026-06-26","end_date":"2027-07-26","notes":""},"prefill":{"tenant_name":"Wong Jia Xi","tenant_phone":"012-3456789","tenant_email":"jiaxi@student.utem.edu.my","matric_no":"B032310495"}}'
+[25-Jun-2026 07:50:08 Asia/Kuala_Lumpur] [send_tenant_form] payload='{"property_id":139,"property_title":"asdfasdgsadfg","student_id":3,"recipient_role":"student","terms":{"monthly_rent":220,"deposit":1200,"term_months":13,"start_date":"2026-06-26","end_date":"2027-07-26","notes":""},"prefill":{"tenant_name":"Lim Mei Ling","tenant_phone":"012-9876543","tenant_email":"meiling@student.utem.edu.my","matric_no":"B032310123"}}'
+[25-Jun-2026 07:50:08 Asia/Kuala_Lumpur] [send_tenant_form] is_string=yes
+[25-Jun-2026 07:50:08 Asia/Kuala_Lumpur] [send_tenant_form] strlen=356
+[25-Jun-2026 07:50:08 Asia/Kuala_Lumpur] [send_tenant_form] json_valid=yes
+[25-Jun-2026 07:50:08 Asia/Kuala_Lumpur] [send_tenant_form] execute returned: true
+[25-Jun-2026 07:50:08 Asia/Kuala_Lumpur] [send_tenant_form] inserted message id: 40
+[25-Jun-2026 07:50:08 Asia/Kuala_Lumpur] [send_tenant_form] readback metadata: '{"property_id":139,"property_title":"asdfasdgsadfg","student_id":3,"recipient_role":"student","terms":{"monthly_rent":220,"deposit":1200,"term_months":13,"start_date":"2026-06-26","end_date":"2027-07-26","notes":""},"prefill":{"tenant_name":"Lim Mei Ling","tenant_phone":"012-9876543","tenant_email":"meiling@student.utem.edu.my","matric_no":"B032310123"}}'
+[25-Jun-2026 08:30:58 Asia/Kuala_Lumpur] [send_tenant_form] payload='{"property_id":139,"property_title":"asdfasdgsadfg","student_id":3,"recipient_role":"student","terms":{"monthly_rent":220,"deposit":1200,"term_months":13,"start_date":"2026-06-29","end_date":"2027-07-29","notes":""},"prefill":{"tenant_name":"Lim Mei Ling","tenant_phone":"012-9876543","tenant_email":"meiling@student.utem.edu.my","matric_no":"B032310123"}}'
+[25-Jun-2026 08:30:58 Asia/Kuala_Lumpur] [send_tenant_form] is_string=yes
+[25-Jun-2026 08:30:58 Asia/Kuala_Lumpur] [send_tenant_form] strlen=356
+[25-Jun-2026 08:30:58 Asia/Kuala_Lumpur] [send_tenant_form] json_valid=yes
+[25-Jun-2026 08:30:58 Asia/Kuala_Lumpur] [send_tenant_form] execute returned: true
+[25-Jun-2026 08:30:58 Asia/Kuala_Lumpur] [send_tenant_form] inserted message id: 42
+[25-Jun-2026 08:30:58 Asia/Kuala_Lumpur] [send_tenant_form] readback metadata: '{"property_id":139,"property_title":"asdfasdgsadfg","student_id":3,"recipient_role":"student","terms":{"monthly_rent":220,"deposit":1200,"term_months":13,"start_date":"2026-06-29","end_date":"2027-07-29","notes":""},"prefill":{"tenant_name":"Lim Mei Ling","tenant_phone":"012-9876543","tenant_email":"meiling@student.utem.edu.my","matric_no":"B032310123"}}'
+[25-Jun-2026 08:48:21 Asia/Kuala_Lumpur] [send_tenant_form] payload='{"property_id":140,"property_title":"djkkfgdghjghjff","student_id":4,"recipient_role":"student","terms":{"monthly_rent":1200,"deposit":3000,"term_months":13,"start_date":"2026-06-29","end_date":"2027-07-29","notes":""},"prefill":{"tenant_name":"Ali Bin Abdullah","tenant_phone":"013-1234567","tenant_email":"alibaba@student.utem.edu.my","matric_no":"B032310234"}}'
+[25-Jun-2026 08:48:21 Asia/Kuala_Lumpur] [send_tenant_form] is_string=yes
+[25-Jun-2026 08:48:21 Asia/Kuala_Lumpur] [send_tenant_form] strlen=363
+[25-Jun-2026 08:48:21 Asia/Kuala_Lumpur] [send_tenant_form] json_valid=yes
+[25-Jun-2026 08:48:21 Asia/Kuala_Lumpur] [send_tenant_form] execute returned: true
+[25-Jun-2026 08:48:21 Asia/Kuala_Lumpur] [send_tenant_form] inserted message id: 46
+[25-Jun-2026 08:48:21 Asia/Kuala_Lumpur] [send_tenant_form] readback metadata: '{"property_id":140,"property_title":"djkkfgdghjghjff","student_id":4,"recipient_role":"student","terms":{"monthly_rent":1200,"deposit":3000,"term_months":13,"start_date":"2026-06-29","end_date":"2027-07-29","notes":""},"prefill":{"tenant_name":"Ali Bin Abdullah","tenant_phone":"013-1234567","tenant_email":"alibaba@student.utem.edu.my","matric_no":"B032310234"}}'
+[25-Jun-2026 08:54:35 Asia/Kuala_Lumpur] [send_tenant_form] payload='{"property_id":140,"property_title":"djkkfgdghjghjff","student_id":4,"recipient_role":"student","terms":{"monthly_rent":1200,"deposit":3000,"term_months":13,"start_date":"2026-06-29","end_date":"2027-07-29","notes":""},"prefill":{"tenant_name":"Ali Bin Abdullah","tenant_phone":"013-1234567","tenant_email":"alibaba@student.utem.edu.my","matric_no":"B032310234"}}'
+[25-Jun-2026 08:54:35 Asia/Kuala_Lumpur] [send_tenant_form] is_string=yes
+[25-Jun-2026 08:54:35 Asia/Kuala_Lumpur] [send_tenant_form] strlen=363
+[25-Jun-2026 08:54:35 Asia/Kuala_Lumpur] [send_tenant_form] json_valid=yes
+[25-Jun-2026 08:54:35 Asia/Kuala_Lumpur] [send_tenant_form] execute returned: true
+[25-Jun-2026 08:54:35 Asia/Kuala_Lumpur] [send_tenant_form] inserted message id: 48
+[25-Jun-2026 08:54:35 Asia/Kuala_Lumpur] [send_tenant_form] readback metadata: '{"property_id":140,"property_title":"djkkfgdghjghjff","student_id":4,"recipient_role":"student","terms":{"monthly_rent":1200,"deposit":3000,"term_months":13,"start_date":"2026-06-29","end_date":"2027-07-29","notes":""},"prefill":{"tenant_name":"Ali Bin Abdullah","tenant_phone":"013-1234567","tenant_email":"alibaba@student.utem.edu.my","matric_no":"B032310234"}}'

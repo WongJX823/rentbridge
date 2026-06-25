@@ -42,13 +42,13 @@ if ($stmt->fetchColumn()) {
 }
 
 $errors = [];
-$old = ['message' => '', 'housemates_needed' => '1', 'semesters_needed' => '1'];
+$old = ['message' => '', 'housemates_needed' => '1', 'semesters_needed' => '3'];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
     $old['message']           = trim($_POST['message'] ?? '');
     $old['housemates_needed'] = (int)($_POST['housemates_needed'] ?? 1);
-    $old['semesters_needed']  = (int)($_POST['semesters_needed'] ?? 1);
+    $old['semesters_needed']  = (int)($_POST['semesters_needed'] ?? 3);
 
     if ($old['message'] === '') {
         $errors['message'] = 'Tell others why they should join you.';
@@ -56,8 +56,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($old['housemates_needed'] < 1 || $old['housemates_needed'] > 5) {
         $errors['housemates_needed'] = 'Must be between 1 and 5.';
     }
-    if ($old['semesters_needed'] < 1 || $old['semesters_needed'] > 6) {
-        $errors['semesters_needed'] = 'Must be between 1 and 6 semesters.';
+    if ($old['semesters_needed'] < 3 || $old['semesters_needed'] > 6) {
+        $errors['semesters_needed'] = 'Must be between 3 and 6 semesters.';
     }
 
     if (empty($errors)) {
@@ -125,16 +125,16 @@ ob_start();
                 </label>
                 <select name="semesters_needed"
                         class="form-select <?= isset($errors['semesters_needed']) ? 'is-invalid' : '' ?>">
-                    <?php for ($i = 1; $i <= 6; $i++): ?>
+                    <?php for ($i = 3; $i <= 6; $i++): ?>
                         <option value="<?= $i ?>" <?= (int)$old['semesters_needed']===$i?'selected':'' ?>>
-                            <?= $i ?> semester<?= $i > 1 ? 's' : '' ?>
+                            <?= $i ?> semesters
                         </option>
                     <?php endfor; ?>
                 </select>
                 <?php if (isset($errors['semesters_needed'])): ?>
                     <div class="invalid-feedback"><?= e($errors['semesters_needed']) ?></div>
                 <?php endif; ?>
-                <small class="text-secondary">1 semester ≈ 6 months (UTeM academic calendar).</small>
+                <small class="text-secondary">Minimum 3 semesters. 1 semester ≈ 4–5 months (UTeM academic calendar).</small>
             </div>
 
             <div class="mb-4">

@@ -66,6 +66,21 @@ $months  = max(1, (int)round(($endTs - $startTs) / (30.44 * 86400)));
 $nextSigner   = contract_next_signer($contract);
 $canSignNow   = contract_can_sign($contract, current_user_id());
 
+// Fetch co-tenants for this contract
+$ctStmt = $pdo->prepare("SELECT * FROM co_tenants WHERE tenancy_id = ? ORDER BY sign_order ASC, id ASC");
+$ctStmt->execute([(int)$contract['tenancy_id']]);
+$coTenants = $ctStmt->fetchAll();
+
+// Check if current user is a co-tenant who can still reject
+$myCoTenant = null;
+foreach ($coTenants as $ct) {
+    if ((int)$ct['student_id'] === current_user_id() && $ct['status'] === 'pending') {
+        $myCoTenant = $ct;
+        break;
+    }
+}
+$canReject = $myCoTenant !== null && $contract['status'] === 'pending_signatures';
+
 // Status badge
 $statusBadge = match ($contract['status']) {
     'pending_signatures' => ['Pending signatures', 'warning'],
@@ -133,7 +148,7 @@ $statusBadge = match ($contract['status']) {
 
                 <hr class="my-4">
 
-                <!-- THE 3 PARTIES -->
+                <!-- PARTIES -->
                 <h5 class="mb-3">Parties to this Agreement</h5>
                 <div class="row g-3 mb-4">
 
@@ -150,31 +165,22 @@ $statusBadge = match ($contract['status']) {
                         </div>
                     </div>
 
-                    <!-- TENANT -->
+                    <!-- TENANTS (primary + co-tenants) -->
+                    <?php foreach ($coTenants as $idx => $ct): $num = $idx + 2; ?>
                     <div class="col-md-4">
                         <div class="border rounded-3 p-3 h-100">
-                            <small class="text-secondary text-uppercase">2. Tenant</small>
-                            <h6 class="mt-1 mb-1"><?= e($contract['student_name']) ?></h6>
+                            <small class="text-secondary text-uppercase">
+                                <?= $num ?>. <?= (int)$ct['is_primary'] ? 'Primary Tenant' : 'Co-Tenant' ?>
+                            </small>
+                            <h6 class="mt-1 mb-1"><?= e($ct['full_name']) ?></h6>
                             <div class="small text-secondary">
-                                <div>Matric: <?= e($contract['student_matric']) ?></div>
-                                <div><?= e($contract['student_email']) ?></div>
-                                <div><?= e($contract['student_phone']) ?></div>
+                                <div>NRIC: <?= e($ct['ic_number']) ?></div>
+                                <div><?= e($ct['email']) ?></div>
+                                <div><?= e($ct['phone']) ?></div>
                             </div>
                         </div>
                     </div>
-
-                    <!-- AGENT (WITNESS) -->
-                    <div class="col-md-4">
-                        <div class="border rounded-3 p-3 h-100" style="background:var(--rb-cream);">
-                            <small class="text-secondary text-uppercase">3. Witness Agent</small>
-                            <h6 class="mt-1 mb-1"><?= e($contract['agent_name']) ?></h6>
-                            <div class="small text-secondary">
-                                <div>UTeM Staff ID: <?= e($contract['agent_staff_id']) ?></div>
-                                <div><?= e($contract['agent_department']) ?></div>
-                                <div><?= e($contract['agent_email']) ?></div>
-                            </div>
-                        </div>
-                    </div>
+                    <?php endforeach; ?>
                 </div>
 
                 <!-- PROPERTY -->
@@ -239,33 +245,54 @@ $statusBadge = match ($contract['status']) {
                 <!-- SIGNATURES SECTION -->
                 <h5 class="mb-3">Signatures</h5>
                 <div class="row g-3 mb-4">
-                    <?php
-                    $sigs = [
-                        ['Landlord',    'landlord', $contract['landlord_signature'], $contract['landlord_signed_at']],
-                        ['Tenant',      'student',  $contract['student_signature'],  $contract['student_signed_at']],
-                        ['Witness Agent','agent',   $contract['agent_signature'],   $contract['agent_signed_at']],
-                    ];
-                    foreach ($sigs as [$label, $key, $img, $signedAt]):
-                    ?>
+
+                    <!-- Landlord -->
                     <div class="col-md-4">
                         <div class="border rounded-3 p-3 h-100 text-center">
-                            <small class="text-secondary text-uppercase d-block mb-2"><?= e($label) ?></small>
+                            <small class="text-secondary text-uppercase d-block mb-2">Landlord</small>
                             <div class="signature-slot mb-2 d-flex align-items-center justify-content-center"
                                  style="height:90px; background:#FAFAFA; border:1px dashed var(--rb-line); border-radius:6px;">
-                                <?php if (!empty($img)): ?>
-                                    <img src="/rentbridge/<?= e($img) ?>" alt="signature"
+                                <?php if (!empty($contract['landlord_signature'])): ?>
+                                    <img src="/rentbridge/<?= e($contract['landlord_signature']) ?>" alt="signature"
                                          style="max-height:80px; max-width:90%;">
                                 <?php else: ?>
                                     <span class="text-secondary small">Not signed yet</span>
                                 <?php endif; ?>
                             </div>
-                            <?php if (!empty($signedAt)): ?>
+                            <?php if (!empty($contract['landlord_signed_at'])): ?>
                                 <small class="text-emerald-dark fw-semibold">
                                     <i class="bi bi-check-circle-fill"></i>
-                                    Signed <?= e(date('d M Y, H:i', strtotime($signedAt))) ?>
+                                    Signed <?= e(date('d M Y, H:i', strtotime($contract['landlord_signed_at']))) ?>
                                 </small>
                             <?php else: ?>
                                 <small class="text-secondary">Pending</small>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
+                    <!-- All tenants -->
+                    <?php foreach ($coTenants as $ct): ?>
+                    <div class="col-md-4">
+                        <div class="border rounded-3 p-3 h-100 text-center">
+                            <small class="text-secondary text-uppercase d-block mb-2">
+                                <?= (int)$ct['is_primary'] ? 'Primary Tenant' : 'Co-Tenant' ?>
+                            </small>
+                            <div class="signature-slot mb-2 d-flex align-items-center justify-content-center"
+                                 style="height:90px; background:#FAFAFA; border:1px dashed var(--rb-line); border-radius:6px;">
+                                <?php if (!empty($ct['signature_data'])): ?>
+                                    <img src="/rentbridge/<?= e($ct['signature_data']) ?>" alt="signature"
+                                         style="max-height:80px; max-width:90%;">
+                                <?php else: ?>
+                                    <span class="text-secondary small">Not signed yet</span>
+                                <?php endif; ?>
+                            </div>
+                            <?php if (!empty($ct['signed_at'])): ?>
+                                <small class="text-emerald-dark fw-semibold">
+                                    <i class="bi bi-check-circle-fill"></i>
+                                    Signed <?= e(date('d M Y, H:i', strtotime($ct['signed_at']))) ?>
+                                </small>
+                            <?php else: ?>
+                                <small class="text-secondary"><?= e($ct['full_name']) ?> · Pending</small>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -289,11 +316,54 @@ $statusBadge = match ($contract['status']) {
                     <?php else: ?>
                         <div class="alert alert-info">
                             <i class="bi bi-info-circle"></i>
-                            <?php if ($nextSigner === 'all_done'): ?>
+                            <?php if ($nextSigner['role'] === 'all_done'): ?>
                                 All signatures collected. Finalising contract.
                             <?php else: ?>
-                                Waiting for the <strong><?= e($nextSigner) ?></strong> to sign.
+                                Waiting for <strong><?= e($nextSigner['name']) ?></strong> to sign.
                             <?php endif; ?>
+                        </div>
+                    <?php endif; ?>
+                    <?php if ($canReject): ?>
+                        <div class="alert alert-danger d-flex align-items-center gap-3 mt-2">
+                            <i class="bi bi-x-circle fs-3"></i>
+                            <div class="flex-grow-1">
+                                <strong>Not your tenancy?</strong>
+                                <div class="small">If you were added without your consent, you can reject this contract. The agent will be notified and the tenancy will be cancelled.</div>
+                            </div>
+                            <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#rejectModal">
+                                Reject
+                            </button>
+                        </div>
+
+                        <!-- Reject confirmation modal -->
+                        <div class="modal fade" id="rejectModal" tabindex="-1">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content">
+                                    <div class="modal-header border-0">
+                                        <h5 class="modal-title text-danger"><i class="bi bi-x-circle me-2"></i>Reject tenancy</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <p>You are about to reject this tenancy contract. This will:</p>
+                                        <ul class="small">
+                                            <li>Cancel the tenancy immediately</li>
+                                            <li>Notify the assigned agent</li>
+                                            <li>Notify the primary tenant</li>
+                                        </ul>
+                                        <p class="mb-0 text-secondary small">This action cannot be undone.</p>
+                                    </div>
+                                    <div class="modal-footer border-0">
+                                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                                        <form method="POST" action="/rentbridge/contracts/reject.php">
+                                            <?= csrf_field() ?>
+                                            <input type="hidden" name="contract_id" value="<?= (int)$contract['id'] ?>">
+                                            <button type="submit" class="btn btn-danger">
+                                                <i class="bi bi-x-circle me-1"></i> Confirm rejection
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     <?php endif; ?>
                 <?php elseif ($contract['status'] === 'active'): ?>
