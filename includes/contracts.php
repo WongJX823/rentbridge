@@ -550,9 +550,150 @@ function rb_render_agreement_pdf(string $html, string $contractCode, string $sub
  * Generate a PDF of a signed contract and save it to disk.
  * Returns the relative path (for DB) like 'uploads/contracts/RB-2026-00001.pdf',
  * or null on failure.
+ *
+ * Uses the SAME formal-agreement template as the unsigned PDF
+ * (rb_agreement_html), with signature images embedded on the signature lines.
  */
 function generate_contract_pdf(int $contractId): ?string {
-    // Load the composer-installed dompdf library
+    require_once __DIR__ . '/../vendor/autoload.php';
+
+    $pdo = db();
+    $stmt = $pdo->prepare("
+        SELECT c.*,
+               t.duration_type,
+               p.title          AS property_title,
+               p.property_type,
+               p.address        AS property_address,
+               p.city           AS property_city,
+               p.state          AS property_state,
+               p.postcode       AS property_postcode,
+               l.full_name      AS landlord_name,
+               l.ic_no          AS landlord_ic,
+               l.phone          AS landlord_phone
+          FROM contracts c
+          JOIN tenancies  t ON t.id = c.tenancy_id
+          JOIN properties p ON p.id = c.property_id
+          JOIN landlords  l ON l.user_id = c.landlord_id
+         WHERE c.id = ?
+         LIMIT 1
+    ");
+    $stmt->execute([$contractId]);
+    $c = $stmt->fetch();
+    if (!$c) return null;
+
+    // Fetch co-tenants with their signatures
+    $ctStmt = $pdo->prepare("SELECT * FROM co_tenants WHERE tenancy_id = ? ORDER BY sign_order ASC, id ASC");
+    $ctStmt->execute([(int)$c['tenancy_id']]);
+    $coTenants = $ctStmt->fetchAll();
+
+    $base = realpath(__DIR__ . '/..') . '/';
+
+    // Helper: resolve a stored relative path to an absolute file path mPDF can read.
+    $absSig = function (?string $rel) use ($base): ?string {
+        if (empty($rel)) return null;
+        $abs = $base . ltrim($rel, '/');
+        return file_exists($abs) ? $abs : null;
+    };
+
+    // === Build the same data structure rb_agreement_html() expects ===
+    $startTs    = strtotime($c['start_date']);
+    $endTs      = strtotime($c['end_date']);
+    $termMonths = max(1, (int)round(($endTs - $startTs) / (30.44 * 86400)));
+    $termLabel  = match($c['duration_type'] ?? '') {
+        'three_semesters' => '13 months (3 semesters)',
+        'four_semesters'  => '18 months (4 semesters)',
+        'two_years'       => '24 months (2 years)',
+        'three_years'     => '36 months (3 years)',
+        '1_semester'      => '5 months (1 semester)',
+        '2_semesters'     => '10 months (2 semesters)',
+        '1_year'          => '12 months (1 year)',
+        default           => $termMonths . ' months',
+    };
+
+    $propertyAddress = $c['property_address'] . ', '
+                     . $c['property_city'] . ' ' . $c['property_postcode'] . ', '
+                     . $c['property_state'];
+
+    $coTenantsData = [];
+    foreach ($coTenants as $ct) {
+        $coTenantsData[] = [
+            'full_name'  => $ct['full_name'],
+            'ic_number'  => $ct['ic_number'],
+            'phone'      => $ct['phone'] ?? '',
+            'is_primary' => (int)$ct['is_primary'],
+            'sig_img'    => $absSig($ct['signature_data'] ?? null),
+            'sig_date'   => !empty($ct['signed_at'])
+                                ? date('d M Y', strtotime($ct['signed_at']))
+                                : null,
+        ];
+    }
+
+    $data = [
+        'contract_code'    => $c['contract_code'],
+        'today'            => date('jS \\d\\a\\y \\o\\f F Y',
+                                   strtotime($c['activated_at'] ?? $c['created_at'] ?? 'now')),
+        'landlord_name'    => $c['landlord_name'],
+        'landlord_ic'      => $c['landlord_ic'],
+        'landlord_phone'   => $c['landlord_phone'] ?? '',
+        'property_type'    => $c['property_type'],
+        'property_address' => $propertyAddress,
+        'term_label'       => $termLabel,
+        'start_short'      => date('d/m/Y', $startTs),
+        'end_short'        => date('d/m/Y', $endTs),
+        'monthly_rent'     => number_format((float)$c['monthly_rent'], 2),
+        'security_deposit' => number_format((float)$c['deposit'], 2),
+        'utility_deposit'  => number_format((float)$c['deposit'] * 0.3, 2),
+        'tenancy_label'    => 'TENANTS',
+        'landlord_sig_img' => $absSig($c['landlord_signature'] ?? null),
+        'landlord_sig_date'=> !empty($c['landlord_signed_at'])
+                                ? date('d M Y', strtotime($c['landlord_signed_at']))
+                                : null,
+        'co_tenants'       => $coTenantsData,
+    ];
+
+    // === Render with mPDF using shared template ===
+    try {
+        $html = rb_agreement_html($data);
+
+        $mpdf = new \Mpdf\Mpdf([
+            'tempDir'      => sys_get_temp_dir(),
+            'format'       => 'A4',
+            'margin_left'  => 20, 'margin_right' => 20,
+            'margin_top'   => 25, 'margin_bottom' => 25,
+        ]);
+        $mpdf->SetTitle('Tenancy Agreement ' . $c['contract_code']);
+        $mpdf->SetAuthor('RentBridge');
+        $mpdf->SetWatermarkText($c['contract_code']);
+        $mpdf->showWatermarkText = true;
+        $mpdf->watermark_font = 'DejaVuSansCondensed';
+        $mpdf->watermarkTextAlpha = 0.04;
+        $mpdf->SetHTMLHeader('<div style="text-align: right; font-size: 8pt; color: #999;">Contract Reference: ' . htmlspecialchars($c['contract_code']) . '</div>');
+        $mpdf->SetHTMLFooter('<div style="text-align: center; font-size: 8pt; color: #999;">Page {PAGENO} of {nbpg} · ' . htmlspecialchars($c['contract_code']) . '</div>');
+        $mpdf->WriteHTML($html);
+
+        $absDir = __DIR__ . '/../uploads/contracts';
+        if (!is_dir($absDir) && !mkdir($absDir, 0755, true) && !is_dir($absDir)) return null;
+
+        $filename = $c['contract_code'] . '.pdf';
+        $relPath  = 'uploads/contracts/' . $filename;
+        $absPath  = __DIR__ . '/../' . $relPath;
+
+        $mpdf->Output($absPath, \Mpdf\Output\Destination::FILE);
+
+        $pdo->prepare('UPDATE contracts SET contract_pdf_path = ? WHERE id = ?')
+            ->execute([$relPath, $contractId]);
+
+        return $relPath;
+    } catch (Throwable $e) {
+        error_log('Contract PDF generation failed: ' . $e->getMessage());
+        return null;
+    }
+}
+
+/**
+ * Legacy dompdf-based generator (no longer used by default; retained for reference).
+ */
+function generate_contract_pdf_legacy_dompdf(int $contractId): ?string {
     require_once __DIR__ . '/../vendor/autoload.php';
 
     $pdo = db();
