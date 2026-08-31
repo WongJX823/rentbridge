@@ -100,7 +100,12 @@ $pageContent   = $pageContent   ?? '';
                 <i class="bi bi-clipboard-data-fill"></i>
                 <span class="sidebar-label">Tenancies</span>
             </a>
-            
+            <a href="/rentbridge/admin/academic_calendar.php"
+               class="sidebar-link <?= $activeNav === 'academic_calendar' ? 'active' : '' ?>">
+                <i class="bi bi-calendar-event-fill"></i>
+                <span class="sidebar-label">Academic Calendar</span>
+            </a>
+
             <a href="/rentbridge/admin/reports.php"
                class="sidebar-link <?= $activeNav === 'flagreports' ? 'active' : '' ?>">
                 <i class="bi bi-flag-fill"></i>
