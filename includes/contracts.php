@@ -457,6 +457,61 @@ function cotenant_sign_url(string $token): string {
 }
 
 /**
+ * Email the signing link to each account-less co-tenant who still needs to sign.
+ * Triggered by the agent from the contract page (not automatic).
+ * Returns ['sent'=>int, 'skipped'=>int, 'errors'=>string[]].
+ */
+function send_cotenant_sign_links(int $contractId): array {
+    require_once __DIR__ . '/mailer.php';
+    $pdo = db();
+
+    $stmt = $pdo->prepare("
+        SELECT c.contract_code, c.tenancy_id, p.title AS property_title
+          FROM contracts c JOIN properties p ON p.id = c.property_id
+         WHERE c.id = ? LIMIT 1
+    ");
+    $stmt->execute([$contractId]);
+    $c = $stmt->fetch();
+    if (!$c) return ['sent'=>0,'skipped'=>0,'errors'=>['Contract not found.']];
+
+    ensure_cotenant_sign_tokens((int)$c['tenancy_id']);
+
+    $stmt = $pdo->prepare("
+        SELECT id, full_name, email, sign_token
+          FROM co_tenants
+         WHERE tenancy_id = ? AND student_id IS NULL AND status != 'signed'
+    ");
+    $stmt->execute([(int)$c['tenancy_id']]);
+    $rows = $stmt->fetchAll();
+
+    $host   = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $sent = 0; $skipped = 0; $errors = [];
+
+    foreach ($rows as $r) {
+        if (empty($r['email']) || empty($r['sign_token'])) { $skipped++; continue; }
+        $url  = $scheme . '://' . $host . cotenant_sign_url($r['sign_token']);
+        $name = htmlspecialchars($r['full_name'], ENT_QUOTES);
+        $code = htmlspecialchars($c['contract_code'], ENT_QUOTES);
+        $prop = htmlspecialchars($c['property_title'], ENT_QUOTES);
+        $safe = htmlspecialchars($url, ENT_QUOTES);
+        $subject = 'Sign your tenancy contract ' . $c['contract_code'];
+        $html = "<p>Hi {$name},</p>"
+              . "<p>You are named as a co-tenant on the tenancy for <strong>{$prop}</strong> "
+              . "(contract {$code}).</p>"
+              . "<p>Please review and sign the contract using your secure link below:</p>"
+              . "<p><a href=\"{$safe}\" style=\"display:inline-block;padding:10px 18px;background:#2E8B57;color:#fff;text-decoration:none;border-radius:6px;\">Sign the contract</a></p>"
+              . "<p style=\"font-size:12px;color:#888\">If the button does not work, copy this link:<br>{$safe}</p>"
+              . "<p>&mdash; RentBridge</p>";
+        $plain = "Hi {$r['full_name']},\n\nSign your tenancy contract {$c['contract_code']} here:\n{$url}\n\n- RentBridge";
+        $res = send_email($r['email'], $r['full_name'], $subject, $html, $plain);
+        if (!empty($res['ok'])) $sent++;
+        else $errors[] = $r['full_name'] . ': ' . ($res['error'] ?? 'send failed');
+    }
+    return ['sent'=>$sent, 'skipped'=>$skipped, 'errors'=>$errors];
+}
+
+/**
  * Apply a signature to a contract via a co-tenant signing token (no login).
  * Enforces the same signing order as apply_signature(): the token holder can
  * only sign when they are the next unsigned party.

@@ -157,8 +157,11 @@ into one PDF:
 - contracts/view.php: shows a shareable signing link per account-less co-tenant.
 - generate_contract_pdf() already embeds every signature, so the final PDF is one
   merged contract. Degrades gracefully if the migration is not yet applied.
-- To do: send the link automatically (email/WhatsApp) instead of manual share;
-  optional token expiry.
+- Agent-triggered email send: DONE. includes/contracts.php
+  send_cotenant_sign_links() emails each account-less co-tenant their signing
+  link (PHPMailer); contracts/view.php has an agent-only "Send signing links"
+  button (the agent controls when it goes out), plus the copy-link fallback.
+- To do: WhatsApp delivery; optional token expiry; auto-resend reminders.
 
 **Contract template dedup (single source of truth).**  [DONE]
 `agent/generate_contract.php` now builds a data array and calls the shared

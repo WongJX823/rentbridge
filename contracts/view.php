@@ -58,6 +58,25 @@ if (!contract_can_view($contract, current_user_id(), current_role())) {
     die('You are not a party to this contract.');
 }
 
+// Agent (or admin) sends the co-tenant signing links by email.
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'send_sign_links') {
+    verify_csrf();
+    if (current_user_id() !== (int)$contract['agent_id'] && current_role() !== 'admin') {
+        set_flash('danger', 'Only the assigned agent can send signing links.');
+    } elseif ($contract['status'] !== 'pending_signatures') {
+        set_flash('info', 'This contract is no longer awaiting signatures.');
+    } else {
+        $r = send_cotenant_sign_links((int)$contract['id']);
+        if ($r['sent'] > 0)        set_flash('success', "Sent {$r['sent']} signing-link email(s).");
+        if ($r['skipped'] > 0)     set_flash('info', "{$r['skipped']} co-tenant(s) had no email on file.");
+        if (!empty($r['errors']))  set_flash('warning', 'Some emails failed: ' . implode('; ', $r['errors']));
+        if ($r['sent'] === 0 && $r['skipped'] === 0 && empty($r['errors']))
+            set_flash('info', 'No account-less co-tenants need a link.');
+    }
+    header('Location: /rentbridge/contracts/view.php?id=' . (int)$contract['id']);
+    exit;
+}
+
 // Calculate total months for display
 $startTs = strtotime($contract['start_date']);
 $endTs   = strtotime($contract['end_date']);
@@ -73,6 +92,16 @@ $canSignNow   = contract_can_sign($contract, current_user_id());
 $ctStmt = $pdo->prepare("SELECT * FROM co_tenants WHERE tenancy_id = ? ORDER BY sign_order ASC, id ASC");
 $ctStmt->execute([(int)$contract['tenancy_id']]);
 $coTenants = $ctStmt->fetchAll();
+
+// The agent (or admin) controls sending the signing links by email.
+$isContractAgent   = current_user_id() === (int)$contract['agent_id'] || current_role() === 'admin';
+$accountLessToSign = 0;
+foreach ($coTenants as $ct) {
+    if (empty($ct['student_id']) && $ct['status'] !== 'signed'
+        && !empty($ct['sign_token']) && !empty($ct['email'])) {
+        $accountLessToSign++;
+    }
+}
 
 // Check if current user is a co-tenant who can still reject
 $myCoTenant = null;
@@ -315,6 +344,22 @@ $statusBadge = match ($contract['status']) {
                     </div>
                     <?php endforeach; ?>
                 </div>
+
+                <!-- AGENT: email signing links to account-less co-tenants -->
+                <?php if ($contract['status'] === 'pending_signatures' && $isContractAgent && $accountLessToSign > 0): ?>
+                    <form method="POST" class="alert alert-light border d-flex align-items-center gap-3 mt-2">
+                        <?= csrf_field() ?>
+                        <input type="hidden" name="action" value="send_sign_links">
+                        <i class="bi bi-envelope-paper fs-3 text-primary"></i>
+                        <div class="flex-grow-1">
+                            <strong><?= (int)$accountLessToSign ?> co-tenant<?= $accountLessToSign > 1 ? 's' : '' ?> without an account</strong>
+                            <div class="small text-secondary">Email them a secure link so they can sign online.</div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-send me-1"></i> Send signing link<?= $accountLessToSign > 1 ? 's' : '' ?>
+                        </button>
+                    </form>
+                <?php endif; ?>
 
                 <!-- ACTION PROMPT -->
                 <?php if ($contract['status'] === 'pending_signatures'): ?>
