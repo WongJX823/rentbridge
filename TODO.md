@@ -46,8 +46,16 @@ Property-Pending  [DONE]
    plus a Rejected terminal). Reusable component includes/property_status_bar.php; shown on the
    landlord + admin property detail pages and a compact variant on the landlord + admin property lists.
 
-Property map pinpoint (Google Maps)
-   Show each property on a Google Map with a location pin, and let the landlord
+Property map pinpoint (Leaflet + OpenStreetMap)  [IN PROGRESS]
+   Done: reusable includes/map.php (Leaflet, no API key) with rb_map_picker()
+   (interactive click/drag pin + Nominatim "find my address"; saves latitude/
+   longitude) wired into landlord/add_property.php, and rb_map_view() (read-only
+   map + "Get directions") on the public property.php detail page. latitude/
+   longitude now saved on property create + edit.
+   To do: extend the map view to student/property.php, landlord/property.php,
+   admin/property.php; test live (needs Apache + internet for tiles/geocoding).
+   -- original note --
+   Show each property on a map with a location pin, and let the landlord
    drop/adjust the pin when adding a property.
    - `properties` already has `latitude`, `longitude`, `maps_url` columns to use.
    - Landlord add/edit (`landlord/add_property.php`): embed a Google Maps

@@ -261,6 +261,15 @@ ob_start();
             <p style="white-space: pre-line;"><?= e($prop['description']) ?></p>
         <?php endif; ?>
 
+        <!-- LOCATION MAP -->
+        <?php
+        if (!empty($prop['latitude']) && !empty($prop['longitude'])):
+            require_once __DIR__ . '/includes/map.php';
+        ?>
+            <h5 class="mt-4">Location</h5>
+            <?php rb_map_view((float)$prop['latitude'], (float)$prop['longitude'], $prop['title']); ?>
+        <?php endif; ?>
+
         <!-- FACILITIES -->
         <?php if (!empty($prop['facilities'])): ?>
             <h5 class="mt-4">Facilities</h5>

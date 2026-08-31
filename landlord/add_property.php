@@ -53,6 +53,8 @@ $old = [
     'facilities'    => $existing['facilities']    ?? '',
     'furnishing'    => $existing['furnishing']    ?? 'partial',
     'viewing_mode'  => $existing['viewing_mode']  ?? '',
+    'latitude'      => $existing['latitude']      ?? '',
+    'longitude'     => $existing['longitude']     ?? '',
 ];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -171,6 +173,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                            city = ?,
                            postcode = ?,
                            state = ?,
+                           latitude = ?,
+                           longitude = ?,
                            monthly_rent = ?,
                            deposit = ?,
                            description = ?,
@@ -188,6 +192,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $old['city'],
                     $old['postcode'],
                     $old['state'],
+                    $old['latitude']  !== '' ? (float)$old['latitude']  : null,
+                    $old['longitude'] !== '' ? (float)$old['longitude'] : null,
                     (float)$old['monthly_rent'],
                     (float)($old['deposit'] !== '' ? $old['deposit'] : 0),
                     $old['description'] !== '' ? $old['description'] : null,
@@ -205,9 +211,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt = $pdo->prepare("
                     INSERT INTO properties
                         (landlord_id, title, property_type, address, city, postcode, state,
+                         latitude, longitude,
                          monthly_rent, deposit, description, facilities, furnishing,
                          viewing_mode, status)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending_approval')
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending_approval')
                 ");
                 $stmt->execute([
                     $userId,
@@ -217,6 +224,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $old['city'],
                     $old['postcode'],
                     $old['state'],
+                    $old['latitude']  !== '' ? (float)$old['latitude']  : null,
+                    $old['longitude'] !== '' ? (float)$old['longitude'] : null,
                     (float)$old['monthly_rent'],
                     (float)($old['deposit'] !== '' ? $old['deposit'] : 0),
                     $old['description'] !== '' ? $old['description'] : null,
@@ -500,6 +509,19 @@ ob_start();
                     Open Google Maps, find your property, click "Share" → copy link. The pricing benchmark uses distance to UTeM.
                 </small>
                 <div id="mapsUrlStatus" class="small mt-1"></div>
+            </div>
+            <div class="col-12">
+                <label class="form-label fw-semibold">
+                    Pin the exact location
+                    <small class="text-secondary fw-normal">— shown to students on the map</small>
+                </label>
+                <?php
+                require_once __DIR__ . '/../includes/map.php';
+                rb_map_picker(
+                    $old['latitude']  !== '' ? (float)$old['latitude']  : null,
+                    $old['longitude'] !== '' ? (float)$old['longitude'] : null
+                );
+                ?>
             </div>
         </div>
     </div>
