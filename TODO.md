@@ -1,5 +1,22 @@
 # RentBridge — TODO
 
+## Schedule snapshot  (visual: schedule_gantt.png)
+
+Dev -> Deploy -> Test, by phase — P1 Core dev · P2 Data integrity · P3 Testing ·
+P4 Security · P5 Deploy prep · P6 Deploy · P7 UAT.
+
+- **Done:** property status bar; property map pinpoint; academic-calendar
+  importer (GPT-4o); PHPUnit backend suite + single test runner.
+- **In progress:** data integrity (migrations written, not yet applied);
+  security review.
+- **Pending:** durations wiring + duration_type enum fix; multi-role app wiring;
+  apply migrations; full green test run; deploy prep; deploy; UAT.
+- **Report:** Ch2 / §3.3.1 / §4.3.2 done; Ch6 + Ch7 merged into Report_v3.docx;
+  README done; Ch5 (Implementation) not written.
+
+---
+
+
 ## Option A: Academic-calendar–driven tenancy durations
 
 **Goal:** Make tenancy/contract durations match the real UTeM academic calendar instead of approximate month/week arithmetic.
@@ -119,6 +136,34 @@ separate database is needed — keep everything in `dbrb_2026`.
 4. **Backups** — schedule regular dumps as the real recover-lost-data safety net:
    `mysqldump -u root dbrb_2026 > backups/dbrb_2026_$(date +%F).sql`
    and consider enabling the MySQL binary log for point-in-time recovery.
+
+---
+
+## Contracts
+
+**Merge hard-sign (wet) and e-sign into one final contract.**
+Today a contract can have a MIX of signatures: co-tenants WITH an account
+e-sign digitally (signature image embedded in the PDF), while co-tenants WITHOUT
+an account wet-sign the printed copy. Those wet signatures never make it back
+into the digital document, so the "signed" PDF is incomplete for mixed groups.
+- Goal: one final signed document that carries BOTH the embedded e-signatures
+  and the physical/wet signatures.
+- Options: (a) let the agent upload a scan/photo of each wet signature so it is
+  embedded on that signer's line like an e-signature; or (b) let the agent
+  upload the scanned wet-signed pages and append/merge them with the e-signed
+  PDF. Option (a) keeps a single clean PDF.
+- Touches: includes/contracts.php (rb_agreement_html signature blocks +
+  generate_contract_pdf), co_tenants.signature_data, contracts/view.php,
+  agent/upload_signed_contract.php.
+
+**Contract template dedup (single source of truth).**
+`agent/generate_contract.php` still holds its OWN inline copy of the formal
+tenancy-agreement HTML; the signed download already uses the shared
+`rb_agreement_html()` in includes/contracts.php. Refactor the agent page to call
+`rb_agreement_html()` so the blank and signed contracts can never drift apart.
+Low risk: map the page's variables into the function's data array; keep output
+identical. (This drift is what caused the earlier "two different-looking
+contracts" issue.)
 
 ---
 
