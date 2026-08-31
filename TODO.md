@@ -158,14 +158,11 @@ into the digital document, so the "signed" PDF is incomplete for mixed groups.
   generate_contract_pdf), co_tenants.signature_data, contracts/view.php,
   agent/upload_signed_contract.php.
 
-**Contract template dedup (single source of truth).**
-`agent/generate_contract.php` still holds its OWN inline copy of the formal
-tenancy-agreement HTML; the signed download already uses the shared
-`rb_agreement_html()` in includes/contracts.php. Refactor the agent page to call
-`rb_agreement_html()` so the blank and signed contracts can never drift apart.
-Low risk: map the page's variables into the function's data array; keep output
-identical. (This drift is what caused the earlier "two different-looking
-contracts" issue.)
+**Contract template dedup (single source of truth).**  [DONE]
+`agent/generate_contract.php` now builds a data array and calls the shared
+`rb_agreement_html()` in includes/contracts.php (same function used by the signed
+download), so the blank and signed contracts share one template and can no longer
+drift apart. The inline template / buildSignatureBlock have been removed.
 
 ---
 
