@@ -63,6 +63,9 @@ $startTs = strtotime($contract['start_date']);
 $endTs   = strtotime($contract['end_date']);
 $months  = max(1, (int)round(($endTs - $startTs) / (30.44 * 86400)));
 
+// Ensure account-less co-tenants have a signing-link token (backfill).
+ensure_cotenant_sign_tokens((int)$contract['tenancy_id']);
+
 $nextSigner   = contract_next_signer($contract);
 $canSignNow   = contract_can_sign($contract, current_user_id());
 
@@ -293,6 +296,20 @@ $statusBadge = match ($contract['status']) {
                                 </small>
                             <?php else: ?>
                                 <small class="text-secondary"><?= e($ct['full_name']) ?> · Pending</small>
+                            <?php endif; ?>
+
+                            <?php if (empty($ct['signed_at']) && empty($ct['student_id']) && !empty($ct['sign_token'])):
+                                $signLink = (isset($_SERVER['HTTP_HOST']) ? 'http://' . $_SERVER['HTTP_HOST'] : '')
+                                          . cotenant_sign_url($ct['sign_token']); ?>
+                                <div class="mt-2">
+                                    <input type="text" class="form-control form-control-sm text-center small"
+                                           value="<?= e($signLink) ?>" readonly
+                                           onclick="this.select();navigator.clipboard&&navigator.clipboard.writeText(this.value);"
+                                           title="Click to copy the signing link">
+                                    <small class="text-secondary d-block mt-1">
+                                        <i class="bi bi-link-45deg"></i> Share this link so they can sign online.
+                                    </small>
+                                </div>
                             <?php endif; ?>
                         </div>
                     </div>

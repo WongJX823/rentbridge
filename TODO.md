@@ -143,20 +143,22 @@ separate database is needed — keep everything in `dbrb_2026`.
 
 ## Contracts
 
-**Merge hard-sign (wet) and e-sign into one final contract.**
-Today a contract can have a MIX of signatures: co-tenants WITH an account
-e-sign digitally (signature image embedded in the PDF), while co-tenants WITHOUT
-an account wet-sign the printed copy. Those wet signatures never make it back
-into the digital document, so the "signed" PDF is incomplete for mixed groups.
-- Goal: one final signed document that carries BOTH the embedded e-signatures
-  and the physical/wet signatures.
-- Options: (a) let the agent upload a scan/photo of each wet signature so it is
-  embedded on that signer's line like an e-signature; or (b) let the agent
-  upload the scanned wet-signed pages and append/merge them with the e-signed
-  PDF. Option (a) keeps a single clean PDF.
-- Touches: includes/contracts.php (rb_agreement_html signature blocks +
-  generate_contract_pdf), co_tenants.signature_data, contracts/view.php,
-  agent/upload_signed_contract.php.
+**Everyone signs in-system, merged into one contract.**  [DONE]
+Previously co-tenants WITHOUT an account had to wet-sign the printed copy, so
+their signatures never reached the digital PDF and a mixed-group contract could
+never fully e-sign. Now every party signs in-system and all signatures merge
+into one PDF:
+- migrations/add_cotenant_sign_token.sql: adds co_tenants.sign_token.
+- includes/contracts.php: ensure_cotenant_sign_tokens() (tokens for account-less
+  co-tenants, generated at contract creation + backfilled), cotenant_sign_url(),
+  apply_signature_by_token() (link-based signing, same signing order + all-signed
+  activation as apply_signature()).
+- contracts/sign_link.php: public token-signed signature-pad page (no login).
+- contracts/view.php: shows a shareable signing link per account-less co-tenant.
+- generate_contract_pdf() already embeds every signature, so the final PDF is one
+  merged contract. Degrades gracefully if the migration is not yet applied.
+- To do: send the link automatically (email/WhatsApp) instead of manual share;
+  optional token expiry.
 
 **Contract template dedup (single source of truth).**  [DONE]
 `agent/generate_contract.php` now builds a data array and calls the shared

@@ -96,6 +96,9 @@ function create_contract_from_tenancy(int $tenancyId): ?int {
 
         $pdo->commit();
 
+        // Give account-less co-tenants a signing link token.
+        ensure_cotenant_sign_tokens($tenancyId);
+
         // Notify the student (they sign first)
         notify(
             (int)$tenancy['student_id'],
@@ -418,6 +421,127 @@ function apply_signature(int $contractId, int $userId, string $dataUrl): array {
         if ($pdo->inTransaction()) $pdo->rollBack();
         @unlink(__DIR__ . '/../' . $sigPath);
         return ['success' => false, 'all_signed' => false, 'message' => 'Database error: ' . $e->getMessage()];
+    }
+}
+
+/* ============================================================
+ *  Link-based signing for co-tenants without an account
+ * ============================================================ */
+
+/**
+ * Give every account-less co-tenant of a tenancy a secure signing token
+ * (so they can sign via a link). Idempotent; safe no-op if the sign_token
+ * column has not been added yet (migrations/add_cotenant_sign_token.sql).
+ */
+function ensure_cotenant_sign_tokens(int $tenancyId): void {
+    try {
+        $pdo = db();
+        $stmt = $pdo->prepare("
+            SELECT id FROM co_tenants
+             WHERE tenancy_id = ? AND student_id IS NULL
+               AND (sign_token IS NULL OR sign_token = '')
+        ");
+        $stmt->execute([$tenancyId]);
+        foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) as $id) {
+            $pdo->prepare("UPDATE co_tenants SET sign_token = ? WHERE id = ?")
+                ->execute([bin2hex(random_bytes(24)), (int)$id]);
+        }
+    } catch (Throwable $e) {
+        // sign_token column missing (migration not applied yet) — ignore.
+    }
+}
+
+/** Absolute path to the link-signing page for a token. */
+function cotenant_sign_url(string $token): string {
+    return '/rentbridge/contracts/sign_link.php?token=' . urlencode($token);
+}
+
+/**
+ * Apply a signature to a contract via a co-tenant signing token (no login).
+ * Enforces the same signing order as apply_signature(): the token holder can
+ * only sign when they are the next unsigned party.
+ *
+ * Returns: ['success'=>bool, 'all_signed'=>bool, 'message'=>string,
+ *           'wait'=>bool (true when it is not their turn yet)]
+ */
+function apply_signature_by_token(string $token, string $dataUrl): array {
+    $token = trim($token);
+    if ($token === '') return ['success'=>false,'all_signed'=>false,'message'=>'Missing signing token.'];
+
+    $pdo = db();
+    $stmt = $pdo->prepare("
+        SELECT ct.id AS co_tenant_id, ct.tenancy_id, ct.status AS ct_status
+          FROM co_tenants ct
+         WHERE ct.sign_token = ? LIMIT 1
+    ");
+    $stmt->execute([$token]);
+    $row = $stmt->fetch();
+    if (!$row)                      return ['success'=>false,'all_signed'=>false,'message'=>'Invalid signing link.'];
+    if ($row['ct_status'] === 'signed') return ['success'=>false,'all_signed'=>false,'message'=>'You have already signed this contract.'];
+
+    $coTenantId = (int)$row['co_tenant_id'];
+    $stmt = $pdo->prepare("SELECT * FROM contracts WHERE tenancy_id = ? LIMIT 1");
+    $stmt->execute([(int)$row['tenancy_id']]);
+    $contract = $stmt->fetch();
+    if (!$contract)                              return ['success'=>false,'all_signed'=>false,'message'=>'Contract not found.'];
+    if ($contract['status'] !== 'pending_signatures') return ['success'=>false,'all_signed'=>false,'message'=>'This contract is no longer accepting signatures.'];
+
+    $next = contract_next_signer($contract);
+    if ($next['role'] !== 'tenant' || (int)$next['co_tenant_id'] !== $coTenantId) {
+        return ['success'=>false,'all_signed'=>false,'wait'=>true,
+                'message'=>'It is not your turn yet. Please wait until the earlier signer(s) have signed.'];
+    }
+
+    $contractId = (int)$contract['id'];
+    try {
+        $sigPath = save_signature_image($dataUrl, $contractId, 'tenant_' . $coTenantId);
+    } catch (RuntimeException $e) {
+        return ['success'=>false,'all_signed'=>false,'message'=>$e->getMessage()];
+    }
+
+    try {
+        $pdo->beginTransaction();
+        $pdo->prepare("UPDATE co_tenants SET status='signed', signed_at=NOW(), signature_data=? WHERE id=?")
+            ->execute([$sigPath, $coTenantId]);
+
+        $stmt = $pdo->prepare('SELECT * FROM contracts WHERE id = ? LIMIT 1');
+        $stmt->execute([$contractId]);
+        $contract = $stmt->fetch();
+
+        $u = $pdo->prepare("SELECT COUNT(*) FROM co_tenants WHERE tenancy_id = ? AND status != 'signed'");
+        $u->execute([(int)$contract['tenancy_id']]);
+        $allSigned = ((int)$u->fetchColumn() === 0) && !empty($contract['landlord_signed_at']);
+
+        if ($allSigned) {
+            $pdo->prepare('UPDATE contracts SET status="active", activated_at=NOW() WHERE id=?')->execute([$contractId]);
+            $pdo->prepare('UPDATE tenancies SET status="active" WHERE id=?')->execute([(int)$contract['tenancy_id']]);
+            ensure_agent_commission_for_contract($contractId, 'earned');
+        }
+        $pdo->commit();
+
+        if ($allSigned) {
+            $pdfPath = generate_contract_pdf($contractId);
+            $msg = 'Tenancy contract ' . $contract['contract_code'] . ' is now active!'
+                 . ($pdfPath ? ' The signed PDF is now downloadable.' : '');
+            foreach ([(int)$contract['landlord_id'], (int)$contract['agent_id']] as $uid) {
+                if ($uid > 0) notify($uid, 'contract_active', 'Contract activated', $msg,
+                    '/rentbridge/contracts/view.php?id=' . $contractId);
+            }
+        } else {
+            $nx = contract_next_signer($contract);
+            if (!empty($nx['user_id'])) {
+                notify($nx['user_id'], 'contract_your_turn', 'It is your turn to sign',
+                    'Contract ' . $contract['contract_code'] . ' is ready for your signature.',
+                    '/rentbridge/contracts/view.php?id=' . $contractId);
+            }
+        }
+        return ['success'=>true,'all_signed'=>$allSigned,
+                'message'=>$allSigned ? 'Contract activated!' : 'Signature saved.',
+                'contract_code'=>$contract['contract_code']];
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        @unlink(__DIR__ . '/../' . $sigPath);
+        return ['success'=>false,'all_signed'=>false,'message'=>'Database error: ' . $e->getMessage()];
     }
 }
 
