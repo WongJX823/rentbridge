@@ -1,5 +1,6 @@
 ﻿<?php
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/property_status_bar.php';
 require_role('landlord');
 
 $pdo = db();
@@ -204,6 +205,9 @@ ob_start();
                             <div class="small text-secondary mb-2">
                                 <i class="bi bi-geo-alt"></i> <?= e($p['city']) ?>
                             </div>
+
+                            <!-- Compact status progress -->
+                            <div class="mb-2"><?php render_property_status_bar($p, true); ?></div>
 
                             <div class="d-flex justify-content-between align-items-center">
                                 <div>

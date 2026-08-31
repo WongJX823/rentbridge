@@ -174,6 +174,12 @@ ob_start();
     <span class="badge bg-<?= $statusColor ?> fs-6"><?= e($statusLabel) ?></span>
 </div>
 
+<!-- STATUS PROGRESS BAR -->
+<?php
+require_once __DIR__ . '/../includes/property_status_bar.php';
+render_property_status_bar($property);
+?>
+
 <!-- STATUS EXPLANATION -->
 <div class="alert alert-light border d-flex gap-3 align-items-start mb-4">
     <i class="bi bi-info-circle text-secondary fs-4"></i>

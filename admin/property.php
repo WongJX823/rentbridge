@@ -247,6 +247,12 @@ ob_start();
     <span class="badge bg-<?= $statusColor ?> fs-6"><?= e($statusLabel) ?></span>
 </div>
 
+<!-- STATUS PROGRESS BAR -->
+<?php
+require_once __DIR__ . '/../includes/property_status_bar.php';
+render_property_status_bar($property);
+?>
+
 <!-- ACTIONS -->
 <?php if ($property['status'] === 'pending_approval'): ?>
     <div class="bg-white border rounded-3 p-4 mb-4" style="border-left: 4px solid #D4A017 !important;">

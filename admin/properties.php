@@ -1,5 +1,6 @@
 ﻿<?php
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/property_status_bar.php';
 require_role('admin');
 
 $pdo = db();
@@ -224,7 +225,10 @@ ob_start();
                             <strong>RM <?= number_format((float)$p['monthly_rent']) ?></strong>
                             <div class="small text-secondary">/ month</div>
                         </td>
-                        <td><span class="badge bg-<?= $color ?>"><?= e($label) ?></span></td>
+                        <td>
+                            <span class="badge bg-<?= $color ?>"><?= e($label) ?></span>
+                            <div class="mt-2"><?php render_property_status_bar($p, true); ?></div>
+                        </td>
                         <td class="text-end pe-3">
                             <a href="/rentbridge/admin/property.php?id=<?= (int)$p['id'] ?>"
                                class="btn btn-sm btn-outline-dark">

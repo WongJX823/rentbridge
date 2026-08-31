@@ -41,8 +41,78 @@ on insert.
 
 ---
 New
-Property-Pending
-   May do a status progress bar to show status 1 pending -> 2 wait for inspection -> inspection complete -> 4 available now
+Property-Pending  [DONE]
+   Status progress bar (Pending -> Awaiting inspection -> Inspection complete -> Available now,
+   plus a Rejected terminal). Reusable component includes/property_status_bar.php; shown on the
+   landlord + admin property detail pages and a compact variant on the landlord + admin property lists.
+
+Property map pinpoint (Google Maps)
+   Show each property on a Google Map with a location pin, and let the landlord
+   drop/adjust the pin when adding a property.
+   - `properties` already has `latitude`, `longitude`, `maps_url` columns to use.
+   - Landlord add/edit (`landlord/add_property.php`): embed a Google Maps
+     (or Leaflet — see `feat/property-map-leaflet` branch) picker; save the
+     chosen lat/long.
+   - Property detail (`property.php` / `student/property.php`): render the map
+     with the pin + a "Get directions" link (`maps_url`).
+   - Decide provider: Google Maps JS API (needs an API key) vs Leaflet +
+     OpenStreetMap (no key). Note: strict CSP if embedding in artifacts.
+
+## Multi-role support (overlapping roles)
+
+**Goal:** Let one user hold more than one role at the same time (e.g. a student
+who is also a landlord). Today the model is **disjoint + partial**: authorization
+reads a single `users.primary_role`, so a user is effectively one role only, and
+`admin` has no subtype table.
+
+**Status:** DB migration added — `migrations/add_user_roles.sql` creates a
+`user_roles(user_id, role, is_primary)` junction (the explicit overlapping M:M)
+and backfills it from `primary_role` and from existing `students` / `landlords`
+/ `agents` profile rows. **Not yet wired into the app.**
+
+**Still to do (application layer):**
+1. Change authorization to "does the user have role X?" — update `require_role()`
+   / login / dashboards to check `user_roles` (EXISTS/join) instead of comparing
+   `users.primary_role` directly.
+2. Replace hard-coded `WHERE primary_role = 'agent' / 'admin'` queries (e.g.
+   `includes/agent_assignment.php`, `includes/tenancies.php`,
+   `includes/transfers.php`, `includes/reports.php`) with `user_roles` lookups.
+3. Add a **role switcher** in the UI and activate the dormant
+   `users.last_used_role` column to remember the active context.
+4. Add "become a landlord / register another role" flows that insert into
+   `user_roles` + create the matching subtype profile row.
+5. Decide completeness: give `admin` a proper subtype/flag so the model can be
+   made **total** if desired.
+
+---
+
+## Data protection: audit log, soft-delete & backups
+
+**Why:** Many FKs use `ON DELETE CASCADE`, so deleting one `users` row silently
+wipes that user's `tenancies`, `contracts`, `agent_commissions`, `messages`, etc.
+Those are legal/financial records that must be traceable and recoverable. No
+separate database is needed — keep everything in `dbrb_2026`.
+
+**Status:** Audit log added — `migrations/add_audit_log.sql` creates an
+`audit_log` table and AFTER insert/update/delete triggers on `contracts`,
+`tenancies`, and `agent_commissions` (captures old/new JSON snapshots + actor).
+
+**Still to do:**
+1. **Set the actor** on every request before writes:
+   `$pdo->exec('SET @app_user_id = ' . (int)current_user_id());` (e.g. in
+   `includes/auth.php` after login/session bootstrap) so audit rows record who.
+2. **Soft-delete the legal/financial tables.** Add `deleted_at TIMESTAMP NULL`
+   (contracts/tenancies already have `cancelled_*` / `terminated` statuses) and
+   filter it out in queries instead of running `DELETE`. Change
+   `ON DELETE CASCADE` to `RESTRICT` / `SET NULL` on `contracts`, `tenancies`,
+   and `agent_commissions` so a user deletion can never destroy them.
+3. **Extend audit coverage** to more tables (users, properties) and add more
+   columns to the `JSON_OBJECT(...)` snapshots as needed.
+4. **Backups** — schedule regular dumps as the real recover-lost-data safety net:
+   `mysqldump -u root dbrb_2026 > backups/dbrb_2026_$(date +%F).sql`
+   and consider enabling the MySQL binary log for point-in-time recovery.
+
+---
 
 ### Done (interim) — Option B + C
 - `tenancies/new.php`: 1 sem = +18 weeks, 2 sem = +39 weeks (~9 months); cards relabelled.
