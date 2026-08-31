@@ -180,6 +180,15 @@ require_once __DIR__ . '/../includes/property_status_bar.php';
 render_property_status_bar($property);
 ?>
 
+<!-- LOCATION MAP -->
+<?php if (!empty($property['latitude']) && !empty($property['longitude'])):
+    require_once __DIR__ . '/../includes/map.php'; ?>
+    <div class="mb-4">
+        <h6 class="text-secondary text-uppercase small mb-2">Location</h6>
+        <?php rb_map_view((float)$property['latitude'], (float)$property['longitude'], $property['title']); ?>
+    </div>
+<?php endif; ?>
+
 <!-- STATUS EXPLANATION -->
 <div class="alert alert-light border d-flex gap-3 align-items-start mb-4">
     <i class="bi bi-info-circle text-secondary fs-4"></i>

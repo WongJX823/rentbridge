@@ -67,6 +67,20 @@ function current_role(): ?string {
     return $_SESSION['role'] ?? null;
 }
 
+/*
+ * Audit actor — set the MySQL session variable @app_user_id so the audit_log
+ * triggers (migrations/add_audit_log.sql) record WHO made each change. Runs
+ * once per request for logged-in users only (guests never force a DB connect),
+ * and is harmless if the audit_log migration has not been applied.
+ */
+if (is_logged_in()) {
+    try {
+        db()->exec('SET @app_user_id = ' . (int)current_user_id());
+    } catch (Throwable $e) {
+        // DB not ready or session vars unsupported — safe to ignore.
+    }
+}
+
 function login_user(array $user): void {
     // Regenerate session ID on login (security: prevents session fixation)
     session_regenerate_id(true);

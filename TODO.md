@@ -69,8 +69,10 @@ Property map pinpoint (Leaflet + OpenStreetMap)  [IN PROGRESS]
    longitude) wired into landlord/add_property.php, and rb_map_view() (read-only
    map + "Get directions") on the public property.php detail page. latitude/
    longitude now saved on property create + edit.
-   To do: extend the map view to student/property.php, landlord/property.php,
-   admin/property.php; test live (needs Apache + internet for tiles/geocoding).
+   Map view now also on landlord/property.php + admin/property.php (public
+   property.php already had it; student/property.php is only a partial included
+   by property.php, so it is covered).
+   To do: test live (needs Apache + internet for tiles/geocoding).
    -- original note --
    Show each property on a map with a location pin, and let the landlord
    drop/adjust the pin when adding a property.
@@ -123,9 +125,9 @@ separate database is needed — keep everything in `dbrb_2026`.
 `tenancies`, and `agent_commissions` (captures old/new JSON snapshots + actor).
 
 **Still to do:**
-1. **Set the actor** on every request before writes:
-   `$pdo->exec('SET @app_user_id = ' . (int)current_user_id());` (e.g. in
-   `includes/auth.php` after login/session bootstrap) so audit rows record who.
+1. [DONE] **Set the actor** — includes/auth.php now runs
+   `SET @app_user_id = <id>` once per request for logged-in users, so audit rows
+   record who made each change.
 2. **Soft-delete the legal/financial tables.** Add `deleted_at TIMESTAMP NULL`
    (contracts/tenancies already have `cancelled_*` / `terminated` statuses) and
    filter it out in queries instead of running `DELETE`. Change
