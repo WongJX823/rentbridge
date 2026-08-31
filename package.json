@@ -11,7 +11,8 @@
     "test:flow4": "playwright test tests/flow4-housemate-post.spec.js",
     "test:flow5": "playwright test tests/flow5-agent-inspection.spec.js",
     "test:flow6": "playwright test tests/flow6-admin.spec.js",
-    "test:report": "playwright show-report"
+    "test:report": "playwright show-report",
+    "test:all": "php tests/run_all.php"
   },
   "devDependencies": {
     "@playwright/test": "^1.45.0"
