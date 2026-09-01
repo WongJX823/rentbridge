@@ -63,16 +63,15 @@ Property-Pending  [DONE]
    plus a Rejected terminal). Reusable component includes/property_status_bar.php; shown on the
    landlord + admin property detail pages and a compact variant on the landlord + admin property lists.
 
-Property map pinpoint (Leaflet + OpenStreetMap)  [IN PROGRESS]
-   Done: reusable includes/map.php (Leaflet, no API key) with rb_map_picker()
-   (interactive click/drag pin + Nominatim "find my address"; saves latitude/
-   longitude) wired into landlord/add_property.php, and rb_map_view() (read-only
-   map + "Get directions") on the public property.php detail page. latitude/
-   longitude now saved on property create + edit.
-   Map view now also on landlord/property.php + admin/property.php (public
-   property.php already had it; student/property.php is only a partial included
-   by property.php, so it is covered).
-   To do: test live (needs Apache + internet for tiles/geocoding).
+Property map pinpoint (Google Maps)  [IN PROGRESS]
+   Done: reusable includes/map.php with rb_map_view() = KEYLESS Google Maps embed
+   iframe + "Get directions" (no API key needed) on property.php, landlord/
+   property.php, admin/property.php; and rb_map_picker() = interactive Google
+   Maps JS picker (click/drag pin + Geocoder "find my address") wired into
+   landlord/add_property.php, saving latitude/longitude on create + edit. The
+   picker needs a Google Maps API key in config/google.php (git-ignored); with
+   no key it degrades to manual latitude/longitude inputs so the form still works.
+   To do: add a real API key + restrict it to the domain; test live.
    -- original note --
    Show each property on a map with a location pin, and let the landlord
    drop/adjust the pin when adding a property.

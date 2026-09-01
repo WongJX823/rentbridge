@@ -8,3 +8,4 @@ credentials.json
 
 # Local API keys
 config/openai.php
+config/google.php
