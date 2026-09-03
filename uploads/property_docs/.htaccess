@@ -1,11 +1,6 @@
-# Prevent execution of any uploaded scripts
-<FilesMatch "\.(php|php3|php4|php5|phtml|pl|py|jsp|asp|sh|cgi)$">
-    Order allow,deny
-    Deny from all
-</FilesMatch>
-
-# Allow only specific file types
-<FilesMatch "\.(pdf|jpg|jpeg|png|webp)$">
-    Order allow,deny
-    Allow from all
-</FilesMatch>
+# Private ownership documents (IC copies, geran, utility bills) — landlord,
+# assigned agent, and admin only. Served exclusively through
+# documents/property_doc.php, which checks that authorization; never as a
+# plain static file.
+Order deny,allow
+Deny from all

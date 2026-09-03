@@ -28,7 +28,8 @@ $stmt = $pdo->prepare("
            a.staff_id       AS agent_staff_id,
            a.department     AS agent_department,
            au.email         AS agent_email,
-           ua.full_name     AS uploaded_by_name
+           ua.full_name     AS uploaded_by_name,
+           c.id             AS contract_id
       FROM tenancies b
       JOIN properties p ON p.id = b.property_id
       JOIN users su ON su.id = b.student_id
@@ -38,6 +39,7 @@ $stmt = $pdo->prepare("
       LEFT JOIN users au ON au.id = b.agent_id
       LEFT JOIN agents a ON a.user_id = b.agent_id
       LEFT JOIN agents ua ON ua.user_id = b.signed_uploaded_by
+      LEFT JOIN contracts c ON c.tenancy_id = b.id
      WHERE b.id = ?
      LIMIT 1
 ");
@@ -340,7 +342,7 @@ ob_start();
                 </div>
             </div>
             <div class="col-md-4 text-md-end">
-                <a href="/rentbridge/<?= e($tenancy['signed_contract_path']) ?>"
+                <a href="/rentbridge/contracts/pdf.php?id=<?= (int)$tenancy['contract_id'] ?>"
                    target="_blank" class="btn btn-sm btn-outline-dark">
                     <i class="bi bi-file-pdf me-1"></i> View signed PDF
                 </a>

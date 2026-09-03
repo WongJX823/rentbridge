@@ -444,7 +444,7 @@ foreach ($coTenants as $ct) {
                 Uploaded <?= e(date('d M Y, H:i', strtotime($contract['signed_uploaded_at']))) ?>
             </p>
         </div>
-        <a href="/rentbridge/<?= e($contract['signed_pdf_path']) ?>"
+        <a href="/rentbridge/contracts/pdf.php?id=<?= (int)$contract['id'] ?>"
            target="_blank" class="btn btn-outline-dark btn-sm">
             <i class="bi bi-file-earmark-pdf me-1"></i> Download signed copy
         </a>
@@ -491,7 +491,7 @@ if ($mixedSigningPending): ?>
             <i class="bi bi-upload me-1"></i> Upload &amp; activate tenancy
         </button>
         <?php if (!empty($contract['contract_pdf_path'])): ?>
-        <a href="/rentbridge/<?= e($contract['contract_pdf_path']) ?>" target="_blank"
+        <a href="/rentbridge/contracts/pdf.php?id=<?= (int)$contract['id'] ?>" target="_blank"
            class="btn btn-outline-secondary">
             <i class="bi bi-download me-1"></i> Download digital draft
         </a>

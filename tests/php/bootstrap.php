@@ -61,7 +61,7 @@ rb_run(sprintf('"%s" %s < "%s"', $mysql, $cred, $create));
 
 // 2. Import schema + seed — strip any USE / CREATE DATABASE lines so the import
 //    can only ever land in dbrb_2026_test.
-$schema = file_get_contents($root . '/dbrb_2026.sql');
+$schema = file_get_contents($root . '/db/dbrb_2026.sql');
 $schema = preg_replace('/^\s*(USE|CREATE\s+DATABASE|DROP\s+DATABASE)\b.*$/mi', '', $schema);
 $schemaTmp = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'rb_schema_' . getmypid() . '.sql';
 file_put_contents($schemaTmp, $schema);

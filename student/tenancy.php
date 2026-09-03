@@ -317,7 +317,7 @@ $months  = max(1, (int)round(($endTs - $startTs) / (30.44 * 86400)));
 
                         <div class="d-flex gap-2 flex-wrap">
                             <?php if ($bestPdf && $pdfFullPath && file_exists($pdfFullPath)): ?>
-                                <a href="/rentbridge/<?= e($bestPdf) ?><?= $cacheBust ?>"
+                                <a href="/rentbridge/contracts/pdf.php?id=<?= (int)$tenancy['contract_id'] ?>"
                                    target="_blank" class="btn btn-success">
                                     <i class="bi bi-download me-1"></i> Download PDF
                                 </a>

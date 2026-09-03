@@ -1035,7 +1035,7 @@ ob_start();
                     <?php foreach ($existingDocs as $doc): ?>
                         <tr>
                             <td><small><?= e(ucwords(str_replace('_', ' ', $doc['document_type']))) ?></small></td>
-                            <td><small><a href="/rentbridge/<?= e($doc['file_path']) ?>" target="_blank">View</a></small></td>
+                            <td><small><a href="/rentbridge/documents/property_doc.php?id=<?= (int)$doc['id'] ?>" target="_blank">View</a></small></td>
                             <td><small><?= e($doc['notes'] ?: '—') ?></small></td>
                             <td><small><?= e(date('d M Y', strtotime($doc['uploaded_at']))) ?></small></td>
                             <td><small>

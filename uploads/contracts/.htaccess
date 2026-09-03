@@ -1,5 +1,6 @@
 # Contract PDFs contain full legal/personal detail — served exclusively
 # through contracts/pdf.php, which checks contract_can_view(); never as a
-# plain static file.
+# plain static file. (Previously had no .htaccess at all — also missing
+# the usual script-execution block.)
 Order deny,allow
 Deny from all

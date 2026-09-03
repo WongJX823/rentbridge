@@ -190,7 +190,7 @@ function pretty_filter(string $s): string {
                                 </div>
                                 <div class="d-flex gap-1 justify-content-md-end">
                                     <?php if (!empty($c['contract_pdf_path']) && $pdfFullPath && file_exists($pdfFullPath)): ?>
-                                        <a href="/rentbridge/<?= e($c['contract_pdf_path']) ?><?= $cacheBust ?>"
+                                        <a href="/rentbridge/contracts/pdf.php?id=<?= (int)$c['id'] ?>"
                                            target="_blank" class="btn btn-sm btn-success" title="Download PDF">
                                             <i class="bi bi-download"></i>
                                         </a>

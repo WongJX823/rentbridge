@@ -1,0 +1,5 @@
+# Signed contract PDFs — served exclusively through contracts/pdf.php,
+# which checks contract_can_view(); never as a plain static file.
+# (Inherits from uploads/contracts/.htaccess too; kept explicit here.)
+Order deny,allow
+Deny from all

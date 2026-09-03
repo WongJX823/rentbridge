@@ -151,11 +151,8 @@ $statusBadge = match ($contract['status']) {
                 </p>
                 <div class="d-flex gap-2">
                     <span class="badge bg-<?= $statusBadge[1] ?> fs-6"><?= e($statusBadge[0]) ?></span>
-                    <?php if (!empty($contract['contract_pdf_path'])):
-    $pdfFullPath = __DIR__ . '/../' . $contract['contract_pdf_path'];
-    $cacheBust = file_exists($pdfFullPath) ? '?v=' . filemtime($pdfFullPath) : '';
-?>
-    <a href="/rentbridge/<?= e($contract['contract_pdf_path']) ?><?= $cacheBust ?>"
+                    <?php if (!empty($contract['contract_pdf_path'])): ?>
+    <a href="/rentbridge/contracts/pdf.php?id=<?= (int)$contract['id'] ?>"
        class="btn btn-success btn-sm" target="_blank">
         <i class="bi bi-download me-1"></i> Download PDF
     </a>
@@ -285,7 +282,7 @@ $statusBadge = match ($contract['status']) {
                             <div class="signature-slot mb-2 d-flex align-items-center justify-content-center"
                                  style="height:90px; background:#FAFAFA; border:1px dashed var(--rb-line); border-radius:6px;">
                                 <?php if (!empty($contract['landlord_signature'])): ?>
-                                    <img src="/rentbridge/<?= e($contract['landlord_signature']) ?>" alt="signature"
+                                    <img src="/rentbridge/contracts/signature.php?contract_id=<?= (int)$contract['id'] ?>&field=landlord" alt="signature"
                                          style="max-height:80px; max-width:90%;">
                                 <?php else: ?>
                                     <span class="text-secondary small">Not signed yet</span>
@@ -312,7 +309,7 @@ $statusBadge = match ($contract['status']) {
                             <div class="signature-slot mb-2 d-flex align-items-center justify-content-center"
                                  style="height:90px; background:#FAFAFA; border:1px dashed var(--rb-line); border-radius:6px;">
                                 <?php if (!empty($ct['signature_data'])): ?>
-                                    <img src="/rentbridge/<?= e($ct['signature_data']) ?>" alt="signature"
+                                    <img src="/rentbridge/contracts/signature.php?contract_id=<?= (int)$contract['id'] ?>&co_tenant_id=<?= (int)$ct['id'] ?>" alt="signature"
                                          style="max-height:80px; max-width:90%;">
                                 <?php else: ?>
                                     <span class="text-secondary small">Not signed yet</span>

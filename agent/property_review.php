@@ -243,7 +243,7 @@ ob_start();
                 <ul class="list-unstyled mb-0">
                     <?php foreach ($docs as $doc): ?>
                         <li class="mb-2">
-                            <a href="/rentbridge/<?= e($doc['file_path']) ?>" target="_blank">
+                            <a href="/rentbridge/documents/property_doc.php?id=<?= (int)$doc['id'] ?>" target="_blank">
                                 <i class="bi bi-file-earmark-text"></i>
                                 <?= e($doc['document_type'] ?? 'Document') ?>
                             </a>

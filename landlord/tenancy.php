@@ -489,7 +489,7 @@ ob_start();
             View contract <i class="bi bi-arrow-right ms-1"></i>
         </a>
         <?php if ($bestLandlordPdf && $landlordPdfFull && file_exists($landlordPdfFull)): ?>
-            <a href="/rentbridge/<?= e($bestLandlordPdf) ?>" target="_blank"
+            <a href="/rentbridge/contracts/pdf.php?id=<?= (int)$tenancy['contract_id'] ?>" target="_blank"
                class="btn btn-sm btn-outline-success">
                 <i class="bi bi-download me-1"></i> Download PDF
             </a>

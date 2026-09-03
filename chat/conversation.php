@@ -710,7 +710,7 @@ if (
                         $contractPdfUrl = null;
                         if (!empty($meta['tenancy_id'])) {
                             $stmt = $pdo->prepare("
-                                SELECT t.status,
+                                SELECT t.status, c.id AS contract_id,
                                        COALESCE(c.contract_pdf_path, c.signed_pdf_path, c.generated_pdf_path) AS pdf_path
                                   FROM tenancies t
                                   LEFT JOIN contracts c ON c.tenancy_id = t.id
@@ -720,7 +720,9 @@ if (
                             $stmt->execute([(int)$meta['tenancy_id']]);
                             $tRow = $stmt->fetch();
                             $tenancyStatus  = $tRow['status'] ?? null;
-                            $contractPdfUrl = !empty($tRow['pdf_path']) ? '/rentbridge/' . $tRow['pdf_path'] : null;
+                            $contractPdfUrl = !empty($tRow['pdf_path'])
+                                ? '/rentbridge/contracts/pdf.php?id=' . (int)$tRow['contract_id']
+                                : null;
                         }
                         // Hide action buttons if agent has sent a newer active form after this response
                         $chkStmt = $pdo->prepare("

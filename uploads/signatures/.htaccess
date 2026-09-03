@@ -1,0 +1,5 @@
+# E-signature images — served exclusively through contracts/signature.php,
+# which checks contract_can_view(); never as a plain static file.
+# (Previously had no .htaccess at all.)
+Order deny,allow
+Deny from all

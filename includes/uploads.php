@@ -213,13 +213,23 @@ function can_view_property_documents(int $propertyId, int $userId, string $role)
     }
 
     if ($role === 'agent') {
-        // Agent can view if they're currently assigned to a tenancy on this property
+        // Agent can view if they're currently assigned to a tenancy on this property...
         $stmt = $pdo->prepare("
             SELECT 1 FROM tenancies
              WHERE property_id = ?
                AND agent_id = ?
                AND status IN ('agent_assigned','agent_verifying','agent_verified','contract_pending','active')
              LIMIT 1
+        ");
+        $stmt->execute([$propertyId, $userId]);
+        if ($stmt->fetchColumn()) return true;
+
+        // ...or assigned to review/inspect the property itself (before any tenancy exists)
+        $stmt = $pdo->prepare("
+            SELECT 1 FROM properties
+             WHERE id = ?
+               AND assigned_agent_id = ?
+               AND agent_status IN ('pending','inspecting','accepted')
         ");
         $stmt->execute([$propertyId, $userId]);
         return (bool)$stmt->fetchColumn();
