@@ -6,13 +6,31 @@ Dev -> Deploy -> Test, by phase — P1 Core dev · P2 Data integrity · P3 Testi
 P4 Security · P5 Deploy prep · P6 Deploy · P7 UAT.
 
 - **Done:** property status bar; property map pinpoint; academic-calendar
-  importer (GPT-4o); PHPUnit backend suite + single test runner.
-- **In progress:** data integrity (migrations written, not yet applied);
+  importer (GPT-4o); PHPUnit backend suite + single test runner; migrations
+  applied to dev DB; Playwright E2E suite repaired and passing (36/39, 3
+  justified skips for real product gaps — see "Found while fixing E2E" below).
+- **In progress:** data integrity (soft-delete + audit coverage still open);
   security review.
 - **Pending:** durations wiring + duration_type enum fix; multi-role app wiring;
-  apply migrations; full green test run; deploy prep; deploy; UAT.
+  deploy prep; deploy; UAT.
 - **Report:** Ch2 / §3.3.1 / §4.3.2 done; Ch6 + Ch7 merged into Report_v3.docx;
   README done; Ch5 (Implementation) not written.
+
+### Found while fixing E2E (two real gaps, not test bugs)
+
+- **`/verify.php` doesn't exist.** Referenced as a live feature in `faq.php`
+  ("Anyone can verify it at `/verify.php`") and in the contract templates
+  (`rentbridge.com/verify/<code>` footer line), but there is no such file
+  anywhere in the codebase. Either build it (public, no-login, looks up a
+  contract by `contract_code` and shows non-sensitive details) or update the
+  copy that promises it.
+- **No UI to add a co-tenant to an existing tenancy.** `includes/co_tenants.php`
+  has `add_co_tenant()`, but the only caller is `chat/submit_cotenants.php` —
+  the old landlord-modal path, which is unreachable now that
+  `chat/conversation.php` always sets `recipient_role=student` on the tenant
+  info form. Neither `agent/case.php` nor `admin/tenancy.php` exposes any way
+  to add a late co-tenant (e.g. after the primary has already submitted, or
+  after some parties have signed).
 
 ---
 
@@ -206,11 +224,22 @@ separate database is needed — keep everything in `dbrb_2026`.
 1. [DONE] **Set the actor** — includes/auth.php now runs
    `SET @app_user_id = <id>` once per request for logged-in users, so audit rows
    record who made each change.
-2. **Soft-delete the legal/financial tables.** Add `deleted_at TIMESTAMP NULL`
-   (contracts/tenancies already have `cancelled_*` / `terminated` statuses) and
-   filter it out in queries instead of running `DELETE`. Change
-   `ON DELETE CASCADE` to `RESTRICT` / `SET NULL` on `contracts`, `tenancies`,
-   and `agent_commissions` so a user deletion can never destroy them.
+2. [DONE] **Soft-delete the legal/financial tables** —
+   `migrations/add_soft_delete_and_restrict_cascade.sql` adds `deleted_at
+   TIMESTAMP NULL` to `contracts`, `tenancies`, and `agent_commissions`, and
+   changes every `ON DELETE CASCADE` on those tables (from `users` and
+   `properties`) to `RESTRICT`. Verified live: deleting a landlord or student
+   with an active tenancy now fails with an FK error instead of silently
+   wiping the tenancy/contract/commission chain. `tenancies.agent_id` and
+   `.cancelled_by` were left on `SET NULL` on purpose — losing that reference
+   doesn't destroy the tenancy record itself.
+   Nothing in the app issues a hard `DELETE` on these three tables today, so
+   `deleted_at` is laid down for future use, not yet read by any query — add
+   `WHERE deleted_at IS NULL` wherever a delete-this-record UI gets built.
+   One adjacent gap surfaced but left alone (out of scope for this item):
+   `properties.landlord_id` -> `users` is still `CASCADE`, so deleting a
+   landlord still deletes their properties outright (RESTRICT now stops it
+   one hop later, at tenancies/contracts).
 3. **Extend audit coverage** to more tables (users, properties) and add more
    columns to the `JSON_OBJECT(...)` snapshots as needed.
 4. **Backups** — schedule regular dumps as the real recover-lost-data safety net:
