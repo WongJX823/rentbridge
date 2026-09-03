@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/tenancies.php';
 require_once __DIR__ . '/../includes/agent_assignment.php';
+require_once __DIR__ . '/../includes/contracts.php';
 require_role('agent');
 
 $caseId = (int)($_GET['id'] ?? $_POST['tenancy_id'] ?? 0);
@@ -417,6 +418,32 @@ foreach ($coTenants as $ct) {
         the signed pages, combine into a single PDF, and upload here.
     </p>
 
+    <?php
+    // Mixed signing: some parties already e-signed digitally, others chose to
+    // sign a physical copy instead (contracts/sign.php). List who's pending.
+    $nextSignerInfo = contract_next_signer($contract);
+    if ($nextSignerInfo['role'] === 'awaiting_manual'):
+        $manualParties = [];
+        $stmt = $pdo->prepare("
+            SELECT full_name FROM co_tenants
+             WHERE tenancy_id = ? AND status != 'signed' AND sign_method = 'manual'
+             ORDER BY sign_order ASC
+        ");
+        $stmt->execute([(int)$case['id']]);
+        foreach ($stmt->fetchAll() as $row) $manualParties[] = $row['full_name'];
+        if ($contract['landlord_sign_method'] === 'manual' && empty($contract['landlord_signed_at'])) {
+            $manualParties[] = 'Landlord';
+        }
+    ?>
+    <div class="alert alert-warning small mb-3">
+        <i class="bi bi-file-earmark-person me-1"></i>
+        <strong><?= e(implode(', ', $manualParties)) ?></strong>
+        chose to sign a physical copy instead of e-signing. Everyone else has already
+        e-signed — print/regenerate the contract, collect their handwritten
+        signature(s), then upload the merged PDF below to activate the tenancy.
+    </div>
+    <?php endif; ?>
+
     <form method="POST" action="/rentbridge/agent/upload_signed_contract.php"
           enctype="multipart/form-data">
         <?= csrf_field() ?>
@@ -449,55 +476,6 @@ foreach ($coTenants as $ct) {
             <i class="bi bi-file-earmark-pdf me-1"></i> Download signed copy
         </a>
     </div>
-<?php endif; ?>
-
-<?php
-// E-sign mixed path: all turns done but one or more parties chose manual signing
-$mixedSigningPending = $contract
-    && $contract['status'] !== 'active'
-    && !empty($contract['student_signed_at'])
-    && !empty($contract['landlord_signed_at'])
-    && !empty($contract['agent_signed_at'])
-    && ($contract['student_sign_method'] === 'manual' || $contract['landlord_sign_method'] === 'manual')
-    && empty($contract['generated_pdf_path']);
-if ($mixedSigningPending): ?>
-<hr class="my-3">
-<div class="alert alert-warning d-flex gap-3 align-items-start mb-3">
-    <i class="bi bi-file-earmark-person fs-4 mt-1"></i>
-    <div>
-        <strong>Physical signature collection required</strong>
-        <div class="small mt-1">
-            <?php
-            $manualParties = [];
-            if ($contract['student_sign_method'] === 'manual') $manualParties[] = 'Tenant';
-            if ($contract['landlord_sign_method'] === 'manual') $manualParties[] = 'Landlord';
-            echo implode(' and ', $manualParties);
-            ?> chose to sign a physical copy.
-            Print the contract, collect their handwritten signatures, then upload the merged PDF below.
-        </div>
-    </div>
-</div>
-<h6 class="text-secondary text-uppercase small mb-2">Upload merged signed contract</h6>
-<form method="POST" action="/rentbridge/agent/upload_signed_contract.php" enctype="multipart/form-data">
-    <?= csrf_field() ?>
-    <input type="hidden" name="tenancy_id" value="<?= (int)$case['id'] ?>">
-    <div class="mb-3">
-        <input type="file" name="signed_pdf" class="form-control" accept="application/pdf" required>
-        <small class="text-secondary">PDF only, max 20MB</small>
-    </div>
-    <div class="d-flex gap-2 flex-wrap">
-        <button type="submit" class="btn btn-success"
-                onclick="return confirm('Upload merged signed contract? This will activate the tenancy.');">
-            <i class="bi bi-upload me-1"></i> Upload &amp; activate tenancy
-        </button>
-        <?php if (!empty($contract['contract_pdf_path'])): ?>
-        <a href="/rentbridge/contracts/pdf.php?id=<?= (int)$contract['id'] ?>" target="_blank"
-           class="btn btn-outline-secondary">
-            <i class="bi bi-download me-1"></i> Download digital draft
-        </a>
-        <?php endif; ?>
-    </div>
-</form>
 <?php endif; ?>
 </div>
 <?php endif; ?>

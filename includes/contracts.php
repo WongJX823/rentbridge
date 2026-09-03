@@ -223,13 +223,16 @@ function contract_can_view(array $contract, int $userId, string $role): bool {
 
 /**
  * Determine whose turn it is to sign (order: all co-tenants by sign_order → landlord).
- * Returns: ['role' => 'tenant'|'landlord'|'all_done', 'co_tenant_id' => ?int, 'user_id' => ?int, 'name' => string]
+ * Parties who already chose 'manual' (sign on a physical copy) are skipped —
+ * they're resolved later by the agent uploading a merged signed PDF, not
+ * through this e-sign queue.
+ * Returns: ['role' => 'tenant'|'landlord'|'awaiting_manual'|'all_done', 'co_tenant_id' => ?int, 'user_id' => ?int, 'name' => string]
  */
 function contract_next_signer(array $contract): array {
     $pdo = db();
     $stmt = $pdo->prepare("
         SELECT id, student_id, full_name FROM co_tenants
-         WHERE tenancy_id = ? AND status != 'signed'
+         WHERE tenancy_id = ? AND status != 'signed' AND sign_method != 'manual'
          ORDER BY sign_order ASC, id ASC
          LIMIT 1
     ");
@@ -239,9 +242,27 @@ function contract_next_signer(array $contract): array {
     if ($next) {
         return ['role' => 'tenant', 'co_tenant_id' => (int)$next['id'], 'user_id' => (int)$next['student_id'], 'name' => $next['full_name']];
     }
-    if (empty($contract['landlord_signed_at'])) {
+
+    $landlordIsManual = ($contract['landlord_sign_method'] ?? 'esign') === 'manual';
+    if (empty($contract['landlord_signed_at']) && !$landlordIsManual) {
         return ['role' => 'landlord', 'co_tenant_id' => null, 'user_id' => (int)$contract['landlord_id'], 'name' => 'Landlord'];
     }
+
+    // Every e-signing party is done — but if anyone (tenant or landlord)
+    // chose manual and hasn't been resolved yet, the contract isn't
+    // actually finished; it's waiting on the agent's physical-copy upload.
+    $stmt = $pdo->prepare("
+        SELECT COUNT(*) FROM co_tenants
+         WHERE tenancy_id = ? AND status != 'signed' AND sign_method = 'manual'
+    ");
+    $stmt->execute([(int)$contract['tenancy_id']]);
+    $manualTenantsPending = (int)$stmt->fetchColumn() > 0;
+    $manualLandlordPending = $landlordIsManual && empty($contract['landlord_signed_at']);
+
+    if ($manualTenantsPending || $manualLandlordPending) {
+        return ['role' => 'awaiting_manual', 'co_tenant_id' => null, 'user_id' => null, 'name' => ''];
+    }
+
     return ['role' => 'all_done', 'co_tenant_id' => null, 'user_id' => null, 'name' => ''];
 }
 
@@ -250,8 +271,55 @@ function contract_next_signer(array $contract): array {
  */
 function contract_can_sign(array $contract, int $userId): bool {
     $next = contract_next_signer($contract);
-    if ($next['role'] === 'all_done') return false;
+    if ($next['role'] === 'all_done' || $next['role'] === 'awaiting_manual') return false;
     return $userId === $next['user_id'];
+}
+
+/**
+ * Record that it's this user's turn and they chose to sign a physical copy
+ * instead of e-signing. Does NOT mark them as signed — the agent still has
+ * to collect the physical signature and upload the merged PDF
+ * (agent/upload_signed_contract.php) before the contract can activate.
+ */
+function choose_manual_signing(int $contractId, int $userId): array {
+    $pdo = db();
+    $stmt = $pdo->prepare('SELECT * FROM contracts WHERE id = ? LIMIT 1');
+    $stmt->execute([$contractId]);
+    $contract = $stmt->fetch();
+
+    if (!$contract) {
+        return ['success' => false, 'message' => 'Contract not found.'];
+    }
+    if ($contract['status'] !== 'pending_signatures') {
+        return ['success' => false, 'message' => 'Contract is no longer accepting signatures.'];
+    }
+
+    $nextInfo = contract_next_signer($contract);
+    if ($userId !== $nextInfo['user_id']) {
+        return ['success' => false, 'message' => 'It is not your turn to sign, or you are not a party to this contract.'];
+    }
+
+    if ($nextInfo['role'] === 'tenant') {
+        $pdo->prepare("UPDATE co_tenants SET sign_method = 'manual' WHERE id = ?")
+            ->execute([$nextInfo['co_tenant_id']]);
+    } else {
+        $pdo->prepare("UPDATE contracts SET landlord_sign_method = 'manual' WHERE id = ?")
+            ->execute([$contractId]);
+    }
+
+    // Notify the agent so they know to arrange physical signature collection.
+    if (function_exists('notify') && !empty($contract['agent_id'])) {
+        notify(
+            (int)$contract['agent_id'],
+            'contract_manual_signing_chosen',
+            'A party chose to sign a physical copy',
+            $nextInfo['name'] . ' will sign contract ' . $contract['contract_code']
+                . ' on a physical copy instead of e-signing — collect their signature and upload the merged PDF.',
+            '/rentbridge/agent/case.php?id=' . (int)$contract['tenancy_id']
+        );
+    }
+
+    return ['success' => true, 'message' => 'Noted — you\'ll sign a physical copy instead. Your agent has been notified.'];
 }
 
 /* ============================================================
@@ -963,251 +1031,6 @@ function generate_contract_pdf(int $contractId): ?string {
     }
 }
 
-/**
- * Legacy dompdf-based generator (no longer used by default; retained for reference).
- */
-function generate_contract_pdf_legacy_dompdf(int $contractId): ?string {
-    require_once __DIR__ . '/../vendor/autoload.php';
-
-    $pdo = db();
-    $stmt = $pdo->prepare("
-        SELECT c.*,
-               p.title       AS property_title,
-               p.property_type,
-               p.address     AS property_address,
-               p.city        AS property_city,
-               p.state       AS property_state,
-               p.postcode    AS property_postcode,
-               p.furnishing,
-               p.facilities,
-               s.full_name   AS student_name,
-               s.matric_no   AS student_matric,
-               s.phone       AS student_phone,
-               us.email      AS student_email,
-               l.full_name   AS landlord_name,
-               l.ic_no       AS landlord_ic,
-               l.phone       AS landlord_phone,
-               ul.email      AS landlord_email,
-               a.full_name   AS agent_name,
-               a.staff_id    AS agent_staff_id,
-               a.department  AS agent_department,
-               a.phone       AS agent_phone,
-               ua.email      AS agent_email
-          FROM contracts c
-          JOIN properties p ON p.id = c.property_id
-          JOIN students   s ON s.user_id = c.student_id
-          JOIN users      us ON us.id = c.student_id
-          JOIN landlords  l ON l.user_id = c.landlord_id
-          JOIN users      ul ON ul.id = c.landlord_id
-          JOIN agents     a ON a.user_id = c.agent_id
-          JOIN users      ua ON ua.id = c.agent_id
-         WHERE c.id = ?
-         LIMIT 1
-    ");
-    $stmt->execute([$contractId]);
-    $c = $stmt->fetch();
-    if (!$c) return null;
-
-    // Fetch co-tenants with their signatures
-    $ctStmt = $pdo->prepare("SELECT * FROM co_tenants WHERE tenancy_id = ? ORDER BY sign_order ASC, id ASC");
-    $ctStmt->execute([(int)$c['tenancy_id']]);
-    $coTenants = $ctStmt->fetchAll();
-
-    $base        = __DIR__ . '/../';
-    $sigLandlord = !empty($c['landlord_signature']) ? realpath($base . $c['landlord_signature']) : null;
-
-    // Helper for safe HTML escape
-    $h = fn(?string $v): string => htmlspecialchars($v ?? '', ENT_QUOTES, 'UTF-8');
-
-    // Calculate months
-    $startTs = strtotime($c['start_date']);
-    $endTs   = strtotime($c['end_date']);
-    $months  = max(1, (int)round(($endTs - $startTs) / (30.44 * 86400)));
-    $total   = $months * (float)$c['monthly_rent'];
-
-    // Build PDF HTML (note: dompdf has slightly different CSS support than browsers)
-    ob_start();
-    ?>
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="UTF-8">
-        <style>
-            @page { margin: 50px 60px; }
-            body  { font-family: DejaVu Sans, sans-serif; font-size: 11px; color: #0F2C52; line-height: 1.5; }
-            h1    { font-size: 22px; margin: 0 0 4px; }
-            h2    { font-size: 14px; margin: 22px 0 8px; border-bottom: 2px solid #0F2C52; padding-bottom: 4px; }
-            h3    { font-size: 11px; margin: 0 0 4px; text-transform: uppercase; letter-spacing: 0.08em; color: #6B7B91; }
-            .center  { text-align: center; }
-            .small   { font-size: 9.5px; color: #6B7B91; }
-            .muted   { color: #6B7B91; }
-            .accent  { color: #2E8B57; font-weight: bold; }
-            table  { width: 100%; border-collapse: collapse; margin-top: 4px; }
-            table td { padding: 6px 8px; border: 1px solid #E5E1D8; vertical-align: top; }
-            .party { width: 33%; }
-            .terms-list { white-space: pre-wrap; }
-            .sig-box   { border: 1px solid #E5E1D8; padding: 12px; text-align: center; }
-            .sig-img   { max-height: 70px; max-width: 200px; }
-            .sig-meta  { font-size: 9px; color: #6B7B91; margin-top: 4px; }
-            .header-rule { border-top: 4px double #0F2C52; margin: 6px 0 18px; }
-            .footer  { margin-top: 30px; padding-top: 12px; border-top: 1px solid #E5E1D8; font-size: 9px; color: #6B7B91; text-align: center; }
-        </style>
-    </head>
-    <body>
-
-    <div class="center">
-        <h3 class="muted">Bilateral Tenancy Agreement</h3>
-        <h1>RentBridge Contract</h1>
-        <div class="small">
-            Contract code: <strong><?= $h($c['contract_code']) ?></strong>
-            &nbsp;·&nbsp; Generated <?= $h(date('d M Y', strtotime($c['created_at']))) ?>
-            <?php if (!empty($c['activated_at'])): ?>
-                &nbsp;·&nbsp; Activated <?= $h(date('d M Y, H:i', strtotime($c['activated_at']))) ?>
-            <?php endif; ?>
-        </div>
-    </div>
-    <div class="header-rule"></div>
-
-    <h2>Parties to this Agreement</h2>
-    <table>
-        <tr>
-            <td class="party">
-                <h3>1. Landlord</h3>
-                <strong><?= $h($c['landlord_name']) ?></strong><br>
-                IC: <?= $h($c['landlord_ic']) ?><br>
-                <?= $h($c['landlord_email']) ?><br>
-                <?= $h($c['landlord_phone']) ?>
-            </td>
-            <?php foreach ($coTenants as $idx => $ct): $num = $idx + 2; ?>
-            <td class="party">
-                <h3><?= $num ?>. <?= ((int)$ct['is_primary'] ? 'Primary Tenant' : 'Co-Tenant') ?></h3>
-                <strong><?= $h($ct['full_name']) ?></strong><br>
-                NRIC: <?= $h($ct['ic_number']) ?><br>
-                <?= $h($ct['email']) ?><br>
-                <?= $h($ct['phone']) ?>
-            </td>
-            <?php endforeach; ?>
-        </tr>
-    </table>
-
-    <h2>Property</h2>
-    <table>
-        <tr>
-            <td>
-                <strong><?= $h($c['property_title']) ?></strong><br>
-                <?= $h($c['property_address']) ?>,
-                <?= $h($c['property_city']) ?> <?= $h($c['property_postcode']) ?>,
-                <?= $h($c['property_state']) ?>
-                <br><br>
-                Type: <strong><?= $h(ucfirst(str_replace('_',' ', $c['property_type']))) ?></strong>
-                &nbsp;·&nbsp;
-                Furnishing: <strong><?= $h(ucfirst($c['furnishing'] ?? '')) ?></strong>
-                <?php if (!empty($c['facilities'])): ?>
-                    <br>Facilities: <?= $h($c['facilities']) ?>
-                <?php endif; ?>
-            </td>
-        </tr>
-    </table>
-
-    <h2>Tenancy Terms</h2>
-    <table>
-        <tr>
-            <td><h3>Start Date</h3><strong><?= $h(date('d M Y', $startTs)) ?></strong></td>
-            <td><h3>End Date</h3><strong><?= $h(date('d M Y', $endTs)) ?></strong></td>
-            <td><h3>Duration</h3><strong><?= $months ?> month<?= $months===1?'':'s' ?></strong><br><span class="small">Continuous period, incl. any semester break</span></td>
-        </tr>
-        <tr>
-            <td><h3>Monthly Rent</h3><strong class="accent">RM <?= number_format((float)$c['monthly_rent']) ?></strong></td>
-            <td><h3>Security Deposit</h3><strong>RM <?= number_format((float)$c['deposit']) ?></strong></td>
-            <td><h3>Total Contract Value</h3><strong class="accent">RM <?= number_format($total) ?></strong></td>
-        </tr>
-    </table>
-
-    <h2>Standard Terms</h2>
-    <div class="terms-list"><?= $h($c['terms']) ?></div>
-
-    <h2>Signatures</h2>
-    <table>
-        <tr>
-            <td class="sig-box party">
-                <h3>Landlord</h3>
-                <?php if ($sigLandlord && file_exists($sigLandlord)): ?>
-                    <img class="sig-img" src="file:///<?= str_replace('\\', '/', $sigLandlord) ?>" alt="">
-                <?php else: ?>
-                    <div class="muted small">(not signed)</div>
-                <?php endif; ?>
-                <div class="sig-meta">
-                    <?= !empty($c['landlord_signed_at']) ? $h(date('d M Y, H:i', strtotime($c['landlord_signed_at']))) : '—' ?>
-                </div>
-            </td>
-            <?php foreach ($coTenants as $ct):
-                $sigFile = !empty($ct['signature_data']) ? realpath($base . $ct['signature_data']) : null;
-            ?>
-            <td class="sig-box party">
-                <h3><?= (int)$ct['is_primary'] ? 'Primary Tenant' : 'Co-Tenant' ?></h3>
-                <?php if ($sigFile && file_exists($sigFile)): ?>
-                    <img class="sig-img" src="file:///<?= str_replace('\\', '/', $sigFile) ?>" alt="">
-                <?php else: ?>
-                    <div class="muted small">(not signed)</div>
-                <?php endif; ?>
-                <div class="sig-meta">
-                    <?= !empty($ct['signed_at']) ? $h(date('d M Y, H:i', strtotime($ct['signed_at']))) : '—' ?>
-                </div>
-            </td>
-            <?php endforeach; ?>
-        </tr>
-    </table>
-
-    <div class="footer">
-        This document is generated by RentBridge from cryptographically-stored signature records.
-        Verify authenticity at rentbridge.com/verify/<?= $h($c['contract_code']) ?>
-    </div>
-
-    </body>
-    </html>
-    <?php
-    $html = ob_get_clean();
-
-    // Render with dompdf
-    try {
-        $options = new \Dompdf\Options();
-$options->set('isRemoteEnabled', true);  // Allow file:// access for signature images
-$options->set('isHtml5ParserEnabled', true);
-$options->set('defaultFont', 'DejaVu Sans');
-// Tell dompdf which directories it can read images from
-$options->setChroot([
-    realpath(__DIR__ . '/../uploads'),
-    realpath(__DIR__ . '/../'),
-]);
-
-        $dompdf = new \Dompdf\Dompdf($options);
-        $dompdf->loadHtml($html, 'UTF-8');
-        $dompdf->setPaper('A4', 'portrait');
-        $dompdf->render();
-
-        // Save PDF to disk
-        $absDir = __DIR__ . '/../uploads/contracts';
-        if (!is_dir($absDir)) {
-            if (!mkdir($absDir, 0755, true) && !is_dir($absDir)) return null;
-        }
-
-        $filename = $c['contract_code'] . '.pdf';
-        $relPath  = 'uploads/contracts/' . $filename;
-        $absPath  = __DIR__ . '/../' . $relPath;
-
-        if (file_put_contents($absPath, $dompdf->output()) === false) return null;
-
-        // Save path in DB
-        $stmt = $pdo->prepare('UPDATE contracts SET contract_pdf_path = ? WHERE id = ?');
-        $stmt->execute([$relPath, $contractId]);
-
-        return $relPath;
-
-    } catch (Throwable $e) {
-        error_log('Contract PDF generation failed: ' . $e->getMessage());
-        return null;
-    }
-}
 
 /**
  * Lazy check — send contract expiry notifications.

@@ -55,21 +55,31 @@ $errors = [];
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
 
-    $dataUrl = $_POST['signature_data'] ?? '';
-    if ($dataUrl === '' || $dataUrl === 'data:,') {
-        $errors['general'] = 'Please draw your signature before submitting.';
-    } else {
-        $result = apply_signature($contractId, current_user_id(), $dataUrl);
+    if (($_POST['action'] ?? '') === 'choose_manual') {
+        $result = choose_manual_signing($contractId, current_user_id());
         if ($result['success']) {
-            set_flash('success',
-                $result['all_signed']
-                    ? 'All signatures collected — contract is now active! 🎉'
-                    : 'Your signature has been recorded.'
-            );
+            set_flash('info', $result['message']);
             header('Location: /rentbridge/contracts/view.php?id=' . $contractId);
             exit;
+        }
+        $errors['general'] = $result['message'];
+    } else {
+        $dataUrl = $_POST['signature_data'] ?? '';
+        if ($dataUrl === '' || $dataUrl === 'data:,') {
+            $errors['general'] = 'Please draw your signature before submitting.';
         } else {
-            $errors['general'] = $result['message'];
+            $result = apply_signature($contractId, current_user_id(), $dataUrl);
+            if ($result['success']) {
+                set_flash('success',
+                    $result['all_signed']
+                        ? 'All signatures collected — contract is now active! 🎉'
+                        : 'Your signature has been recorded.'
+                );
+                header('Location: /rentbridge/contracts/view.php?id=' . $contractId);
+                exit;
+            } else {
+                $errors['general'] = $result['message'];
+            }
         }
     }
 }
@@ -146,6 +156,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <i class="bi bi-pen me-1"></i> Submit signature
                         </button>
                     </div>
+                </form>
+
+                <hr class="my-4">
+
+                <form method="POST"
+                      onsubmit="return confirm('Sign a physical copy instead? Your agent will be notified to arrange collecting your handwritten signature and merging it into the final contract.');">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="contract_id" value="<?= (int)$contractId ?>">
+                    <input type="hidden" name="action" value="choose_manual">
+                    <button type="submit" class="btn btn-outline-secondary btn-sm w-100">
+                        <i class="bi bi-file-earmark-person me-1"></i>
+                        I'd rather sign a physical copy
+                    </button>
                 </form>
             </div>
 

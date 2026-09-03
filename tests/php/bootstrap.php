@@ -72,7 +72,8 @@ rb_run(sprintf('"%s" %s dbrb_2026_test < "%s"', $mysql, $cred, $schemaTmp));
 foreach (['migrations/add_user_roles.sql', 'migrations/add_audit_log.sql',
           'migrations/add_academic_terms.sql', 'migrations/add_cotenant_sign_token.sql',
           'migrations/add_soft_delete_and_restrict_cascade.sql',
-          'migrations/add_login_attempts.sql'] as $m) {
+          'migrations/add_login_attempts.sql',
+          'migrations/add_mixed_signing_method.sql'] as $m) {
     $path = $root . '/' . $m;
     if (is_file($path)) {
         rb_run(sprintf('"%s" %s dbrb_2026_test < "%s"', $mysql, $cred, $path));

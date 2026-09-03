@@ -82,13 +82,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt->execute([$destRel, $agentId, $tenancyId]);
 
                 // Activate the contract record too (covers the e-sign mixed-signing path)
+                // COALESCE landlord_signed_at: if the landlord already e-signed
+                // digitally (mixed signing — only some other party chose
+                // manual), keep that original timestamp instead of
+                // overwriting it with the upload time.
                 $pdo->prepare("
                     UPDATE contracts
                        SET status = 'active',
                            signed_pdf_path = ?,
                            signed_uploaded_at = NOW(),
                            signed_uploaded_by = ?,
-                           activated_at = NOW()
+                           activated_at = NOW(),
+                           landlord_signed_at = COALESCE(landlord_signed_at, NOW())
                      WHERE tenancy_id = ? AND status = 'pending_signatures'
                 ")->execute([$destRel, $agentId, $tenancyId]);
 

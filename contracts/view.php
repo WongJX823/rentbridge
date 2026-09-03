@@ -284,6 +284,8 @@ $statusBadge = match ($contract['status']) {
                                 <?php if (!empty($contract['landlord_signature'])): ?>
                                     <img src="/rentbridge/contracts/signature.php?contract_id=<?= (int)$contract['id'] ?>&field=landlord" alt="signature"
                                          style="max-height:80px; max-width:90%;">
+                                <?php elseif (($contract['landlord_sign_method'] ?? 'esign') === 'manual'): ?>
+                                    <span class="text-secondary small"><i class="bi bi-file-earmark-person"></i> Signing a physical copy</span>
                                 <?php else: ?>
                                     <span class="text-secondary small">Not signed yet</span>
                                 <?php endif; ?>
@@ -311,6 +313,8 @@ $statusBadge = match ($contract['status']) {
                                 <?php if (!empty($ct['signature_data'])): ?>
                                     <img src="/rentbridge/contracts/signature.php?contract_id=<?= (int)$contract['id'] ?>&co_tenant_id=<?= (int)$ct['id'] ?>" alt="signature"
                                          style="max-height:80px; max-width:90%;">
+                                <?php elseif (($ct['sign_method'] ?? 'esign') === 'manual'): ?>
+                                    <span class="text-secondary small"><i class="bi bi-file-earmark-person"></i> Signing a physical copy</span>
                                 <?php else: ?>
                                     <span class="text-secondary small">Not signed yet</span>
                                 <?php endif; ?>
@@ -377,6 +381,9 @@ $statusBadge = match ($contract['status']) {
                             <i class="bi bi-info-circle"></i>
                             <?php if ($nextSigner['role'] === 'all_done'): ?>
                                 All signatures collected. Finalising contract.
+                            <?php elseif ($nextSigner['role'] === 'awaiting_manual'): ?>
+                                Everyone who's e-signing has signed. Waiting on your agent to collect the
+                                remaining physical signature(s) and upload the merged copy.
                             <?php else: ?>
                                 Waiting for <strong><?= e($nextSigner['name']) ?></strong> to sign.
                             <?php endif; ?>
