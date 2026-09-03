@@ -6,6 +6,8 @@ $pdo = db();
 
 // Handle cancel action
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'cancel') {
+    verify_csrf();
+
     $tenancyId = (int)($_POST['tenancy_id'] ?? 0);
     $cancellable = ['pending_landlord', 'pending_agent', 'agent_assigned'];
 
@@ -180,6 +182,7 @@ function status_label(string $status): array {
                                 <?php if (in_array($b['status'], ['pending_landlord', 'pending_agent', 'agent_assigned'], true)): ?>
                                     <form method="post" class="mt-3"
                                           onsubmit="return confirm('Cancel this tenancy request?')">
+                                        <?= csrf_field() ?>
                                         <input type="hidden" name="action" value="cancel">
                                         <input type="hidden" name="tenancy_id" value="<?= (int)$b['id'] ?>">
                                         <button type="submit" class="btn btn-sm btn-outline-danger">
