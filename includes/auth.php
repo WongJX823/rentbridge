@@ -3,6 +3,18 @@ require_once __DIR__ . '/../config/database.php';
 
 // Start the session if not already started
 if (session_status() === PHP_SESSION_NONE) {
+    // Secure is conditional on the request actually being HTTPS — forcing it
+    // unconditionally would silently break local HTTP dev (browsers refuse
+    // to send a Secure cookie back over plain HTTP).
+    $isHttps = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
+    session_set_cookie_params([
+        'lifetime' => 0,
+        'path'     => '/',
+        'domain'   => '',
+        'secure'   => $isHttps,
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ]);
     session_start();
 }
 
