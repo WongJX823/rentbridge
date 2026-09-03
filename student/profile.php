@@ -34,6 +34,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $ic_no          = trim($_POST['ic_no'] ?? '');
     $university     = trim($_POST['university'] ?? 'UTeM');
     $phone          = trim($_POST['phone'] ?? '');
+    $gender         = in_array($_POST['gender'] ?? '', ['male','female'], true) ? $_POST['gender'] : '';
+    $race           = in_array($_POST['race'] ?? '', ['malay','chinese','indian','others'], true) ? $_POST['race'] : '';
     $looking        = isset($_POST['looking_for_housing']) ? 1 : 0;
     $allow_whatsapp = isset($_POST['allow_whatsapp']) ? 1 : 0;
     $pref_city      = trim($_POST['housing_pref_city'] ?? '');
@@ -57,6 +59,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                        ic_no = ?,
                        university = ?,
                        phone = ?,
+                       gender = ?,
+                       race = ?,
                        allow_whatsapp = ?,
                        looking_for_housing = ?,
                        housing_pref_city = ?,
@@ -67,6 +71,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ");
             $stmt->execute([
                 $full_name, $preferred_name, $matric_no, $ic_no, $university, $phone,
+                $gender ?: null,
+                $race ?: null,
                 $allow_whatsapp,
                 $looking,
                 $pref_city ?: null,
@@ -92,6 +98,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'ic_no' => $ic_no,
         'university' => $university,
         'phone' => $phone,
+        'gender' => $gender,
+        'race' => $race,
         'allow_whatsapp' => $allow_whatsapp,
         'looking_for_housing' => $looking,
         'housing_pref_city' => $pref_city,
@@ -203,6 +211,28 @@ ob_start();
                     <label class="form-label fw-semibold">Email</label>
                     <input type="email" class="form-control" value="<?= e($student['email']) ?>" disabled>
                     <small class="text-secondary">Email cannot be changed here.</small>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Gender</label>
+                    <?php $sg = $student['gender'] ?? ''; ?>
+                    <select name="gender" class="form-select">
+                        <option value=""       <?= $sg === ''       ? 'selected' : '' ?>>Prefer not to say</option>
+                        <option value="male"   <?= $sg === 'male'   ? 'selected' : '' ?>>Male</option>
+                        <option value="female" <?= $sg === 'female' ? 'selected' : '' ?>>Female</option>
+                    </select>
+                    <small class="text-secondary">Used to match you with gender-specific housemate posts.</small>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Race</label>
+                    <?php $sr = $student['race'] ?? ''; ?>
+                    <select name="race" class="form-select">
+                        <option value=""        <?= $sr === ''        ? 'selected' : '' ?>>Prefer not to say</option>
+                        <option value="malay"   <?= $sr === 'malay'   ? 'selected' : '' ?>>Malay</option>
+                        <option value="chinese" <?= $sr === 'chinese' ? 'selected' : '' ?>>Chinese</option>
+                        <option value="indian"  <?= $sr === 'indian'  ? 'selected' : '' ?>>Indian</option>
+                        <option value="others"  <?= $sr === 'others'  ? 'selected' : '' ?>>Others</option>
+                    </select>
+                    <small class="text-secondary">Used to match you with race-specific housemate posts/listings.</small>
                 </div>
             </div>
 

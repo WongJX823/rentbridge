@@ -146,6 +146,12 @@ ob_start();
                     <strong class="text-dark"><?= (int)($post['semesters_needed'] ?? 1) ?></strong>
                     semester<?= ($post['semesters_needed'] ?? 1) > 1 ? 's' : '' ?>
                 </div>
+                <?php if ($gb = rb_gender_badge($post['gender_preference'] ?? 'any')): ?>
+                <div><?= $gb ?></div>
+                <?php endif; ?>
+                <?php if ($rb = rb_race_badge($post['race_preference'] ?? 'any')): ?>
+                <div><?= $rb ?></div>
+                <?php endif; ?>
                 <div>
                     <i class="bi bi-check-circle text-success"></i>
                     <strong class="text-dark"><?= $acceptedCount ?></strong> accepted

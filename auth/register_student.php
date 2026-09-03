@@ -9,6 +9,8 @@ $old = [
     'matric_no'      => '',
     'ic_no'          => '',
     'phone'          => '',
+    'gender'         => '',
+    'race'           => '',
 ];
 
 // ---- HANDLE FORM SUBMISSION ----
@@ -21,6 +23,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $old['matric_no']      = strtoupper(trim($_POST['matric_no'] ?? ''));
     $old['ic_no']          = trim($_POST['ic_no'] ?? '');
     $old['phone']          = trim($_POST['phone'] ?? '');
+    $old['gender']         = in_array($_POST['gender'] ?? '', ['male','female'], true) ? $_POST['gender'] : '';
+    $old['race']           = in_array($_POST['race'] ?? '', ['malay','chinese','indian','others'], true) ? $_POST['race'] : '';
     $password              = $_POST['password'] ?? '';
     $confirm               = $_POST['password_confirm'] ?? '';
 
@@ -68,8 +72,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $userId = (int)$pdo->lastInsertId();
 
                 $stmt = $pdo->prepare(
-                    'INSERT INTO students (user_id, full_name, preferred_name, matric_no, ic_no, university, phone)
-                     VALUES (?, ?, ?, ?, ?, "UTeM", ?)'
+                    'INSERT INTO students (user_id, full_name, preferred_name, matric_no, ic_no, university, phone, gender, race)
+                     VALUES (?, ?, ?, ?, ?, "UTeM", ?, ?, ?)'
                 );
                 $stmt->execute([
                     $userId,
@@ -77,7 +81,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $old['preferred_name'],
                     $old['matric_no'],
                     $old['ic_no'],
-                    $old['phone']
+                    $old['phone'],
+                    $old['gender'] ?: null,
+                    $old['race'] ?: null
                 ]);
 
                 $pdo->commit();
@@ -192,6 +198,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <div class="invalid-feedback"><?= e($errors['phone']) ?></div>
                             <?php endif; ?>
                         </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">
+                            Gender <small class="text-secondary fw-normal">— optional</small>
+                        </label>
+                        <select name="gender" class="form-select">
+                            <option value=""       <?= ($old['gender'] ?? '') === ''       ? 'selected' : '' ?>>Prefer not to say</option>
+                            <option value="male"   <?= ($old['gender'] ?? '') === 'male'   ? 'selected' : '' ?>>Male</option>
+                            <option value="female" <?= ($old['gender'] ?? '') === 'female' ? 'selected' : '' ?>>Female</option>
+                        </select>
+                        <small class="text-secondary">Lets you filter housemate posts to ones you're eligible for. You can set this later in your profile.</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">
+                            Race <small class="text-secondary fw-normal">— optional</small>
+                        </label>
+                        <select name="race" class="form-select">
+                            <option value=""        <?= ($old['race'] ?? '') === ''        ? 'selected' : '' ?>>Prefer not to say</option>
+                            <option value="malay"   <?= ($old['race'] ?? '') === 'malay'   ? 'selected' : '' ?>>Malay</option>
+                            <option value="chinese" <?= ($old['race'] ?? '') === 'chinese' ? 'selected' : '' ?>>Chinese</option>
+                            <option value="indian"  <?= ($old['race'] ?? '') === 'indian'  ? 'selected' : '' ?>>Indian</option>
+                            <option value="others"  <?= ($old['race'] ?? '') === 'others'  ? 'selected' : '' ?>>Others</option>
+                        </select>
+                        <small class="text-secondary">Lets you filter posts/listings to ones you're eligible for. You can set this later in your profile.</small>
                     </div>
 
                     <div class="mb-3">

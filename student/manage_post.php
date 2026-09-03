@@ -128,6 +128,18 @@ ob_start();
             <span class="text-secondary">Duration</span>
             <strong class="ms-1"><?= (int)($post['semesters_needed'] ?? 1) ?> semester<?= ($post['semesters_needed'] ?? 1) > 1 ? 's' : '' ?></strong>
         </div>
+        <?php if ($gb = rb_gender_badge($post['gender_preference'] ?? 'any')): ?>
+        <div>
+            <span class="text-secondary">Gender</span>
+            <span class="ms-1"><?= $gb ?></span>
+        </div>
+        <?php endif; ?>
+        <?php if ($rb = rb_race_badge($post['race_preference'] ?? 'any')): ?>
+        <div>
+            <span class="text-secondary">Race</span>
+            <span class="ms-1"><?= $rb ?></span>
+        </div>
+        <?php endif; ?>
         <div>
             <span class="text-secondary">Accepted</span>
             <strong class="ms-1 text-success"><?= $acceptedCount ?></strong>

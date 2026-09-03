@@ -2,6 +2,8 @@
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/saved.php';
 require_once __DIR__ . '/includes/save_button.php';
+require_once __DIR__ . '/includes/gender.php';
+require_once __DIR__ . '/includes/race.php';
 
 // Pre-fetch saved status for all properties on this page (if logged in)
 $savedMap = [];
@@ -19,6 +21,20 @@ $filterType  = trim($_GET['type'] ?? '');
 $filterMin   = trim($_GET['min_rent'] ?? '');
 $filterMax   = trim($_GET['max_rent'] ?? '');
 $sortBy      = $_GET['sort'] ?? 'recent';
+$genderMatch = !empty($_GET['gender_match']);   // opt-in: only listings I'm eligible for
+$raceMatch   = !empty($_GET['race_match']);
+
+// Viewing student's gender + race (for the match filters). Only students have them.
+$myGender = null;
+$myRace   = null;
+if (is_logged_in() && current_role() === 'student') {
+    $gStmt = $pdo->prepare("SELECT gender, race FROM students WHERE user_id = ?");
+    $gStmt->execute([current_user_id()]);
+    if ($srow = $gStmt->fetch()) {
+        $myGender = $srow['gender'] ?: null;
+        $myRace   = $srow['race']   ?: null;
+    }
+}
 
 // Build query
 $where = "p.status = 'available'";
@@ -28,6 +44,16 @@ $params = [];
 if (is_logged_in() && current_role() === 'landlord') {
     $where .= " AND p.landlord_id != ?";
     $params[] = current_user_id();
+}
+
+// Gender-match: hide listings restricted to a different gender (opt-in, students only)
+if ($genderMatch && $myGender) {
+    $where .= " AND (p.gender_preference = 'any' OR p.gender_preference = ?)";
+    $params[] = $myGender;
+}
+if ($raceMatch && $myRace) {
+    $where .= " AND (p.race_preference = 'any' OR p.race_preference = ?)";
+    $params[] = $myRace;
 }
 
 if ($searchQuery !== '') {
@@ -135,11 +161,41 @@ ob_start();
             <button type="submit" class="btn btn-sm btn-primary flex-fill">
                 <i class="bi bi-funnel"></i> Filter
             </button>
-            <?php if ($searchQuery || $filterCity || $filterType || $filterMin || $filterMax): ?>
+            <?php if ($searchQuery || $filterCity || $filterType || $filterMin || $filterMax || $genderMatch || $raceMatch): ?>
                 <a href="?" class="btn btn-sm btn-outline-secondary">Clear</a>
             <?php endif; ?>
         </div>
     </div>
+    <?php if (is_logged_in() && current_role() === 'student'): ?>
+    <div class="mt-2 pt-2 border-top small d-flex flex-wrap gap-3 align-items-center">
+        <?php if ($myGender): ?>
+            <div class="form-check m-0" title="Only show listings you're eligible for">
+                <input class="form-check-input" type="checkbox" name="gender_match" value="1"
+                       id="listGenderMatch" <?= $genderMatch ? 'checked' : '' ?>
+                       onchange="this.form.submit()">
+                <label class="form-check-label" for="listGenderMatch">
+                    <i class="bi bi-gender-ambiguous"></i> Matching my gender
+                </label>
+            </div>
+        <?php endif; ?>
+        <?php if ($myRace): ?>
+            <div class="form-check m-0" title="Only show listings you're eligible for">
+                <input class="form-check-input" type="checkbox" name="race_match" value="1"
+                       id="listRaceMatch" <?= $raceMatch ? 'checked' : '' ?>
+                       onchange="this.form.submit()">
+                <label class="form-check-label" for="listRaceMatch">
+                    <i class="bi bi-people"></i> Matching my race
+                </label>
+            </div>
+        <?php endif; ?>
+        <?php if (!$myGender || !$myRace): ?>
+            <a href="/rentbridge/student/profile.php" class="text-decoration-none"
+               title="Set your gender/race in your profile to filter listings by match">
+                <i class="bi bi-info-circle"></i> Set gender/race in profile to filter listings
+            </a>
+        <?php endif; ?>
+    </div>
+    <?php endif; ?>
 </form>
 
 <!-- LOGIN PROMPT for guests -->
@@ -202,7 +258,12 @@ ob_start();
                                     <?= e(ucfirst($p['furnishing'])) ?>
                                 </small>
                             </div>
-                            <h6 class="mb-2" style="font-size:0.95rem;"><?= e($p['title']) ?></h6>
+                            <h6 class="mb-1" style="font-size:0.95rem;"><?= e($p['title']) ?></h6>
+                            <?php $gb = rb_gender_badge($p['gender_preference'] ?? 'any');
+                                  $rbb = rb_race_badge($p['race_preference'] ?? 'any');
+                                  if ($gb || $rbb): ?>
+                                <div class="mb-2 d-flex flex-wrap gap-1" style="font-size:0.7rem;"><?= $gb ?><?= $rbb ?></div>
+                            <?php endif; ?>
                             <div class="small text-secondary mb-2">
                                 <i class="bi bi-geo-alt"></i> <?= e($p['city']) ?>
                             </div>

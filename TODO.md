@@ -57,6 +57,66 @@ is `('1_semester','2_semesters','1_year','custom')`. Map form key -> enum value
 on insert.
 
 ---
+
+Gender preference (property listing + find-housemate)  [DONE, migration pending apply]
+   Landlords can set a preferred tenant gender on a listing, and students can set
+   a preferred housemate gender on a co-tenancy post. Any / Male only / Female only.
+   - migrations/add_gender_preference.sql: adds gender_preference ENUM('any',
+     'male','female') DEFAULT 'any' to `properties` and `co_tenancy_posts`.
+   - includes/gender.php: shared rb_gender_norm/options/label/badge helpers.
+   - Property: select added to landlord/add_property.php (create+edit) and
+     auth/register_landlord_step2.php; saved on INSERT/UPDATE; badge shown on
+     property.php header (only when restricted).
+   - Housemate: select added to student/find_housemates.php; saved on INSERT;
+     badge shown on housemate_post.php, student/partners.php cards, manage_post.php.
+   - Display uses `?? 'any'` so it degrades safely before the migration is applied;
+     the INSERT/UPDATE need the column, so APPLY THE MIGRATION before creating/
+     editing listings or posts.
+   Gender-match browse filter (housemate posts)  [DONE, migration pending apply]
+   - migrations/add_student_gender.sql: adds students.gender ENUM('male','female')
+     NULL (NULL = not specified). Collected optionally at student registration
+     (auth/register_student.php) and editable in student/profile.php.
+   - student/partners.php browse tab: opt-in "Matching my gender" checkbox (shown
+     only once the student has set a gender; otherwise a "Set gender to filter"
+     link to the profile). When ticked, includes/partners.php list_co_tenancy_posts
+     adds WHERE (gender_preference='any' OR gender_preference = my gender), so
+     posts the student isn't eligible for are skipped. Double-guarded: filter only
+     applies when the viewer's gender is set. Default is show-all (opt-in).
+   Gender-match filter also applied to PROPERTY listings browse (listings.php):
+   opt-in "Only show listings matching my gender" checkbox (students only; hint to
+   set gender in profile otherwise) -> adds WHERE (p.gender_preference='any' OR
+   p.gender_preference = my gender). Listing cards also show a gender badge when
+   restricted. Property gender_preference is editable via landlord/add_property.php
+   edit mode (loads SELECT * so the saved value pre-selects); student gender is
+   editable via student/profile.php.
+   Race preference (mirrors gender end-to-end)  [DONE, migration pending apply]
+   - migrations/add_race_preference.sql: adds properties.race_preference &
+     co_tenancy_posts.race_preference ENUM('any','malay','chinese','indian',
+     'others') DEFAULT 'any', and students.race ENUM('malay','chinese','indian',
+     'others') NULL.
+   - includes/race.php: rb_race_norm/values/options/label/badge +
+     rb_race_identity_* helpers.
+   - Landlord property (add_property.php create+edit, register_landlord_step2.php):
+     "Preferred tenant race" select saved on INSERT/UPDATE; badge on property.php
+     + listings.php cards.
+   - Housemate post (find_housemates.php): "Preferred housemate race" select saved
+     on INSERT; badge on housemate_post.php, partners.php cards, manage_post.php.
+   - Student race collected at registration (register_student.php) + editable in
+     student/profile.php.
+   - Race-match opt-in filter on BOTH browse tabs (student/partners.php posts and
+     listings.php properties): "Matching my race" checkbox -> WHERE
+     (race_preference='any' OR race_preference = my race). Double-guarded on the
+     viewer's race being set; independent of the gender-match toggle.
+   Housemate posts remain NON-editable after creation (by design) — gender/race
+   are set once at creation.
+   Compatibility score now gates on gender/race (includes/partners.php):
+   post_matches_identity() decides eligibility; compatibility_score() caps an
+   ineligible viewer's score at 15 (so mismatches sort to the bottom and never
+   read as a good match), and the card shows a "Not eligible — limited to a
+   different gender/race" badge instead of High/Medium/Low. Unknown viewer
+   identity or an 'any' post = not gated. Soft factors (city/budget/university/
+   move-in) unchanged.
+
 New
 Property-Pending  [DONE]
    Status progress bar (Pending -> Awaiting inspection -> Inspection complete -> Available now,
@@ -66,12 +126,31 @@ Property-Pending  [DONE]
 Property map pinpoint (Google Maps)  [IN PROGRESS]
    Done: reusable includes/map.php with rb_map_view() = KEYLESS Google Maps embed
    iframe + "Get directions" (no API key needed) on property.php, landlord/
-   property.php, admin/property.php; and rb_map_picker() = interactive Google
-   Maps JS picker (click/drag pin + Geocoder "find my address") wired into
-   landlord/add_property.php, saving latitude/longitude on create + edit. The
-   picker needs a Google Maps API key in config/google.php (git-ignored); with
-   no key it degrades to manual latitude/longitude inputs so the form still works.
+   property.php, admin/property.php.
+   Pin-first drawer redesign (from the "Landlord Map Pinpoint" Claude Design
+   wireframe) is DONE: the map is now COLLAPSED by default behind a pin icon
+   tucked into the street-address field. Tapping it opens a right-side "Pin your
+   property" drawer (search prefilled from the typed address + geocode results,
+   "My location" GPS, click-to-drop, drag-to-fine-tune, Cancel/Done). After
+   pinning, a green "Location pinned + coords / Edit pin" row appears and the pin
+   icon turns filled-green. The Google Maps link is demoted to a collapsed
+   optional toggle. Pinning stays optional — submit never blocks on it. Edge
+   states handled: GPS denied, address not found, mobile full-height sheet.
+   Implemented as rb_address_pin_field() + rb_maps_link_field() +
+   rb_map_pinpoint_assets() (drawer + JS, Google Maps JS loaded lazily on first
+   open). Wired into BOTH landlord/add_property.php (create/edit) AND
+   auth/register_landlord_step2.php (sign-up) — the latter now also persists
+   latitude/longitude/maps_url on the properties INSERT. No key -> degrades to
+   manual latitude/longitude inputs so the form still works. Legacy inline
+   rb_map_picker() kept for any other callers.
+   Pin <-> Google Maps link two-way sync (last edit wins): confirming a pin also
+   reverse-geocodes to fill the street address / city / postcode AND rewrites the
+   optional Google Maps link to a canonical ?q=lat,lng URL; conversely pasting a
+   Maps link resolves its coordinates (landlord/geocode_link.php, follows
+   goo.gl short links) and overwrites the pin + address form. So the two can
+   never contradict. City is only set when it matches an allowed Melaka area.
    To do: add a real API key + restrict it to the domain; test live.
+   (config/google.php now holds a working key locally — restrict it before deploy.)
    -- original note --
    Show each property on a map with a location pin, and let the landlord
    drop/adjust the pin when adding a property.

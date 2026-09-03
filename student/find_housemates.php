@@ -1,5 +1,7 @@
 <?php
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/gender.php';
+require_once __DIR__ . '/../includes/race.php';
 require_role('student');
 
 $pdo = db();
@@ -42,13 +44,15 @@ if ($stmt->fetchColumn()) {
 }
 
 $errors = [];
-$old = ['message' => '', 'housemates_needed' => '1', 'semesters_needed' => '3'];
+$old = ['message' => '', 'housemates_needed' => '1', 'semesters_needed' => '3', 'gender_preference' => 'any', 'race_preference' => 'any'];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
     $old['message']           = trim($_POST['message'] ?? '');
     $old['housemates_needed'] = (int)($_POST['housemates_needed'] ?? 1);
     $old['semesters_needed']  = (int)($_POST['semesters_needed'] ?? 3);
+    $old['gender_preference'] = rb_gender_norm($_POST['gender_preference'] ?? 'any');
+    $old['race_preference']   = rb_race_norm($_POST['race_preference'] ?? 'any');
 
     if ($old['message'] === '') {
         $errors['message'] = 'Tell others why they should join you.';
@@ -62,10 +66,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (empty($errors)) {
         $stmt = $pdo->prepare("
-            INSERT INTO co_tenancy_posts (poster_id, property_id, message, housemates_needed, semesters_needed)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO co_tenancy_posts (poster_id, property_id, message, housemates_needed, semesters_needed, gender_preference, race_preference)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         ");
-        $stmt->execute([$userId, $propertyId, $old['message'], $old['housemates_needed'], $old['semesters_needed']]);
+        $stmt->execute([$userId, $propertyId, $old['message'], $old['housemates_needed'], $old['semesters_needed'], $old['gender_preference'], $old['race_preference']]);
 
         // Auto-enable looking_for_housing for them
         $pdo->prepare("UPDATE students SET looking_for_housing = 1 WHERE user_id = ?")->execute([$userId]);
@@ -135,6 +139,31 @@ ob_start();
                     <div class="invalid-feedback"><?= e($errors['semesters_needed']) ?></div>
                 <?php endif; ?>
                 <small class="text-secondary">Minimum 3 semesters. 1 semester ≈ 4–5 months (UTeM academic calendar).</small>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Preferred housemate gender</label>
+                    <select name="gender_preference" class="form-select">
+                        <?php foreach (rb_gender_options() as $gv => $glabel): ?>
+                            <option value="<?= $gv ?>" <?= ($old['gender_preference'] ?? 'any') === $gv ? 'selected' : '' ?>>
+                                <?= e($glabel) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <small class="text-secondary">Choose "Any" for no preference.</small>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Preferred housemate race</label>
+                    <select name="race_preference" class="form-select">
+                        <?php foreach (rb_race_options() as $rv => $rlabel): ?>
+                            <option value="<?= $rv ?>" <?= ($old['race_preference'] ?? 'any') === $rv ? 'selected' : '' ?>>
+                                <?= e($rlabel) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <small class="text-secondary">Choose "Any" for no preference.</small>
+                </div>
             </div>
 
             <div class="mb-4">

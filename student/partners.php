@@ -8,7 +8,7 @@ $userId = current_user_id();
 
 // Check viewer's privacy setting
 $stmt = $pdo->prepare("
-    SELECT looking_for_housing, housing_pref_city, housing_pref_max_rent
+    SELECT looking_for_housing, housing_pref_city, housing_pref_max_rent, gender, race
       FROM students WHERE user_id = ?
 ");
 $stmt->execute([$userId]);
@@ -17,9 +17,15 @@ $me = $stmt->fetch();
 // Filters
 $filterCity = trim($_GET['city'] ?? '');
 $filterMaxRent = trim($_GET['max_rent'] ?? '');
+$genderMatch = !empty($_GET['gender_match']);   // opt-in: only posts matching my gender
+$raceMatch   = !empty($_GET['race_match']);     // opt-in: only posts matching my race
+$myGender    = $me['gender'] ?? null;
+$myRace      = $me['race'] ?? null;
 $filters = [];
 if ($filterCity !== '')    $filters['city'] = $filterCity;
 if ($filterMaxRent !== '') $filters['max_rent'] = $filterMaxRent;
+if ($genderMatch && $myGender) $filters['gender_match'] = 1;
+if ($raceMatch && $myRace)     $filters['race_match'] = 1;
 
 $posts = list_co_tenancy_posts($userId, $filters);
 $myPosts = get_my_co_tenancy_posts($userId);
@@ -94,10 +100,36 @@ ob_start();
     <input type="number" name="max_rent" value="<?= e($filterMaxRent) ?>"
            class="form-control form-control-sm" placeholder="Max rent RM"
            style="max-width:150px;" step="50">
+    <?php if ($myGender): ?>
+        <div class="form-check form-check-inline m-0" title="Only show posts you're eligible for">
+            <input class="form-check-input" type="checkbox" name="gender_match" value="1"
+                   id="genderMatch" <?= $genderMatch ? 'checked' : '' ?>
+                   onchange="this.form.submit()">
+            <label class="form-check-label small" for="genderMatch">
+                <i class="bi bi-gender-ambiguous"></i> Matching my gender
+            </label>
+        </div>
+    <?php endif; ?>
+    <?php if ($myRace): ?>
+        <div class="form-check form-check-inline m-0" title="Only show posts you're eligible for">
+            <input class="form-check-input" type="checkbox" name="race_match" value="1"
+                   id="raceMatch" <?= $raceMatch ? 'checked' : '' ?>
+                   onchange="this.form.submit()">
+            <label class="form-check-label small" for="raceMatch">
+                <i class="bi bi-people"></i> Matching my race
+            </label>
+        </div>
+    <?php endif; ?>
+    <?php if (!$myGender || !$myRace): ?>
+        <a href="/rentbridge/student/profile.php" class="small text-decoration-none"
+           title="Set your gender and race in your profile to filter by match">
+            <i class="bi bi-info-circle"></i> Set gender/race to filter
+        </a>
+    <?php endif; ?>
     <button type="submit" class="btn btn-sm btn-primary">
         <i class="bi bi-funnel"></i> Filter
     </button>
-    <?php if ($filterCity || $filterMaxRent): ?>
+    <?php if ($filterCity || $filterMaxRent || $genderMatch || $raceMatch): ?>
         <a href="?" class="btn btn-sm btn-outline-secondary">Clear</a>
     <?php endif; ?>
     <span class="text-secondary small ms-auto">
@@ -111,8 +143,8 @@ ob_start();
         <i class="bi bi-people" style="font-size: 3rem; color: rgba(15,44,82,0.15);"></i>
         <h4 class="mt-3">No co-tenancy posts</h4>
         <p class="text-secondary small">
-            <?php if ($filterCity || $filterMaxRent): ?>
-                Try removing filters.
+            <?php if ($filterCity || $filterMaxRent || $genderMatch || $raceMatch): ?>
+                Try removing filters<?= ($genderMatch || $raceMatch) ? ' — including the gender/race match' : '' ?>.
             <?php else: ?>
                 Browse a property → click "Share with housemates" to start.
             <?php endif; ?>
@@ -199,6 +231,12 @@ ob_start();
                                 <i class="bi bi-calendar2-range me-1"></i>
                                 <?= (int)($post['semesters_needed'] ?? 1) ?> semester<?= ($post['semesters_needed'] ?? 1) > 1 ? 's' : '' ?>
                             </div>
+                            <?php if ($gb = rb_gender_badge($post['gender_preference'] ?? 'any')): ?>
+                            <div style="margin-bottom:6px;"><?= $gb ?></div>
+                            <?php endif; ?>
+                            <?php if ($rb = rb_race_badge($post['race_preference'] ?? 'any')): ?>
+                            <div style="margin-bottom:6px;"><?= $rb ?></div>
+                            <?php endif; ?>
 
                             <!-- Message (truncated) -->
                             <?php if (!empty($post['message'])): ?>

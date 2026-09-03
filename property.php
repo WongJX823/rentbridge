@@ -3,6 +3,8 @@ require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/saved.php';
 require_once __DIR__ . '/includes/save_button.php';
 require_once __DIR__ . '/includes/reports.php';
+require_once __DIR__ . '/includes/gender.php';
+require_once __DIR__ . '/includes/race.php';
 
 $id = (int)($_GET['id'] ?? 0);
 if ($id <= 0) {
@@ -222,6 +224,12 @@ ob_start();
             <span class="badge bg-light text-secondary border mb-2">
                 <?= e(ucfirst(str_replace('_', ' ', $prop['property_type']))) ?>
             </span>
+            <?php if ($gb = rb_gender_badge($prop['gender_preference'] ?? 'any')): ?>
+                <span class="mb-2"><?= $gb ?></span>
+            <?php endif; ?>
+            <?php if ($rb = rb_race_badge($prop['race_preference'] ?? 'any')): ?>
+                <span class="mb-2"><?= $rb ?></span>
+            <?php endif; ?>
             <h1 class="property-title"><?= e($prop['title']) ?></h1>
             <p class="property-location text-secondary mb-3">
                 <i class="bi bi-geo-alt"></i>

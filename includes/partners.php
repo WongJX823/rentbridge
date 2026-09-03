@@ -4,22 +4,46 @@
  */
 
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/gender.php';
+require_once __DIR__ . '/race.php';
+
+/**
+ * Whether the viewer meets a post's gender/race restrictions (i.e. could
+ * actually join it). Unknown viewer identity or an 'any' post = eligible.
+ */
+function post_matches_identity(array $viewer, array $post): bool {
+    $pg = $post['gender_preference'] ?? 'any';
+    if ($pg !== 'any' && !empty($viewer['gender']) && $pg !== $viewer['gender']) {
+        return false;
+    }
+    $pr = $post['race_preference'] ?? 'any';
+    if ($pr !== 'any' && !empty($viewer['race']) && $pr !== $viewer['race']) {
+        return false;
+    }
+    return true;
+}
 
 /**
  * Compute compatibility score between viewer (logged-in student) and a post.
  * Returns integer 0-100. Higher = better match.
  *
- * Algorithm (weights):
+ * Gender/race act as a HARD eligibility gate: if the viewer's own gender/race is
+ * set and doesn't meet the post's restriction, they can't join, so the score is
+ * capped low (15) regardless of the soft factors below.
+ *
+ * Soft factors (weights):
  *   - Same preferred city                        : 40
  *   - Budget overlap (poster's rent ≤ viewer max): 25
  *   - Same university                            : 15  (always true for UTeM-only platform)
  *   - Move-in date within 14 days                : 20
  *
- * If viewer has not set housing preferences, returns 50 (neutral).
+ * If viewer has not set housing preferences, returns 50 (neutral) — still gated.
  */
 function compatibility_score(array $viewer, array $post): int {
-    // If viewer has no preferences set, return neutral
-    if (empty($viewer['looking_for_housing'])) return 50;
+    $eligible = post_matches_identity($viewer, $post);
+
+    // If viewer has no preferences set, return neutral (still gated on eligibility)
+    if (empty($viewer['looking_for_housing'])) return $eligible ? 50 : 15;
 
     $score = 0;
 
@@ -64,6 +88,9 @@ function compatibility_score(array $viewer, array $post): int {
     } else {
         $score += 10;
     }
+
+    // Hard gate: an ineligible viewer can never be a good match, whatever the soft score.
+    if (!$eligible) $score = min($score, 15);
 
     return min(100, max(0, $score));
 }
@@ -136,7 +163,7 @@ function list_co_tenancy_posts(int $viewerId, array $filters = []): array {
     // Load viewer's preferences for scoring
     $stmt = $pdo->prepare("
         SELECT looking_for_housing, housing_pref_city,
-               housing_pref_max_rent, housing_pref_move_in
+               housing_pref_max_rent, housing_pref_move_in, gender, race
           FROM students WHERE user_id = ?
     ");
     $stmt->execute([$viewerId]);
@@ -153,6 +180,17 @@ function list_co_tenancy_posts(int $viewerId, array $filters = []): array {
     if (!empty($filters['max_rent'])) {
         $where .= " AND p.monthly_rent <= ?";
         $params[] = (float)$filters['max_rent'];
+    }
+    // Gender-match: hide posts the viewer isn't eligible for.
+    // Only applies when the viewer has set their own gender.
+    if (!empty($filters['gender_match']) && !empty($viewer['gender'])) {
+        $where .= " AND (ctp.gender_preference = 'any' OR ctp.gender_preference = ?)";
+        $params[] = $viewer['gender'];
+    }
+    // Race-match: hide posts the viewer isn't eligible for (viewer race must be set).
+    if (!empty($filters['race_match']) && !empty($viewer['race'])) {
+        $where .= " AND (ctp.race_preference = 'any' OR ctp.race_preference = ?)";
+        $params[] = $viewer['race'];
     }
 
     $stmt = $pdo->prepare("
@@ -182,7 +220,22 @@ function list_co_tenancy_posts(int $viewerId, array $filters = []): array {
     // Compute compatibility scores
     foreach ($posts as &$post) {
         $post['compatibility_score'] = compatibility_score($viewer, $post);
-        $post['compatibility'] = compatibility_label($post['compatibility_score']);
+        $post['eligible'] = post_matches_identity($viewer, $post);
+        if (!$post['eligible']) {
+            // Viewer's gender/race doesn't meet this post's restriction.
+            $bits = [];
+            $pg = $post['gender_preference'] ?? 'any';
+            $pr = $post['race_preference'] ?? 'any';
+            if ($pg !== 'any' && !empty($viewer['gender']) && $pg !== $viewer['gender']) $bits[] = 'gender';
+            if ($pr !== 'any' && !empty($viewer['race'])   && $pr !== $viewer['race'])   $bits[] = 'race';
+            $post['compatibility'] = [
+                'label'       => 'Not eligible',
+                'color'       => 'secondary',
+                'description' => 'This post is limited to a different ' . implode(' / ', $bits ?: ['preference']),
+            ];
+        } else {
+            $post['compatibility'] = compatibility_label($post['compatibility_score']);
+        }
     }
     unset($post);
 

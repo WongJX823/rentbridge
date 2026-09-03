@@ -1,6 +1,9 @@
 <?php
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/uploads.php';
+require_once __DIR__ . '/../includes/map.php';
+require_once __DIR__ . '/../includes/gender.php';
+require_once __DIR__ . '/../includes/race.php';
 
 // Must have completed Step 1 first
 if (empty($_SESSION['landlord_signup'])) {
@@ -23,12 +26,17 @@ $old = [
     'city'          => '',
     'postcode'      => '',
     'state'         => 'Melaka',
+    'latitude'      => '',
+    'longitude'     => '',
+    'maps_url'      => '',
     'monthly_rent'  => '',
     'deposit'       => '',
     'furnishing'    => 'partial',
     'description'   => '',
     'facilities'    => '',
     'viewing_mode'  => '',
+    'gender_preference' => 'any',
+    'race_preference'   => 'any',
 ];
 
 // ---- HANDLE STEP 2 SUBMIT ----
@@ -39,6 +47,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $old[$field] = trim($_POST[$field] ?? '');
     }
     $old['state'] = 'Melaka';
+    $old['gender_preference'] = rb_gender_norm($old['gender_preference']);
+    $old['race_preference']   = rb_race_norm($old['race_preference']);
 
     // Validate property fields
     if ($old['title'] === '')        $errors['title']   = 'Property title is required.';
@@ -139,9 +149,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $pdo->prepare(
                 'INSERT INTO properties
                     (landlord_id, title, property_type, address, city, postcode, state,
+                     latitude, longitude, maps_url,
                      monthly_rent, deposit, description, facilities, furnishing,
-                     viewing_mode, status)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "pending_approval")'
+                     viewing_mode, gender_preference, race_preference, status)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "pending_approval")'
             );
             $stmt->execute([
                 $userId,
@@ -151,12 +162,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $old['city'],
                 $old['postcode'],
                 $old['state'],
+                $old['latitude']  !== '' ? (float)$old['latitude']  : null,
+                $old['longitude'] !== '' ? (float)$old['longitude'] : null,
+                $old['maps_url']  !== '' ? $old['maps_url']  : null,
                 (float)$old['monthly_rent'],
                 $old['deposit'] !== '' ? (float)$old['deposit'] : 0,
                 $old['description'] !== '' ? $old['description'] : null,
                 $old['facilities']  !== '' ? $old['facilities']  : null,
                 $old['furnishing'],
                 $old['viewing_mode'],
+                $old['gender_preference'],
+                $old['race_preference'],
             ]);
             $propertyId = (int)$pdo->lastInsertId();
 
@@ -297,17 +313,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="bg-white border rounded-3 p-4 mb-3">
                     <h6 class="text-secondary text-uppercase small mb-3">Address</h6>
 
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">
-                            Full street address <small class="text-danger">*</small>
-                        </label>
-                        <textarea name="address" rows="2"
-                                  class="form-control <?= isset($errors['address']) ? 'is-invalid' : '' ?>"
-                                  placeholder="No 23, Jalan Sutera 5, Taman Sutera" required><?= e($old['address']) ?></textarea>
-                        <?php if (isset($errors['address'])): ?>
-                            <div class="invalid-feedback"><?= e($errors['address']) ?></div>
-                        <?php endif; ?>
-                    </div>
+                    <?php
+                    rb_address_pin_field(
+                        $old['address'],
+                        $old['latitude']  !== '' ? (float)$old['latitude']  : null,
+                        $old['longitude'] !== '' ? (float)$old['longitude'] : null,
+                        $errors['address'] ?? null
+                    );
+                    ?>
 
                     <div class="row g-3">
                         <div class="col-md-6">
@@ -345,19 +358,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <input type="text" name="state" class="form-control"
                                    value="Melaka" readonly>
                         </div>
-                        <div class="col-12">
-                            <label class="form-label fw-semibold">
-                                Google Maps link
-                                <small class="text-secondary fw-normal">— helps pricing accuracy</small>
-                            </label>
-                            <input type="url" name="maps_url" id="mapsUrlInput"
-                                   class="form-control"
-                                   placeholder="https://maps.app.goo.gl/... or https://www.google.com/maps/@2.3138,102.3192,17z">
-                            <small class="text-secondary">
-                                Open Google Maps, find your property, click "Share" → copy link. The pricing benchmark uses distance to UTeM.
-                            </small>
-                            <div id="mapsUrlStatus" class="small mt-1"></div>
-                        </div>
+                        <?php rb_maps_link_field($old['maps_url']); ?>
                     </div>
                 </div>
 
@@ -395,6 +396,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <option value="full"    <?= $old['furnishing']==='full'?'selected':'' ?>>Fully furnished</option>
                             </select>
                             <small class="text-secondary">Furnishing significantly affects rental value.</small>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Preferred tenant gender</label>
+                            <select name="gender_preference" class="form-select">
+                                <?php foreach (rb_gender_options() as $gv => $glabel): ?>
+                                    <option value="<?= $gv ?>" <?= $old['gender_preference'] === $gv ? 'selected' : '' ?>>
+                                        <?= e($glabel) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <small class="text-secondary">Choose "Any" for no restriction.</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Preferred tenant race</label>
+                            <select name="race_preference" class="form-select">
+                                <?php foreach (rb_race_options() as $rv => $rlabel): ?>
+                                    <option value="<?= $rv ?>" <?= $old['race_preference'] === $rv ? 'selected' : '' ?>>
+                                        <?= e($rlabel) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <small class="text-secondary">Choose "Any" for no restriction.</small>
                         </div>
                     </div>
 
@@ -580,6 +606,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
     </div>
 </div>
+<?php rb_map_pinpoint_assets(); ?>
 
 <script>
 (function() {

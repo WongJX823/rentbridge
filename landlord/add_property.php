@@ -1,6 +1,8 @@
 ﻿<?php
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/uploads.php';
+require_once __DIR__ . '/../includes/gender.php';
+require_once __DIR__ . '/../includes/race.php';
 require_role('landlord');
 
 $pdo = db();
@@ -55,6 +57,8 @@ $old = [
     'viewing_mode'  => $existing['viewing_mode']  ?? '',
     'latitude'      => $existing['latitude']      ?? '',
     'longitude'     => $existing['longitude']     ?? '',
+    'gender_preference' => $existing['gender_preference'] ?? 'any',
+    'race_preference'   => $existing['race_preference']   ?? 'any',
 ];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -86,6 +90,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $old[$f] = trim($_POST[$f] ?? '');
     }
     $old['state'] = 'Melaka';
+    $old['gender_preference'] = rb_gender_norm($old['gender_preference']);
+    $old['race_preference']   = rb_race_norm($old['race_preference']);
 
     // Validate
     if ($old['title'] === '')        $errors['title'] = 'Title is required.';
@@ -181,6 +187,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                            facilities = ?,
                            furnishing = ?,
                            viewing_mode = ?,
+                           gender_preference = ?,
+                           race_preference = ?,
                            status = ?
                      WHERE id = ?
                        AND landlord_id = ?
@@ -200,6 +208,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $old['facilities']  !== '' ? $old['facilities']  : null,
                     $old['furnishing'],
                     $old['viewing_mode'],
+                    $old['gender_preference'],
+                    $old['race_preference'],
                     $newStatus,
                     $editId,
                     $userId
@@ -213,8 +223,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         (landlord_id, title, property_type, address, city, postcode, state,
                          latitude, longitude,
                          monthly_rent, deposit, description, facilities, furnishing,
-                         viewing_mode, status)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending_approval')
+                         viewing_mode, gender_preference, race_preference, status)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending_approval')
                 ");
                 $stmt->execute([
                     $userId,
@@ -231,7 +241,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $old['description'] !== '' ? $old['description'] : null,
                     $old['facilities']  !== '' ? $old['facilities']  : null,
                     $old['furnishing'],
-                    $old['viewing_mode']
+                    $old['viewing_mode'],
+                    $old['gender_preference'],
+                    $old['race_preference']
                 ]);
                 $propertyId = (int)$pdo->lastInsertId();
             }
@@ -445,20 +457,18 @@ ob_start();
     </div>
 
     <!-- ADDRESS -->
+    <?php require_once __DIR__ . '/../includes/map.php'; ?>
     <div class="bg-white border rounded-3 p-4 mb-3">
         <h6 class="text-secondary text-uppercase small mb-3">Address</h6>
 
-        <div class="mb-3">
-            <label class="form-label fw-semibold">
-                Full street address <small class="text-danger">*</small>
-            </label>
-            <textarea name="address" rows="2"
-                      class="form-control <?= isset($errors['address']) ? 'is-invalid' : '' ?>"
-                      placeholder="No 23, Jalan Sutera 5, Taman Sutera" required><?= e($old['address']) ?></textarea>
-            <?php if (isset($errors['address'])): ?>
-                <div class="invalid-feedback"><?= e($errors['address']) ?></div>
-            <?php endif; ?>
-        </div>
+        <?php
+        rb_address_pin_field(
+            $old['address'],
+            $old['latitude']  !== '' ? (float)$old['latitude']  : null,
+            $old['longitude'] !== '' ? (float)$old['longitude'] : null,
+            $errors['address'] ?? null
+        );
+        ?>
 
         <div class="row g-3">
             <div class="col-md-6">
@@ -496,33 +506,7 @@ ob_start();
                 <input type="text" name="state" class="form-control"
                        value="Melaka" readonly>
             </div>
-            <div class="col-12">
-                <label class="form-label fw-semibold">
-                    Google Maps link
-                    <small class="text-secondary fw-normal">— helps pricing accuracy</small>
-                </label>
-                <input type="url" name="maps_url" id="mapsUrlInput"
-                    class="form-control"
-                    value="<?= e($old['maps_url'] ?? '') ?>"
-                    placeholder="https://maps.app.goo.gl/... or https://www.google.com/maps/@2.3138,102.3192,17z">
-                <small class="text-secondary">
-                    Open Google Maps, find your property, click "Share" → copy link. The pricing benchmark uses distance to UTeM.
-                </small>
-                <div id="mapsUrlStatus" class="small mt-1"></div>
-            </div>
-            <div class="col-12">
-                <label class="form-label fw-semibold">
-                    Pin the exact location
-                    <small class="text-secondary fw-normal">— shown to students on the map</small>
-                </label>
-                <?php
-                require_once __DIR__ . '/../includes/map.php';
-                rb_map_picker(
-                    $old['latitude']  !== '' ? (float)$old['latitude']  : null,
-                    $old['longitude'] !== '' ? (float)$old['longitude'] : null
-                );
-                ?>
-            </div>
+            <?php rb_maps_link_field($old['maps_url'] ?? ''); ?>
         </div>
     </div>
 
@@ -560,7 +544,32 @@ ob_start();
             </div>
         </div>
 
-        <div class="mb-3">
+        <div class="row g-3 mt-1">
+            <div class="col-md-6">
+                <label class="form-label fw-semibold">Preferred tenant gender</label>
+                <select name="gender_preference" class="form-select">
+                    <?php foreach (rb_gender_options() as $gv => $glabel): ?>
+                        <option value="<?= $gv ?>" <?= $old['gender_preference'] === $gv ? 'selected' : '' ?>>
+                            <?= e($glabel) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+                <small class="text-secondary">Choose "Any" for no restriction.</small>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label fw-semibold">Preferred tenant race</label>
+                <select name="race_preference" class="form-select">
+                    <?php foreach (rb_race_options() as $rv => $rlabel): ?>
+                        <option value="<?= $rv ?>" <?= $old['race_preference'] === $rv ? 'selected' : '' ?>>
+                            <?= e($rlabel) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+                <small class="text-secondary">Choose "Any" for no restriction.</small>
+            </div>
+        </div>
+
+        <div class="mb-3 mt-3">
             <label class="form-label fw-semibold">Facilities</label>
             <textarea name="facilities" rows="3" class="form-control"
                       placeholder="WiFi, aircond, washing machine, parking, etc."><?= e($old['facilities']) ?></textarea>
@@ -1060,6 +1069,7 @@ ob_start();
 </div>
 
 </form>
+<?php rb_map_pinpoint_assets(); ?>
 <script>
 let benchmarkSuggested = null;
 
