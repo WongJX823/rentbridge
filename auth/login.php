@@ -15,9 +15,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $email    = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
+    $ip       = $_SERVER['REMOTE_ADDR'] ?? '';
 
     if ($email === '' || $password === '') {
         $error = 'Please enter your email and password.';
+    } elseif (($lockMsg = login_throttle_check($email, $ip)) !== null) {
+        $error = $lockMsg;
     } else {
         $stmt = db()->prepare('SELECT * FROM users WHERE email = ? LIMIT 1');
         $stmt->execute([$email]);
@@ -25,15 +28,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (!$user || !password_verify($password, $user['password_hash'])) {
             // Same generic message for "no such email" + "wrong password"
+            record_login_attempt($email, $ip, false);
             $error = 'Invalid email or password.';
         } elseif ($user['status'] === 'suspended') {
+            record_login_attempt($email, $ip, true); // correct password — not a brute-force signal
             $error = 'This account has been suspended. Please contact support.';
         } elseif ($user['status'] === 'pending') {
+            record_login_attempt($email, $ip, true);
             $error = 'Your account is pending admin approval. Please check back later.';
         } elseif ($user['status'] === 'rejected') {
+            record_login_attempt($email, $ip, true);
             $error = 'Your application was not approved. Please contact UTeM HEP for clarification.';
         } else {
             // ✅ All good — log in
+            record_login_attempt($email, $ip, true);
             login_user($user);
             set_flash('success', 'Welcome back!');
             header('Location: ' . dashboard_url_for($user['primary_role']));

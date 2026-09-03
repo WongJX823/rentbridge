@@ -124,6 +124,59 @@ function require_role(string $role): void {
 }
 
 /* ============================================================
+ *  Login rate limiting (brute-force / credential-stuffing defense)
+ * ============================================================ */
+
+const RB_LOGIN_MAX_ATTEMPTS    = 5;  // per-account failures before lockout
+const RB_LOGIN_IP_MAX_ATTEMPTS = 20; // per-IP failures before lockout (many accounts from one source)
+const RB_LOGIN_WINDOW_MINUTES  = 15; // rolling window both thresholds are counted over
+
+/**
+ * Check whether this email or IP is currently locked out from logging in.
+ * Returns a user-facing message if locked, or null if the attempt may proceed.
+ * Call BEFORE checking credentials, so a locked-out attacker never learns
+ * whether the password they're trying is correct.
+ */
+function login_throttle_check(string $email, string $ip): ?string {
+    $pdo = db();
+    $windowStart = date('Y-m-d H:i:s', time() - RB_LOGIN_WINDOW_MINUTES * 60);
+
+    $stmt = $pdo->prepare("
+        SELECT COUNT(*) FROM login_attempts
+         WHERE identifier = ? AND success = 0 AND attempted_at > ?
+    ");
+    $stmt->execute([strtolower($email), $windowStart]);
+    if ((int)$stmt->fetchColumn() >= RB_LOGIN_MAX_ATTEMPTS) {
+        return 'Too many failed login attempts for this account. Please try again in '
+             . RB_LOGIN_WINDOW_MINUTES . ' minutes.';
+    }
+
+    $stmt = $pdo->prepare("
+        SELECT COUNT(*) FROM login_attempts
+         WHERE ip_address = ? AND success = 0 AND attempted_at > ?
+    ");
+    $stmt->execute([$ip, $windowStart]);
+    if ((int)$stmt->fetchColumn() >= RB_LOGIN_IP_MAX_ATTEMPTS) {
+        return 'Too many failed login attempts from your network. Please try again in '
+             . RB_LOGIN_WINDOW_MINUTES . ' minutes.';
+    }
+
+    return null;
+}
+
+/**
+ * Record one login attempt. $success = true for a correct password (even if
+ * the account is then blocked for another reason, e.g. suspended) so that
+ * never counts against the brute-force threshold.
+ */
+function record_login_attempt(string $email, string $ip, bool $success): void {
+    db()->prepare("
+        INSERT INTO login_attempts (identifier, ip_address, success)
+        VALUES (?, ?, ?)
+    ")->execute([strtolower($email), $ip, $success ? 1 : 0]);
+}
+
+/* ============================================================
  *  Password validation (NIST SP 800-63B-aligned hybrid policy)
  * ============================================================ */
 
