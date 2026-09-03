@@ -180,7 +180,7 @@ test.describe('Flow 3D — Agent generates contract then uploads a wet-signed PD
       test.skip(true, 'Signed PDF upload input not found — contract may not be in the right state');
       return;
     }
-    await uploadInput.setInputFiles(path.join(__dirname, '..', 'test_document.pdf'));
+    await uploadInput.setInputFiles(path.join(__dirname, 'fixtures', 'test_document.pdf'));
 
     // The upload button has a confirm() dialog guard.
     page.once('dialog', d => d.accept());

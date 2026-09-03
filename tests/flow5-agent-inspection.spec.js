@@ -164,7 +164,7 @@ test.describe('Flow 5D — Agent rejects a separate property with evidence', () 
     await page.fill('#rejectModal textarea[name="reason"]',
       'Dokumen geran tidak sepadan dengan alamat hartanah.');
     await page.setInputFiles('#rejectModal input[name="evidence_photo"]',
-      path.join(__dirname, '..', 'test_photo.jpg'));
+      path.join(__dirname, 'fixtures', 'test_photo.jpg'));
 
     page.once('dialog', d => d.accept());
     await page.click('#rejectModal button:has-text("Reject listing")');

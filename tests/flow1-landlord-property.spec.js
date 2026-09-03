@@ -63,7 +63,7 @@ test.describe('Flow 1 — Landlord property registration', () => {
     // Upload property photo
     const photoInput = page.locator('input[type="file"][name*="photo"], input[type="file"][name*="image"]').first();
     if (await photoInput.count()) {
-      await photoInput.setInputFiles(path.join(__dirname, '..', 'test_photo.jpg'));
+      await photoInput.setInputFiles(path.join(__dirname, 'fixtures', 'test_photo.jpg'));
     }
 
     // Upload ownership document (must pick a document type or the upload is rejected)
@@ -73,7 +73,7 @@ test.describe('Flow 1 — Landlord property registration', () => {
     }
     const docInput = page.locator('input[type="file"][name*="doc"], input[type="file"][name*="document"]').first();
     if (await docInput.count()) {
-      await docInput.setInputFiles(path.join(__dirname, '..', 'test_document.pdf'));
+      await docInput.setInputFiles(path.join(__dirname, 'fixtures', 'test_document.pdf'));
     }
 
     // Submit (scoped text — a generic button[type="submit"] also matches the
