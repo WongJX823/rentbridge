@@ -4,11 +4,14 @@
  * This file is included anywhere we need to talk to MySQL.
  */
 
-// Database credentials (XAMPP defaults)
-define('DB_HOST', 'localhost');
-define('DB_NAME', 'dbrb_2026');
-define('DB_USER', 'root');
-define('DB_PASS', '');
+// Database credentials (XAMPP defaults).
+// Each can be overridden by an environment variable so the automated test
+// suite can point at a throwaway database (dbrb_2026_test) without touching
+// development data. Defaults are unchanged for normal app use.
+define('DB_HOST', getenv('RB_DB_HOST') ?: 'localhost');
+define('DB_NAME', getenv('RB_DB_NAME') ?: 'dbrb_2026');
+define('DB_USER', getenv('RB_DB_USER') ?: 'root');
+define('DB_PASS', getenv('RB_DB_PASS') !== false ? getenv('RB_DB_PASS') : '');
 
 /**
  * Returns a singleton PDO connection.
