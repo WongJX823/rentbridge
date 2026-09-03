@@ -12,7 +12,7 @@ module.exports = defineConfig({
   reporter: [['html', { outputFolder: 'playwright-report' }], ['list']],
 
   use: {
-    baseURL: 'http://localhost/rentbridge',
+    baseURL: 'http://localhost/rentbridge/',
     headless: true,
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',

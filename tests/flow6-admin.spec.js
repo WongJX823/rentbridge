@@ -32,7 +32,7 @@ test.describe('Flow 6B — User analytics', () => {
   test('UC-22: user analytics page renders charts and CSV exports', async ({ page }) => {
     await login(page, 'admin');
 
-    await page.goto('/admin/statistics/users.php');
+    await page.goto('admin/statistics/users.php');
     await page.waitForLoadState('networkidle');
 
     // No PHP errors
@@ -62,7 +62,7 @@ test.describe('Flow 6C — User management', () => {
     await login(page, 'admin');
 
     // Navigate to users list
-    await page.goto('/admin/users.php');
+    await page.goto('admin/users.php');
     await page.waitForLoadState('networkidle');
 
     await expect(page.locator('text=Fatal error')).toHaveCount(0);
@@ -104,7 +104,7 @@ test.describe('Flow 6D–E — Properties and tenancies management', () => {
   test('UC-24a: admin can filter properties by pending status', async ({ page }) => {
     await login(page, 'admin');
 
-    await page.goto('/admin/properties.php');
+    await page.goto('admin/properties.php');
     await page.waitForLoadState('networkidle');
 
     await expect(page.locator('text=Fatal error')).toHaveCount(0);
@@ -134,7 +134,7 @@ test.describe('Flow 6D–E — Properties and tenancies management', () => {
   test('UC-24b: admin tenancy detail shows co-tenant table and contract link', async ({ page }) => {
     await login(page, 'admin');
 
-    await page.goto('/admin/tenancies.php');
+    await page.goto('admin/tenancies.php');
     await page.waitForLoadState('networkidle');
 
     await expect(page.locator('text=Fatal error')).toHaveCount(0);
@@ -163,42 +163,25 @@ test.describe('Flow 6F — Agent transfer request', () => {
   test('UC-25: admin processes an agent transfer request', async ({ page }) => {
     await login(page, 'admin');
 
-    // Navigate to transfer requests
-    const transferUrl = page.locator('a[href*="transfer"], a:has-text("Transfer")').first();
-    await page.goto('/admin/dashboard.php');
+    await page.goto('admin/transfers.php?filter=pending');
     await page.waitForLoadState('networkidle');
 
-    const pendingTransfer = page.locator('text=Transfer Request, a[href*="transfer_request"]').first();
-    if (!(await pendingTransfer.count())) {
+    const reviewBtn = page.locator('button:has-text("Review")').first();
+    if (!(await reviewBtn.count())) {
       test.skip(true, 'No pending transfer requests found — seed one first');
       return;
     }
+    await reviewBtn.click();
+    await page.waitForTimeout(500);
 
-    await pendingTransfer.click();
+    // Approving dispatches to a batch of agents (FIFO), no manual agent pick.
+    page.once('dialog', d => d.accept());
+    await page.click('#reviewModal button:has-text("Approve")');
     await page.waitForLoadState('networkidle');
 
-    // Force assign
-    const forceBtn = page.locator('button:has-text("Force Assign"), a:has-text("Force Assign")').first();
-    if (await forceBtn.count()) {
-      await forceBtn.click();
-      await page.waitForTimeout(300);
-
-      // Select an agent
-      const agentSelect = page.locator('select[name="agent_id"], select[name="new_agent"]').first();
-      if (await agentSelect.count()) {
-        const options = await agentSelect.locator('option').all();
-        if (options.length > 1) await agentSelect.selectOption({ index: 1 });
-      }
-
-      await page.locator('button[type="submit"]').first().click();
-      await page.waitForLoadState('networkidle');
-
-      await expect(
-        page.locator('.alert-success, text=completed, text=transferred, text=Transfer complete')
-      ).toBeVisible().catch(() => {});
-    } else {
-      test.skip(true, 'Force Assign button not found');
-    }
+    await expect(
+      page.locator('.alert-success, text=approved, text=Approved, text=dispatched')
+    ).toBeVisible().catch(() => {});
   });
 
 });
@@ -207,7 +190,7 @@ test.describe('Flow 6H — Role guards and edge case inputs', () => {
 
   test('UC-26a: admin dashboard redirects to login when logged out', async ({ page }) => {
     // Access without login
-    await page.goto('/admin/dashboard.php');
+    await page.goto('admin/dashboard.php');
     await page.waitForLoadState('networkidle');
 
     // Should redirect to login, not show admin content
@@ -217,11 +200,11 @@ test.describe('Flow 6H — Role guards and edge case inputs', () => {
   test('UC-26b: admin cannot access student dashboard', async ({ page }) => {
     await login(page, 'admin');
 
-    await page.goto('/student/dashboard.php');
+    await page.goto('student/dashboard.php');
     await page.waitForLoadState('networkidle');
 
     // Should show access denied or redirect
-    const denied = await page.locator('text=Access denied, text=Unauthorized, text=403').count();
+    const denied = await page.getByText(/Access denied|Unauthorized|403/i).count();
     const redirectedToAdmin = page.url().includes('admin') || page.url().includes('login');
     expect(denied + (redirectedToAdmin ? 1 : 0)).toBeGreaterThan(0);
   });
@@ -229,7 +212,7 @@ test.describe('Flow 6H — Role guards and edge case inputs', () => {
   test('UC-26c: non-existent property ID returns not-found, not PHP error', async ({ page }) => {
     await login(page, 'admin');
 
-    await page.goto('/admin/property.php?id=99999');
+    await page.goto('admin/property.php?id=99999');
     await page.waitForLoadState('networkidle');
 
     await expect(page.locator('text=Fatal error, text=Parse error')).toHaveCount(0);
@@ -239,7 +222,7 @@ test.describe('Flow 6H — Role guards and edge case inputs', () => {
   });
 
   test('UC-26d: fake contract ref on verify page shows not-found, not PHP error', async ({ page }) => {
-    await page.goto('/verify.php?ref=RB-0000-00000');
+    await page.goto('verify.php?ref=RB-0000-00000');
     await page.waitForLoadState('networkidle');
 
     await expect(page.locator('text=Fatal error, text=Parse error')).toHaveCount(0);

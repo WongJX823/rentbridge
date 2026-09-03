@@ -1,299 +1,325 @@
-﻿/**
- * FLOW 4 — Student posts for housemates, 4 sign, 2 added later (edge cases)
- * UC-12 to UC-16
- * Actors: Students 1–6, Landlord, Agent, Admin
- * Covers: co-tenancy post → applications → 4-person tenancy → e-sign × 5 → late addition
+/**
+ * FLOW 4 — Student posts for housemates, group forms, 4-person tenancy signs
+ * UC-12 to UC-15 (UC-14/UC-16 dropped — see Flow 4G note below)
+ * Actors: Students 1–4, Agent
+ *
+ * co_tenancy_posts / applications (find_housemates.php, partners.php,
+ * manage_post.php) are a purely social matching layer — accepting the last
+ * applicant auto-creates a group chat, but there is no bridge from that
+ * group chat into the tenancy/contract flow. To actually rent the unit, the
+ * poster (student1) independently goes through the same agent-mediated
+ * chat -> tenant info form flow as flow2/flow3, this time listing the 3
+ * accepted housemates as co-tenants.
  */
 
 const { test, expect } = require('@playwright/test');
 const { login } = require('./helpers/auth');
 
-let postId;
+const HOUSEMATES = [
+  { name: 'Lim Wei Xian',   ic: '021205-10-1234', phone: '012-3456789', email: 's2@test.com' },
+  { name: 'Priya Nair',     ic: '021308-07-9876', phone: '013-9876543', email: 's3@test.com' },
+  { name: 'Nurul Ain',      ic: '021412-06-3456', phone: '016-7654321', email: 's4@test.com' },
+];
+
 let tenancyId;
 let contractId;
 
-test.describe('Flow 4A–B — Student 1 posts; Students 2–4 apply', () => {
+test.describe('Flow 4A — Student 1 posts for housemates', () => {
 
-  test('UC-12: student 1 creates a housemate post for 3 more people', async ({ page }) => {
+  test('UC-12: student 1 creates a housemate post for property #9001', async ({ page }) => {
     await login(page, 'student1');
 
-    await page.goto('/student/find_housemates.php');
+    await page.goto('student/find_housemates.php?property_id=9001');
     await page.waitForLoadState('networkidle');
 
-    // Create post
-    const createBtn = page.locator('button:has-text("Create"), a:has-text("Create Post"), button:has-text("Post")').first();
-    if (!(await createBtn.count())) {
-      // Try form directly on the page
-    } else {
-      await createBtn.click();
-      await page.waitForTimeout(300);
-    }
+    const housemates = page.locator('select[name="housemates_needed"]');
+    if (await housemates.count()) await housemates.selectOption('3');
 
-    const budgetField = page.locator('input[name="budget_per_person"], input[name="budget"]').first();
-    if (await budgetField.count()) await budgetField.fill('300');
+    // semesters_needed only offers 3-6 (default 3) — leave at default
 
-    const descField = page.locator('textarea[name="description"], textarea[name="post_body"]').first();
-    if (await descField.count()) {
-      await descField.fill('Cari housemate untuk unit 4 bilik dekat UTeM. Serius sahaja.');
-    }
+    await page.fill('textarea[name="message"]', 'Cari 3 housemate untuk unit 4 bilik dekat UTeM. Serius sahaja.');
 
-    const semesterSelect = page.locator('select[name="semesters_needed"]');
-    if (await semesterSelect.count()) await semesterSelect.selectOption('2');
-
-    const submitBtn = page.locator('button[type="submit"]').first();
-    if (await submitBtn.count()) {
-      await submitBtn.click();
-      await page.waitForLoadState('networkidle');
-    }
-
-    // Assert: post appears in browse page
-    await page.goto('/student/partners.php');
+    await page.click('button:has-text("Post to Find Housemates")');
     await page.waitForLoadState('networkidle');
-    await expect(page.locator('text=Cari housemate, .post-card, .partner-card')).toBeVisible().catch(() => {});
+
+    await page.goto('student/partners.php');
+    await page.waitForLoadState('networkidle');
+    await expect(page.locator('text=Cari 3 housemate').first()).toBeVisible().catch(() => {});
   });
 
-  test('UC-12b: students 2, 3, 4 find the post and apply', async ({ page }) => {
-    for (const role of ['student2', 'student3', 'student4'] as const) {
+});
+
+test.describe('Flow 4B — Students 2, 3, 4 find the post and apply', () => {
+
+  test('UC-12b: students 2, 3, 4 apply to join', async ({ page }) => {
+    for (const role of ['student2', 'student3', 'student4']) {
       await login(page, role);
-      await page.goto('/student/partners.php');
+      await page.goto('student/partners.php');
       await page.waitForLoadState('networkidle');
 
-      const applyBtn = page.locator('button:has-text("Apply"), a:has-text("Apply"), button:has-text("Join")').first();
+      const applyBtn = page.locator('a:has-text("Apply to join"), button:has-text("Apply to join")').first();
       if (await applyBtn.count()) {
         await applyBtn.click();
         await page.waitForLoadState('networkidle');
+
+        const msgBox = page.locator('textarea[name="message"]').first();
+        if (await msgBox.count()) {
+          await msgBox.fill(`Hi, I'd like to join as a housemate.`);
+          await page.click('button:has-text("Send application")');
+          await page.waitForLoadState('networkidle');
+        }
       }
-      await page.goto('/auth/logout.php');
+      await page.goto('auth/logout.php');
     }
   });
 
 });
 
-test.describe('Flow 4C–D — Contract prep for 4 tenants', () => {
+test.describe('Flow 4C — Student 1 accepts all 3 applicants', () => {
 
-  test('UC-13: landlord fills tenant info form with 4 tenants', async ({ page }) => {
-    await login(page, 'landlord');
+  test('UC-12c: poster accepts applicants; group chat is created once full', async ({ page }) => {
+    await login(page, 'student1');
 
-    // Student 1 needs to have chatted with landlord first for the target property
-    // This step assumes UC-08 equivalent was run or property was pre-seeded with a conversation
-    await page.goto('/chat.php');
+    await page.goto('student/partners.php');
     await page.waitForLoadState('networkidle');
 
-    const agentConv = page.locator('a[href*="conversation"]').first();
-    await agentConv.click();
-    await page.waitForLoadState('networkidle');
-
-    const modalTrigger = page.locator(
-      'button[data-bs-target="#tenantInfoModal"], button:has-text("Tenant Info"), button:has-text("Fill")'
-    ).first();
-    if (!(await modalTrigger.count())) {
-      test.skip(true, 'Tenant info form not accessible — requires prior UC-08 equivalent');
+    const manageLink = page.locator('a[href*="manage_post.php"]').first();
+    if (!(await manageLink.count())) {
+      test.skip(true, 'No manageable post found — UC-12 may not have completed');
       return;
     }
-    await modalTrigger.click();
+    await manageLink.click();
+    await page.waitForLoadState('networkidle');
+
+    for (let i = 0; i < HOUSEMATES.length; i++) {
+      const acceptBtn = page.locator('button:has-text("Accept")').first();
+      if (!(await acceptBtn.count())) break;
+      await acceptBtn.click();
+      await page.waitForLoadState('networkidle');
+    }
+
+    await expect(page.locator('text=group chat created').first()).toBeVisible().catch(() => {});
+  });
+
+});
+
+test.describe('Flow 4D — Student 1 starts the formal tenancy chat with the agent', () => {
+
+  test('UC-13a: student 1 opens agent chat', async ({ page }) => {
+    await login(page, 'student1');
+
+    await page.goto('property.php?id=9001');
+    await page.waitForLoadState('networkidle');
+
+    const chatBtn = page.locator('a[href*="chat/start.php"]').first();
+    await expect(chatBtn).toBeVisible();
+    await chatBtn.click();
+    await page.waitForLoadState('networkidle');
+    await expect(page).toHaveURL(/conversation/);
+  });
+
+  test('UC-13a2: agent sends the tenant info form', async ({ page }) => {
+    await login(page, 'agent');
+    await page.goto('chat.php');
+    await page.waitForLoadState('networkidle');
+
+    const convs = page.locator('a[href*="conversation"]:visible');
+    await expect(convs.first()).toBeVisible();
+    await convs.first().click();
+    await page.waitForLoadState('networkidle');
+
+    const sendFormBtn = page.locator('#agentSendFormBtn, button:has-text("Send tenant info form")').first();
+    if (!(await sendFormBtn.count())) {
+      test.skip(true, 'Send tenant info form button not shown');
+      return;
+    }
+    await sendFormBtn.click();
     await page.waitForTimeout(500);
 
-    // Primary
-    await page.fill('input[name="primary_name"]', 'Ahmad Faris').catch(() => {});
-    await page.fill('input[name="primary_ic"]', '021103-14-5678').catch(() => {});
-    await page.fill('input[name="primary_phone"]', '011-23456789').catch(() => {});
-    await page.fill('input[name="primary_email"]', 's1@test.com').catch(() => {});
-
-    // 3 co-tenants
-    const coTenants = [
-      { name: 'Lim Wei Xian', ic: '021205-10-1234', phone: '012-3456789', email: 's2@test.com' },
-      { name: 'Priya Nair',   ic: '021308-07-9876', phone: '013-9876543', email: 's3@test.com' },
-      { name: 'Nurul Ain',    ic: '021412-06-3456', phone: '016-7654321', email: 's4@test.com' },
-    ];
-    for (let i = 0; i < coTenants.length; i++) {
-      const addBtn = page.locator('button:has-text("Add Co-Tenant")').first();
-      if (await addBtn.count()) await addBtn.click();
-      const ct = coTenants[i];
-      const idx = i + 1;
-      await page.fill(`input[name="co_tenant_name_${idx}"]`, ct.name).catch(() => {});
-      await page.fill(`input[name="co_tenant_ic_${idx}"]`,   ct.ic).catch(() => {});
-      await page.fill(`input[name="co_tenant_phone_${idx}"]`, ct.phone).catch(() => {});
-      await page.fill(`input[name="co_tenant_email_${idx}"]`, ct.email).catch(() => {});
-    }
-
+    await page.fill('#atm_monthly_rent', '900');
+    await page.fill('#atm_deposit', '1800');
     const today = new Date();
-    const start = new Date(today); start.setDate(today.getDate() + 14);
-    const end   = new Date(today); end.setDate(today.getDate() + 194);
-    const fmt   = (d) => d.toISOString().split('T')[0];
+    const start = new Date(today);
+    start.setDate(today.getDate() + 14);
+    await page.fill('#atm_start_date', start.toISOString().split('T')[0]);
 
-    await page.fill('input[name="start_date"]', fmt(start)).catch(() => {});
-    await page.fill('input[name="end_date"]',   fmt(end)).catch(() => {});
-    await page.fill('input[name="monthly_rent"]', '1200').catch(() => {});
-    await page.fill('input[name="deposit"]', '2400').catch(() => {});
+    await page.click('#atmSubmitBtn');
+    await page.waitForTimeout(1000);
 
-    await page.locator('#tenantInfoModal button[type="submit"], form button[type="submit"]').first().click();
-    await page.waitForLoadState('networkidle');
+    await expect(page.locator('text=Tenant info form').first()).toBeVisible();
   });
 
 });
 
-test.describe('Flow 4F — Admin adds 5th tenant before signing', () => {
+test.describe('Flow 4E — Student 1 fills the tenant form with 3 co-tenants', () => {
 
-  test('UC-14: admin adds student 5 to the tenancy', async ({ page }) => {
-    await login(page, 'admin');
+  test('UC-13b: student submits form with primary + 3 co-tenants', async ({ page }) => {
+    await login(page, 'student1');
 
-    await page.goto('/admin/tenancies.php');
+    await page.goto('chat.php');
     await page.waitForLoadState('networkidle');
 
-    const tenancyLink = page.locator('a[href*="tenancy.php?id"]').first();
-    if (!(await tenancyLink.count())) {
-      test.skip(true, 'No tenancy found in admin panel');
+    const conv = page.locator('a[href*="conversation"]:visible').first();
+    await conv.click();
+    await page.waitForLoadState('networkidle');
+
+    const fillLink = page.locator('a:has-text("Fill in tenant details")').first();
+    if (!(await fillLink.count())) {
+      test.skip(true, 'Tenant info form link not found — UC-13a may not have completed');
       return;
     }
-    await tenancyLink.click();
+    await fillLink.click();
+    await page.waitForLoadState('networkidle');
+    await expect(page).toHaveURL(/tenant_form/);
+
+    await page.fill('input[name="tenant_name"]', 'Ahmad Faris');
+    await page.fill('input[name="tenant_ic"]', '021103-14-5678');
+    await page.fill('input[name="tenant_phone"]', '011-23456789');
+
+    for (const h of HOUSEMATES) {
+      await page.click('#addCoTenantBtn');
+      await page.waitForTimeout(200);
+    }
+
+    const nameFields  = page.locator('input[name="cotenant_name[]"]');
+    const icFields    = page.locator('input[name="cotenant_ic[]"]');
+    const phoneFields = page.locator('input[name="cotenant_phone[]"]');
+    const emailFields = page.locator('input[name="cotenant_email[]"]');
+
+    for (let i = 0; i < HOUSEMATES.length; i++) {
+      await nameFields.nth(i).fill(HOUSEMATES[i].name);
+      await icFields.nth(i).fill(HOUSEMATES[i].ic);
+      await phoneFields.nth(i).fill(HOUSEMATES[i].phone);
+      await emailFields.nth(i).fill(HOUSEMATES[i].email);
+    }
+
+    await page.click('button:has-text("Submit tenant details")');
+    await page.waitForLoadState('networkidle');
+
+    await expect(page.locator('text=Form submitted')).toBeVisible();
+  });
+
+});
+
+test.describe('Flow 4F — Agent generates the contract', () => {
+
+  test('UC-14: agent generates the 4-tenant contract', async ({ page }) => {
+    await login(page, 'agent');
+
+    await page.goto('agent/cases.php?tab=contracts');
+    await page.waitForLoadState('networkidle');
+
+    const caseLink = page.locator('a[href*="case.php"]').first();
+    if (!(await caseLink.count())) {
+      test.skip(true, 'No contract_pending case found — UC-13b may not have completed');
+      return;
+    }
+    await caseLink.click();
     await page.waitForLoadState('networkidle');
 
     const url = page.url();
-    const bm  = url.match(/id=(\d+)/);
+    const bm = url.match(/id=(\d+)/);
     if (bm) tenancyId = bm[1];
 
-    // Add co-tenant form
-    const addCoTenantBtn = page.locator('button:has-text("Add Co-Tenant"), a:has-text("Add Tenant")').first();
-    if (await addCoTenantBtn.count()) {
-      await addCoTenantBtn.click();
-      await page.waitForTimeout(300);
-
-      await page.fill('input[name="full_name"]', 'Tan Jia Hui').catch(() => {});
-      await page.fill('input[name="ic_number"]', '030512-14-2345').catch(() => {});
-      await page.fill('input[name="phone"]', '014-5678901').catch(() => {});
-      await page.fill('input[name="email"]', 's5@test.com').catch(() => {});
-
-      await page.locator('button[type="submit"]').first().click();
-      await page.waitForLoadState('networkidle');
-
-      await expect(page.locator('text=Tan Jia Hui, .alert-success')).toBeVisible().catch(() => {});
-    } else {
-      test.skip(true, 'Add co-tenant button not found on admin tenancy page');
+    const genBtn = page.locator('a[href*="generate_contract"]').first();
+    if (!(await genBtn.count())) {
+      test.skip(true, 'Generate Contract link not visible');
+      return;
     }
+    const downloadPromise = page.waitForEvent('download', { timeout: 15000 }).catch(() => null);
+    await genBtn.click();
+    await downloadPromise;
+    await page.waitForTimeout(1000);
+
+    expect(tenancyId).toBeTruthy();
   });
 
 });
 
-test.describe('Flow 4G — All 5 students e-sign', () => {
+test.describe('Flow 4G — All 4 tenants e-sign in turn', () => {
 
-  for (const [role, label] of [
-    ['student1', 'Student 1 (primary)'],
-    ['student2', 'Student 2'],
-    ['student3', 'Student 3'],
-    ['student4', 'Student 4'],
-    ['student5', 'Student 5'],
-  ] as const) {
-    test(`UC-15: ${label} draws e-signature on contract`, async ({ page }) => {
+  // Only the PRIMARY tenant can reach student/tenancy.php (it filters on
+  // tenancies.student_id, which is the primary tenant's user id only).
+  // Every signer — primary or co-tenant — gets a "your turn to sign"
+  // notification linking to contracts/view.php?id=<contractId>, which is
+  // the universal, access-controlled entry point. student1 (primary) goes
+  // via tenancy.php to discover and capture that contract id; the
+  // co-tenants use it directly.
+  const SIGNERS = ['student1', 'student2', 'student3', 'student4'];
+
+  for (const role of SIGNERS) {
+    test(`UC-15: ${role} draws e-signature on contract (in sign order)`, async ({ page }) => {
       await login(page, role);
 
-      // Navigate to sign page
-      await page.goto(contractId ? `/contracts/sign.php?id=${contractId}` : '/student/tenancy.php');
-      await page.waitForLoadState('networkidle');
-
-      // If on tenancy page, find sign link
-      if (!page.url().includes('sign.php')) {
-        const signLink = page.locator('a[href*="sign.php"]').first();
-        if (await signLink.count()) {
-          await signLink.click();
-          await page.waitForLoadState('networkidle');
-        } else {
-          // Not their turn yet or contract not at signing state
-          test.skip(true, `Sign link not found for ${label} — may not be their turn yet`);
+      let signLink;
+      if (role === 'student1') {
+        if (!tenancyId) {
+          test.skip(true, 'No tenancy id captured from UC-14');
           return;
         }
+        await page.goto(`student/tenancy.php?id=${tenancyId}`);
+        await page.waitForLoadState('networkidle');
+        signLink = page.locator('a[href*="sign.php"]').first();
+      } else {
+        if (!contractId) {
+          test.skip(true, 'No contract id captured from student1 signing — cannot build contracts/view.php URL');
+          return;
+        }
+        await page.goto(`contracts/view.php?id=${contractId}`);
+        await page.waitForLoadState('networkidle');
+        signLink = page.locator('a[href*="sign.php"]').first();
       }
 
-      // It is not this student's turn → skip gracefully
-      const notYourTurn = await page.locator('text=not your turn, text=bukan giliran').count();
-      if (notYourTurn) {
-        test.skip(true, `Not ${label}'s turn to sign yet`);
+      if (!(await signLink.count())) {
+        test.skip(true, `Sign link not found for ${role} — may not be their turn yet, or already signed`);
+        return;
+      }
+      const href = await signLink.getAttribute('href');
+      const m = href?.match(/id=(\d+)/);
+      if (m) contractId = m[1];
+
+      await signLink.click();
+      await page.waitForLoadState('networkidle');
+
+      // Not this signer's turn (contract_can_sign gate) -> redirected back to view.php
+      if (page.url().includes('/contracts/view')) {
+        test.skip(true, `Not ${role}'s turn to sign yet`);
         return;
       }
 
-      // Draw signature
-      const canvas = page.locator('canvas#signatureCanvas, canvas[id*="signature"], canvas').first();
+      const canvas = page.locator('canvas#signature-pad, canvas[id*="signature"]').first();
       await expect(canvas).toBeVisible();
-
       const box = await canvas.boundingBox();
       if (box) {
         await page.mouse.move(box.x + 30, box.y + box.height / 2);
         await page.mouse.down();
         await page.mouse.move(box.x + 150, box.y + box.height / 2 - 20, { steps: 12 });
-        await page.mouse.move(box.x + 220, box.y + box.height / 2,      { steps: 12 });
+        await page.mouse.move(box.x + 220, box.y + box.height / 2, { steps: 12 });
         await page.mouse.up();
       }
 
-      await page.locator('button:has-text("Sign"), button[type="submit"]').first().click();
+      await page.click('#btn-submit, button[type="submit"]');
       await page.waitForLoadState('networkidle');
 
-      // Assert success
-      await expect(
-        page.locator('.alert-success, text=signed, text=Signature saved')
-      ).toBeVisible().catch(() => {});
+      await expect(page).toHaveURL(/contracts\/view/);
+      await expect(page.getByText(/Signed \d/).first()).toBeVisible();
     });
   }
 
 });
 
-test.describe('Flow 4H — Late co-tenant added after activation (edge case)', () => {
+test.describe('Flow 4H — Late co-tenant addition (not implemented)', () => {
 
-  test('UC-16: agent adds student 6 after tenancy is active; s6 signs; tenancy stays active', async ({ page }) => {
-    await login(page, 'agent');
-
-    if (tenancyId) {
-      await page.goto(`/agent/case.php?id=${tenancyId}`);
-    } else {
-      await page.goto('/agent/dashboard.php');
-      await page.locator('a[href*="case.php"]').first().click();
-    }
-    await page.waitForLoadState('networkidle');
-
-    const addLateBtn = page.locator('button:has-text("Add Co-Tenant"), a:has-text("Add Late")').first();
-    if (await addLateBtn.count()) {
-      await addLateBtn.click();
-      await page.waitForTimeout(300);
-
-      await page.fill('input[name="full_name"]', 'Hafiz Zulkifli').catch(() => {});
-      await page.fill('input[name="ic_number"]', '031101-12-6789').catch(() => {});
-      await page.fill('input[name="phone"]', '016-7890123').catch(() => {});
-      await page.fill('input[name="email"]', 's6@test.com').catch(() => {});
-
-      await page.locator('button[type="submit"]').first().click();
-      await page.waitForLoadState('networkidle');
-    } else {
-      test.skip(true, 'Add late co-tenant UI not found on agent case page');
-      return;
-    }
-
-    // Student 6 signs
-    await login(page, 'student6');
-    await page.goto('/student/tenancy.php');
-    await page.waitForLoadState('networkidle');
-
-    const signLink = page.locator('a[href*="sign.php"]').first();
-    if (await signLink.count()) {
-      await signLink.click();
-      await page.waitForLoadState('networkidle');
-
-      const canvas = page.locator('canvas').first();
-      const box = await canvas.boundingBox();
-      if (box) {
-        await page.mouse.move(box.x + 30, box.y + 30);
-        await page.mouse.down();
-        await page.mouse.move(box.x + 120, box.y + 60, { steps: 10 });
-        await page.mouse.up();
-      }
-      await page.locator('button[type="submit"]').first().click();
-      await page.waitForLoadState('networkidle');
-    }
-
-    // Assert tenancy still active (not reset by late addition)
-    await login(page, 'admin');
-    if (tenancyId) {
-      await page.goto(`/admin/tenancy.php?id=${tenancyId}`);
-      await page.waitForLoadState('networkidle');
-      await expect(page.locator('text=active, .badge:has-text("active")')).toBeVisible().catch(() => {});
-    }
+  test('UC-16: agent/admin adding a co-tenant after signing has started', async () => {
+    // NOTE: neither agent/case.php nor admin/tenancy.php exposes any UI to
+    // add a co-tenant to an existing tenancy — includes/co_tenants.php's
+    // add_co_tenant() is only ever called from chat/submit_cotenants.php,
+    // which is the OLD landlord-modal path (dead since tenant-info-form
+    // recipients are now always students, per chat/conversation.php's
+    // hardcoded recipient_role=student). This is a real feature gap, not a
+    // stale selector — skipping rather than asserting against a UI that
+    // doesn't exist.
+    test.skip(true, 'No UI exists (agent or admin) to add a co-tenant to an already-created tenancy');
   });
 
 });

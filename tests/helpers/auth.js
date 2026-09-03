@@ -19,7 +19,7 @@ const ACCOUNTS = {
  */
 async function login(page, role) {
   const creds = ACCOUNTS[role];
-  await page.goto('/auth/login.php');
+  await page.goto('auth/login.php');
   await page.fill('input[name="email"]', creds.email);
   await page.fill('input[name="password"]', creds.password);
   await page.click('button[type="submit"]');
@@ -27,7 +27,7 @@ async function login(page, role) {
 }
 
 async function logout(page) {
-  await page.goto('/auth/logout.php');
+  await page.goto('auth/logout.php');
 }
 
 module.exports = { login, logout, ACCOUNTS };
