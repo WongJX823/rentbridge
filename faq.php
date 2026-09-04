@@ -56,7 +56,7 @@ $faqs = [
             ['q' => 'How are multi-tenant contracts handled?',
              'a' => 'For shared rentals, all co-tenants are listed in Part 3 of the First Schedule with their full names and NRIC numbers. The contract includes a joint-and-several liability clause meaning all tenants are equally responsible. Each tenant signs the contract individually.'],
             ['q' => 'Can I verify a contract reference?',
-             'a' => 'Yes. Every contract has a unique reference code (e.g. RB-2026-00012). Anyone can verify it at <code>/verify.php</code> on this site. The page shows public details: property, period, rent, tenants — but not private information like IC numbers.'],
+             'a' => 'Yes. Every contract has a unique reference code (e.g. RB-2026-00012). Anyone can verify it at <code>/verify.php</code> on this site. The page confirms the contract exists and shows non-identifying details (property type/city, rent, dates) — never tenant/landlord names, addresses, or IC numbers, since a reference code alone shouldn\'t be enough to look up who lives where.'],
             ['q' => 'What if a tenant wants to move out early?',
              'a' => 'Per the standard agreement, either party can terminate with one month\'s written notice after the initial term. Early termination during the first year may result in security deposit forfeiture.'],
         ],

@@ -8,20 +8,21 @@ $showPageTitle = false;
 
 $ref = trim($_GET['ref'] ?? '');
 $contract = null;
-$tenants  = [];
+$tenantCount = 0;
 $searched = $ref !== '';
 
 if ($searched) {
     $pdo = db();
+    // Deliberately no tenant/landlord name or unit-level address here — a
+    // contract_code is a sequential, guessable ID (RB-YYYY-NNNNN), so this
+    // endpoint is reachable by anyone without proving they hold the document.
+    // Showing "who lives where" would let it be scraped as a PII directory.
     $stmt = $pdo->prepare("
         SELECT c.contract_code, c.tenancy_id, c.start_date, c.end_date, c.monthly_rent,
-               c.status, c.generated_at, c.doc_hash,
-               p.title AS property_title, p.city AS property_city,
-               p.property_type,
-               s.full_name AS student_name
+               c.status, c.generated_at,
+               p.city AS property_city, p.property_type
           FROM contracts c
           JOIN properties p ON p.id = c.property_id
-          JOIN students   s ON s.user_id = c.student_id
          WHERE c.contract_code = ?
          LIMIT 1
     ");
@@ -29,12 +30,7 @@ if ($searched) {
     $contract = $stmt->fetch();
 
     if ($contract) {
-        foreach (get_co_tenants((int)$contract['tenancy_id']) as $ct) {
-            $tenants[] = $ct['full_name'];
-        }
-        if (empty($tenants)) {
-            $tenants[] = $contract['student_name'];
-        }
+        $tenantCount = count(get_co_tenants((int)$contract['tenancy_id'])) ?: 1;
     }
 }
 
@@ -105,10 +101,10 @@ ob_start();
                         </div>
 
                         <dl class="row mb-0">
-                            <dt class="col-sm-4 text-secondary">Property</dt>
+                            <dt class="col-sm-4 text-secondary">Property type</dt>
                             <dd class="col-sm-8">
-                                <?= e($contract['property_title']) ?>
-                                <div class="text-secondary small"><?= e($contract['property_city']) ?> &middot; <?= e(ucfirst(str_replace('_', ' ', $contract['property_type']))) ?></div>
+                                <?= e(ucfirst(str_replace('_', ' ', $contract['property_type']))) ?>
+                                in <?= e($contract['property_city']) ?>
                             </dd>
 
                             <dt class="col-sm-4 text-secondary">Tenancy period</dt>
@@ -122,7 +118,7 @@ ob_start();
                             <dd class="col-sm-8">RM <?= number_format((float)$contract['monthly_rent'], 2) ?></dd>
 
                             <dt class="col-sm-4 text-secondary">Tenant(s)</dt>
-                            <dd class="col-sm-8"><?= e(implode(', ', $tenants)) ?></dd>
+                            <dd class="col-sm-8"><?= (int)$tenantCount ?> on this contract</dd>
 
                             <?php if ($contract['generated_at']): ?>
                                 <dt class="col-sm-4 text-secondary">Issued</dt>
@@ -132,8 +128,8 @@ ob_start();
                     </div>
                 </div>
                 <p class="text-secondary small text-center mt-3 mb-0">
-                    Only non-sensitive details are shown here. IC numbers, phone numbers, and
-                    signatures are never made public.
+                    No names, addresses, IC numbers, phone numbers, or signatures are ever
+                    shown here — this only confirms a contract with this reference exists.
                 </p>
             <?php endif; ?>
         <?php endif; ?>
