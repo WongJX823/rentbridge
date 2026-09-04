@@ -70,6 +70,7 @@ rb_run(sprintf('"%s" %s dbrb_2026_test < "%s"', $mysql, $cred, $schemaTmp));
 
 // 3. Apply the migrations that are NOT yet folded into dbrb_2026.sql.
 foreach (['migrations/add_user_roles.sql', 'migrations/add_audit_log.sql',
+          'migrations/add_audit_log_users_properties.sql',
           'migrations/add_academic_terms.sql', 'migrations/add_cotenant_sign_token.sql',
           'migrations/add_soft_delete_and_restrict_cascade.sql',
           'migrations/add_login_attempts.sql',
