@@ -42,6 +42,16 @@ whichever your host supports):
 > fixed in the three files that had it as of this writing; if it recurs on an
 > edited file, strip the first 3 bytes (`EF BB BF`) and re-save as UTF-8 without BOM.
 
+> Free-tier shared MySQL (e.g. InfinityFree) commonly doesn't grant the
+> `TRIGGER` privilege to customer DB users — `add_audit_log.sql` and
+> `add_audit_log_users_properties.sql` will fail with `#1142 - TRIGGER
+> command denied`. No app code reads `audit_log` (only triggers write to it,
+> nothing queries it), so this is safe to work around: import only the
+> `CREATE TABLE audit_log` statement from `add_audit_log.sql` (skip its
+> trigger block), and skip `add_audit_log_users_properties.sql` entirely (it's
+> 100% triggers). The audit trail just stays empty on such hosts — nothing
+> else breaks. If the host does support triggers, run both files unmodified.
+
 1. Create the database: `CREATE DATABASE dbrb_2026 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`
 2. Import the base schema: `mysql -u <user> -p dbrb_2026 < db/dbrb_2026.sql`
 3. Apply every file in `migrations/`, **in filename order** (they're additive/idempotent — safe to re-run):
