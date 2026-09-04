@@ -7,17 +7,73 @@ P4 Security · P5 Deploy prep · P6 Deploy · P7 UAT.
 
 - **Done:** property status bar; property map pinpoint; academic-calendar
   importer (GPT-4o); PHPUnit backend suite + single test runner; migrations
-  applied to dev DB; Playwright E2E suite repaired and passing (36/39, 3
-  justified skips for real product gaps — see "Found while fixing E2E" below);
-  `/verify.php` public verify page; late co-tenant UI; audit coverage extended
-  to `users`/`properties`; DB backup script; security review (1 finding, fixed
+  applied to dev DB; Playwright E2E suite repaired and passing (39/39, 1
+  pre-existing conditional skip — see "Deploy prep" below); `/verify.php`
+  public verify page; late co-tenant UI; audit coverage extended to
+  `users`/`properties`; DB backup script; security review (1 finding, fixed
   — see below); multi-role app wiring; academic-calendar durations for the
-  direct booking flow + the `duration_type` enum data-corruption bug it uncovered.
-- **In progress:** data integrity (soft-delete done; nothing else currently open).
-- **Pending:** deploy prep; deploy; UAT. (Academic-calendar durations for the
+  direct booking flow + the `duration_type` enum data-corruption bug it
+  uncovered; deploy prep (config hardening, migration audit, deploy runbook —
+  see "Deploy prep" below).
+- **In progress:** none currently open.
+- **Pending:** deploy; UAT. (Academic-calendar durations for the
   agent-mediated flow intentionally deferred — see Option A section.)
 - **Report:** Ch2 / §3.3.1 / §4.3.2 done; Ch6 + Ch7 merged into Report_v3.docx;
   README done; Ch5 (Implementation) not written.
+
+### Deploy prep — DONE (target: shared/VPS hosting)
+
+- **Leaked SMTP credentials.** `includes/mail_config.php` had live Mailtrap
+  SMTP username/password hardcoded and committed — the repo is public on
+  GitHub, so these were exposed since commit `864f914`. Refactored to the
+  same env-var + gitignored-local-fallback pattern as `config/google.php`/
+  `config/openai.php` (`mailer.php` now degrades safely if the file is
+  absent). **Still needs a human step:** rotate the Mailtrap credentials in
+  their dashboard — not done as part of this pass.
+- **Config hardening.** `config/database.php` no longer leaks the raw PDO
+  exception message on a DB-connect failure (generic message unless
+  `RB_DEBUG=1`); `contracts/sign.php` no longer force-enables
+  `display_errors` regardless of production `php.ini`.
+- **Migration audit.** All 16 files in `migrations/` verified against the
+  dev DB schema — 15 were already applied; `add_mixed_signing_method.sql`
+  (per-party e-sign/manual choice, code shipped in `281de8c` but the
+  migration was never run) was found pending and applied.
+- **`db/dbrb_2026.sql` is stale** — predates every migration (last touched
+  before any of them existed). Not regenerated as a fresh consolidated dump;
+  instead `DEPLOY.md` and the README document the real path — import it,
+  then apply every `migrations/*.sql` file in filename order (all additive/
+  idempotent, safe to re-run).
+- **Stray `bookings` table** found in the dev DB (162 rows, structurally
+  identical to pre-rename `tenancies`, no FK or code referencing it — a
+  leftover from re-importing an old dump before `rename_bookings_to_tenancies.sql`
+  ran). Dropped.
+- **E2E fixture drift.** `tests/e2e_fixtures_seed.sql` only `INSERT IGNORE`s
+  its 4 static properties (9001/9002/9010/9011) and 9 fixture users once —
+  it never resets state, so repeated runs against the (persistent, not
+  disposable-per-run) dev DB had driven those properties/tenancies well past
+  the states the suite expects. Reset all rows scoped to landlord-274's
+  properties + fixture users 274-282, re-seeded, and found one genuine test
+  bug in the process (below) — not an environmental issue.
+- **Real test bug found + fixed:** `tests/flow4-housemate-post.spec.js`'s
+  `SIGNERS` array for UC-15 only looped the 4 co-tenants, never the
+  landlord — `apply_signature()` correctly requires every co-tenant *and*
+  the landlord before flipping a tenancy to `active`
+  (`contract_next_signer()` in `includes/contracts.php`), so the tenancy
+  never left `contract_pending` and UC-16 correctly found the "Add a late
+  co-tenant" panel still visible (`agent/case.php` gates it on
+  `agent_verifying`/`agent_verified`/`contract_pending`). App behavior was
+  correct; the test was incomplete. Fixed by adding `'landlord'` to
+  `SIGNERS`. Full suite now 39 passed / 0 failed / 1 pre-existing
+  conditional skip (UC-25, agent transfer).
+- **New file:** `DEPLOY.md` — env var reference (`RB_DB_*`, `RB_SMTP_*`,
+  `GOOGLE_MAPS_API_KEY`, `OPENAI_API_KEY`, `RB_DEBUG`), DB import/migration
+  steps, upload-directory ACL notes (`.htaccess` Apache 2.4/`mod_access_compat`
+  caveat), HTTPS/session status, pre-deploy test gate, post-deploy smoke
+  check.
+- **Still open before a real production deploy:** rotate Mailtrap creds;
+  point `RB_SMTP_*` at a real transactional sender (Mailtrap never actually
+  delivers); restrict `GOOGLE_MAPS_API_KEY` to the production domain in the
+  Google Cloud console.
 
 ### Found while fixing E2E (two real gaps, not test bugs) — both DONE
 
