@@ -16,21 +16,28 @@ P4 Security · P5 Deploy prep · P6 Deploy · P7 UAT.
 - **Report:** Ch2 / §3.3.1 / §4.3.2 done; Ch6 + Ch7 merged into Report_v3.docx;
   README done; Ch5 (Implementation) not written.
 
-### Found while fixing E2E (two real gaps, not test bugs)
+### Found while fixing E2E (two real gaps, not test bugs) — both DONE
 
-- **`/verify.php` doesn't exist.** Referenced as a live feature in `faq.php`
-  ("Anyone can verify it at `/verify.php`") and in the contract templates
-  (`rentbridge.com/verify/<code>` footer line), but there is no such file
-  anywhere in the codebase. Either build it (public, no-login, looks up a
-  contract by `contract_code` and shows non-sensitive details) or update the
-  copy that promises it.
-- **No UI to add a co-tenant to an existing tenancy.** `includes/co_tenants.php`
-  has `add_co_tenant()`, but the only caller is `chat/submit_cotenants.php` —
-  the old landlord-modal path, which is unreachable now that
-  `chat/conversation.php` always sets `recipient_role=student` on the tenant
-  info form. Neither `agent/case.php` nor `admin/tenancy.php` exposes any way
-  to add a late co-tenant (e.g. after the primary has already submitted, or
-  after some parties have signed).
+- **`/verify.php` doesn't exist.** [DONE] Built as a public, no-login page —
+  takes `?ref=<contract_code>`, shows non-sensitive details (property, city/
+  type, tenancy period, monthly rent, tenant name(s), status, issue date),
+  never IC/phone/email/signatures. `contracts/view.php`'s footer note now
+  links to the real URL instead of the fictitious `rentbridge.com/verify/<code>`
+  path. `tests/flow3-3tenants-wetsign.spec.js` UC-11 un-skipped.
+- **No UI to add a co-tenant to an existing tenancy.** [DONE] `agent/case.php`
+  now has an "Add a late co-tenant" form (name/IC/phone/email) in the
+  co-tenants panel, posting to new `agent/add_cotenant.php`. Gated server-side
+  to tenancy status `agent_verifying`/`agent_verified`/`contract_pending` only
+  (blocked once the contract is active/closed, since that needs a formal
+  amendment, not this). Calls `ensure_cotenant_sign_tokens()` so an
+  account-less addition immediately gets a sign token, and notifies the
+  primary tenant + landlord. Not added to `admin/tenancy.php` — admin's page
+  is oversight/cancellation only, and the agent already owns the co-tenant
+  lifecycle (sends the tenant-info form, generates the contract), so it's the
+  natural single owner for this action too. Also added flash-message
+  rendering to `agent/case.php` (it had none — redirects from other agent
+  endpoints like `generate_contract.php` were setting flashes that were never
+  displayed).
 
 ---
 

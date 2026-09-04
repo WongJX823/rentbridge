@@ -444,7 +444,10 @@ $statusBadge = match ($contract['status']) {
 
             <!-- Footer note -->
             <p class="text-center text-secondary small mb-0">
-                Verify authenticity at <code>rentbridge.com/verify/<?= e($contract['contract_code']) ?></code>
+                Verify authenticity at
+                <a href="/rentbridge/verify.php?ref=<?= urlencode($contract['contract_code']) ?>">
+                    rentbridge.com/verify.php?ref=<?= e($contract['contract_code']) ?>
+                </a>
             </p>
         </div>
     </div>

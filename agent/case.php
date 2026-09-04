@@ -190,6 +190,13 @@ $months  = max(1, (int)round(($endTs - $startTs) / (30.44 * 86400)));
                 <div class="alert alert-danger"><?= e($errors['general']) ?></div>
             <?php endif; ?>
 
+            <?php $flash = get_flash(); if ($flash): ?>
+                <div class="alert alert-<?= e($flash['type']) ?> alert-dismissible fade show">
+                    <?= e($flash['message']) ?>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            <?php endif; ?>
+
             <div class="row g-4">
 
                 <!-- Property -->
@@ -279,6 +286,10 @@ $months  = max(1, (int)round(($endTs - $startTs) / (30.44 * 86400)));
                     require_once __DIR__ . '/../includes/co_tenants.php';
                     $coTenants = get_co_tenants((int)$case['id']);
                     $additionalCount = count(array_filter($coTenants, fn($c) => !$c['is_primary']));
+
+                    $stmt = $pdo->prepare("SELECT * FROM contracts WHERE tenancy_id = ? LIMIT 1");
+                    $stmt->execute([(int)$case['id']]);
+                    $contract = $stmt->fetch();
                     ?>
 
                     <div class="bg-white border rounded-3 p-4 mb-3"
@@ -333,13 +344,51 @@ $months  = max(1, (int)round(($endTs - $startTs) / (30.44 * 86400)));
         Required before contract generation.
     </small>
     <?php endif; ?>
-</div>  
+
+    <?php if (in_array($case['status'], ['agent_verifying', 'agent_verified', 'contract_pending'], true)): ?>
+    <button type="button" class="btn btn-outline-secondary btn-sm mt-2"
+            data-bs-toggle="collapse" data-bs-target="#addCotenantForm">
+        <i class="bi bi-person-plus me-1"></i> Add a late co-tenant
+    </button>
+    <div class="collapse mt-3" id="addCotenantForm">
+        <form method="POST" action="/rentbridge/agent/add_cotenant.php" class="border rounded-3 p-3" style="background:#F4F4EE;">
+            <?= csrf_field() ?>
+            <input type="hidden" name="tenancy_id" value="<?= (int)$case['id'] ?>">
+            <div class="row g-2">
+                <div class="col-md-6">
+                    <label class="form-label small">Full name</label>
+                    <input type="text" name="full_name" class="form-control form-control-sm" required maxlength="150">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label small">IC number</label>
+                    <input type="text" name="ic_number" class="form-control form-control-sm" required
+                           placeholder="030303-03-0303">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label small">Phone (optional)</label>
+                    <input type="text" name="phone" class="form-control form-control-sm">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label small">Email (optional)</label>
+                    <input type="email" name="email" class="form-control form-control-sm">
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm mt-3">
+                <i class="bi bi-plus-circle me-1"></i> Add co-tenant
+            </button>
+            <?php if ($contract && !empty($contract['generated_pdf_path'])): ?>
+                <small class="text-secondary d-block mt-2">
+                    A contract has already been generated — after adding, re-download the
+                    contract PDF below so it includes this tenant, and send them their
+                    signing link from the contract page.
+                </small>
+            <?php endif; ?>
+        </form>
+    </div>
+    <?php endif; ?>
+</div>
 <!-- CONTRACT GENERATION -->
 <?php
-$stmt = $pdo->prepare("SELECT * FROM contracts WHERE tenancy_id = ? LIMIT 1");
-$stmt->execute([(int)$case['id']]);
-$contract = $stmt->fetch();
-
 $canGenerate = !empty($coTenants);
 $primaryReady = false;
 foreach ($coTenants as $ct) {

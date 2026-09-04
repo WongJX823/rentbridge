@@ -195,12 +195,16 @@ test.describe('Flow 3D — Agent generates contract then uploads a wet-signed PD
 test.describe('Flow 3E — Public contract verify page', () => {
 
   test('UC-11: verify URL accessible without login and shows contract info', async ({ page }) => {
-    // NOTE: /verify.php does not exist anywhere in this codebase — it's only
-    // referenced as a documented feature (faq.php, contract templates say
-    // "Verify authenticity at rentbridge.com/verify/<code>") but was never
-    // built. This is a real product gap, not a stale selector; skipping
-    // rather than asserting against a generic Apache 404 page.
-    test.skip(true, '/verify.php is referenced in faq.php/contract templates but does not exist in the app — not implemented yet');
+    if (!contractRef) {
+      test.skip(true, 'No contract reference captured — UC-10 may not have completed');
+      return;
+    }
+
+    await page.goto(`verify.php?ref=${contractRef}`);
+    await page.waitForLoadState('networkidle');
+
+    expect(page.url()).not.toContain('login');
+    await expect(page.locator(`text=${contractRef}`).first()).toBeVisible();
   });
 
 });
