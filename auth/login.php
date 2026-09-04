@@ -44,7 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             record_login_attempt($email, $ip, true);
             login_user($user);
             set_flash('success', 'Welcome back!');
-            header('Location: ' . dashboard_url_for($user['primary_role']));
+            header('Location: ' . dashboard_url_for(current_role()));
             exit;
         }
     }

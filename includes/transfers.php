@@ -28,7 +28,7 @@ function dispatch_transfer_batch(int $transferId): bool {
           JOIN users u ON u.id = a.user_id
           LEFT JOIN property_agent_assignments paa
             ON paa.agent_id = a.user_id AND paa.outcome = 'pending'
-         WHERE u.primary_role = 'agent'
+         WHERE EXISTS (SELECT 1 FROM user_roles ur WHERE ur.user_id = u.id AND ur.role = 'agent')
            AND u.status = 'active'
            AND a.availability != 'off_duty'
          GROUP BY a.user_id
@@ -44,7 +44,10 @@ function dispatch_transfer_batch(int $transferId): bool {
         $pdo->prepare("UPDATE agent_transfer_requests SET status = 'finding_agent' WHERE id = ?")
             ->execute([$transferId]);
 
-        $stmt = $pdo->query("SELECT id FROM users WHERE primary_role = 'admin'");
+        $stmt = $pdo->query("
+            SELECT id FROM users
+             WHERE EXISTS (SELECT 1 FROM user_roles ur WHERE ur.user_id = users.id AND ur.role = 'admin')
+        ");
         foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) as $adminId) {
             notify((int)$adminId, 'transfer_no_agent',
                 'No agents available for property transfer',

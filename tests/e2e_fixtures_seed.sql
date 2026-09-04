@@ -18,6 +18,18 @@ INSERT IGNORE INTO users (id, email, password_hash, primary_role, status, last_u
   (281, 's5@test.com',    '$2y$10$jF4z7XNCwd6VMBEhT/JqAOD5WZTFpjjv/TJCWvnKxVMmW/BfvNWvy', 'student',  'active', 'student'),
   (282, 's6@test.com',    '$2y$10$jF4z7XNCwd6VMBEhT/JqAOD5WZTFpjjv/TJCWvnKxVMmW/BfvNWvy', 'student',  'active', 'student');
 
+-- user_roles (multi-role membership — mirrors primary_role above) ------
+INSERT IGNORE INTO user_roles (user_id, role, is_primary) VALUES
+  (274, 'landlord', 1),
+  (275, 'agent',    1),
+  (276, 'admin',    1),
+  (277, 'student',  1),
+  (278, 'student',  1),
+  (279, 'student',  1),
+  (280, 'student',  1),
+  (281, 'student',  1),
+  (282, 'student',  1);
+
 -- role subtype rows ------------------------------------------------------
 INSERT IGNORE INTO landlords (user_id, full_name, preferred_name, ic_no, phone, verified) VALUES
   (274, 'Encik Roslan', 'Roslan', '700101-14-9001', '019-1110001', 1);

@@ -69,7 +69,10 @@ function _maybe_notify_admins_flagged(int $userId): void {
     $nameRow->execute([$userId]);
     $userName = $nameRow->fetchColumn() ?: 'User #' . $userId;
 
-    $admins = $pdo->query("SELECT id FROM users WHERE primary_role = 'admin'")->fetchAll(PDO::FETCH_COLUMN);
+    $admins = $pdo->query("
+        SELECT id FROM users
+         WHERE EXISTS (SELECT 1 FROM user_roles ur WHERE ur.user_id = users.id AND ur.role = 'admin')
+    ")->fetchAll(PDO::FETCH_COLUMN);
     foreach ($admins as $adminId) {
         notify(
             (int)$adminId,

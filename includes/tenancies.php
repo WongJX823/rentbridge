@@ -43,7 +43,7 @@ function auto_assign_agent(int $tenancyId): ?int {
               JOIN users u ON u.id = a.user_id
               LEFT JOIN property_agent_assignments paa
                 ON paa.agent_id = a.user_id AND paa.outcome = 'pending'
-             WHERE u.primary_role = 'agent'
+             WHERE EXISTS (SELECT 1 FROM user_roles ur WHERE ur.user_id = u.id AND ur.role = 'agent')
              GROUP BY a.user_id
              ORDER BY COUNT(paa.id) ASC, a.user_id ASC
              LIMIT 1
@@ -132,7 +132,11 @@ function reassign_agent(int $tenancyId, int $rejectingAgentId, string $reason = 
  * Notify all admins when no agents can be assigned (escalation).
  */
 function notify_admins_no_agent(int $tenancyId): void {
-    $stmt = db()->prepare("SELECT id FROM users WHERE primary_role = 'admin' AND status = 'active'");
+    $stmt = db()->prepare("
+        SELECT id FROM users
+         WHERE EXISTS (SELECT 1 FROM user_roles ur WHERE ur.user_id = users.id AND ur.role = 'admin')
+           AND status = 'active'
+    ");
     $stmt->execute();
     $admins = $stmt->fetchAll(PDO::FETCH_COLUMN);
 

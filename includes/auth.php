@@ -79,6 +79,78 @@ function current_role(): ?string {
     return $_SESSION['role'] ?? null;
 }
 
+/* ============================================================
+ *  Multi-role support (migrations/add_user_roles.sql)
+ *
+ *  A user's SESSION role is which context they're currently acting in
+ *  (drives dashboards, name lookups, etc). Their user_roles rows are which
+ *  contexts they're ALLOWED to act in. require_role() checks the latter and
+ *  switches the former to match on successful access, so navigating to a
+ *  role's pages is how you "switch into" that role.
+ *
+ *  Degrades safely if the migration hasn't been applied yet: falls back to
+ *  users.primary_role, exactly like the single-role model before this.
+ * ============================================================ */
+
+/** All roles a user currently holds, primary first. */
+function get_user_roles(int $userId): array {
+    try {
+        $stmt = db()->prepare(
+            'SELECT role FROM user_roles WHERE user_id = ? ORDER BY is_primary DESC, role ASC'
+        );
+        $stmt->execute([$userId]);
+        $roles = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        if (!empty($roles)) return $roles;
+    } catch (Throwable $e) {
+        // user_roles table doesn't exist yet — fall through to primary_role.
+    }
+    $stmt = db()->prepare('SELECT primary_role FROM users WHERE id = ? LIMIT 1');
+    $stmt->execute([$userId]);
+    $role = $stmt->fetchColumn();
+    return $role ? [$role] : [];
+}
+
+/** Does this user hold role $role (primary or additional)? */
+function user_has_role(int $userId, string $role): bool {
+    return in_array($role, get_user_roles($userId), true);
+}
+
+/** Roles this user holds besides the one they're currently acting in — for a role-switcher UI. */
+function other_user_roles(): array {
+    $userId = current_user_id();
+    if (!$userId) return [];
+    return array_values(array_diff(get_user_roles($userId), [current_role()]));
+}
+
+/**
+ * Grant a role to a user (registration, or "add another role" later).
+ * Silently a no-op if the user_roles migration hasn't been applied yet —
+ * never breaks registration over a missing optional table.
+ */
+function grant_user_role(int $userId, string $role, bool $isPrimary = false): void {
+    try {
+        db()->prepare('INSERT IGNORE INTO user_roles (user_id, role, is_primary) VALUES (?, ?, ?)')
+            ->execute([$userId, $role, $isPrimary ? 1 : 0]);
+    } catch (Throwable $e) {
+        // user_roles table doesn't exist yet — fine, primary_role still works.
+    }
+}
+
+/**
+ * Switch the session's active role and remember it as the default for next
+ * login. Caller must already have verified the user holds this role.
+ */
+function switch_active_role(string $role): void {
+    $_SESSION['role'] = $role;
+    if (!current_user_id()) return;
+    try {
+        db()->prepare('UPDATE users SET last_used_role = ? WHERE id = ?')
+            ->execute([$role, current_user_id()]);
+    } catch (Throwable $e) {
+        // Non-critical — the session role is already switched either way.
+    }
+}
+
 /*
  * Audit actor — set the MySQL session variable @app_user_id so the audit_log
  * triggers (migrations/add_audit_log.sql) record WHO made each change. Runs
@@ -99,7 +171,14 @@ function login_user(array $user): void {
 
     $_SESSION['user_id'] = (int)$user['id'];
     $_SESSION['email']   = $user['email'];
-    $_SESSION['role']    = $user['primary_role'];
+
+    // Land back in whichever role they last used, if they still hold it —
+    // otherwise fall back to their primary role.
+    $roles      = get_user_roles((int)$user['id']);
+    $lastUsed   = $user['last_used_role'] ?? null;
+    $_SESSION['role'] = ($lastUsed && in_array($lastUsed, $roles, true))
+        ? $lastUsed
+        : $user['primary_role'];
 }
 
 function logout_user(): void {
@@ -129,10 +208,18 @@ function require_login(): void {
 
 function require_role(string $role): void {
     require_login();
-    if (current_role() !== $role) {
-        http_response_code(403);
-        die('Access denied — wrong role for this page.');
+    if (current_role() === $role) return;
+
+    // Not currently acting in this role — but do they hold it at all?
+    // (e.g. a student who also registered as a landlord, viewing landlord
+    // pages). If so, switch their active context to match.
+    if (user_has_role((int)current_user_id(), $role)) {
+        switch_active_role($role);
+        return;
     }
+
+    http_response_code(403);
+    die('Access denied — wrong role for this page.');
 }
 
 /* ============================================================

@@ -41,7 +41,7 @@ function pick_next_agent_for_property(int $propertyId, ?int $currentAgentId = nu
         SELECT a.user_id
           FROM agents a
           JOIN users u ON u.id = a.user_id
-         WHERE u.primary_role = 'agent'
+         WHERE EXISTS (SELECT 1 FROM user_roles ur WHERE ur.user_id = u.id AND ur.role = 'agent')
            AND u.status = 'active'
            AND a.availability != 'off_duty'
          ORDER BY (

@@ -156,6 +156,16 @@ $pageContent   = $pageContent   ?? '';
             </div>
         </nav>
         <div class="sidebar-footer">
+            <?php foreach (other_user_roles() as $r): ?>
+                <a href="<?= e(dashboard_url_for($r)) ?>" class="sidebar-link">
+                    <i class="bi bi-arrow-left-right"></i>
+                    <span class="sidebar-label">Switch to <?= e(ucfirst($r)) ?></span>
+                </a>
+            <?php endforeach; ?>
+            <a href="/rentbridge/auth/add_role.php" class="sidebar-link">
+                <i class="bi bi-plus-circle"></i>
+                <span class="sidebar-label">Add another role</span>
+            </a>
             <a href="/rentbridge/auth/logout.php" class="sidebar-link sidebar-logout">
                 <i class="bi bi-box-arrow-right"></i>
                 <span class="sidebar-label">Sign out</span>

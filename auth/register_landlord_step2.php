@@ -131,6 +131,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             );
             $stmt->execute([$step1['email'], $step1['password_hash']]);
             $userId = (int)$pdo->lastInsertId();
+            grant_user_role($userId, 'landlord', true);
 
             // 2. Insert into landlords
             $stmt = $pdo->prepare(

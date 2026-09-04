@@ -70,6 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     password_hash($password, PASSWORD_BCRYPT)
                 ]);
                 $userId = (int)$pdo->lastInsertId();
+                grant_user_role($userId, 'student', true);
 
                 $stmt = $pdo->prepare(
                     'INSERT INTO students (user_id, full_name, preferred_name, matric_no, ic_no, university, phone, gender, race)

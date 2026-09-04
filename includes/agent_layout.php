@@ -106,6 +106,19 @@ $urgentCases = (int)$stmt->fetchColumn();
                 </a>
             </li>
             <li><hr class="dropdown-divider"></li>
+            <?php foreach (other_user_roles() as $r): ?>
+                <li>
+                    <a class="dropdown-item" href="<?= e(dashboard_url_for($r)) ?>">
+                        <i class="bi bi-arrow-left-right me-2"></i> Switch to <?= e(ucfirst($r)) ?>
+                    </a>
+                </li>
+            <?php endforeach; ?>
+            <li>
+                <a class="dropdown-item" href="/rentbridge/auth/add_role.php">
+                    <i class="bi bi-plus-circle me-2"></i> Add another role
+                </a>
+            </li>
+            <li><hr class="dropdown-divider"></li>
             <li>
                 <a class="dropdown-item text-danger" href="/rentbridge/auth/logout.php">
                     <i class="bi bi-box-arrow-right me-2"></i> Sign out
