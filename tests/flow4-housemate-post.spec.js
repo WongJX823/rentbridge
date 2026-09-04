@@ -245,7 +245,10 @@ test.describe('Flow 4G — All 4 tenants e-sign in turn', () => {
   // the universal, access-controlled entry point. student1 (primary) goes
   // via tenancy.php to discover and capture that contract id; the
   // co-tenants use it directly.
-  const SIGNERS = ['student1', 'student2', 'student3', 'student4'];
+  // Activation requires every party incl. the landlord (apply_signature()
+  // only flips the tenancy to 'active' once all co-tenants AND the landlord
+  // have signed — see includes/contracts.php contract_next_signer()).
+  const SIGNERS = ['student1', 'student2', 'student3', 'student4', 'landlord'];
 
   for (const role of SIGNERS) {
     test(`UC-15: ${role} draws e-signature on contract (in sign order)`, async ({ page }) => {
