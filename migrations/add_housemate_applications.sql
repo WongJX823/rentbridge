@@ -1,4 +1,4 @@
-﻿-- Housemate application system + group chat support
+-- Housemate application system + group chat support
 -- Run against dbrb_2026
 
 -- Applications table

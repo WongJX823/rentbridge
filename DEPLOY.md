@@ -36,6 +36,12 @@ whichever your host supports):
 
 ## 2. Database
 
+> If phpMyAdmin's import ever throws `Unexpected beginning of statement... near
+> "phpMyAdmin" at position 0` on one of these files, it picked up a UTF-8 BOM
+> before the leading `--` comment (Windows SQL export tools do this). Already
+> fixed in the three files that had it as of this writing; if it recurs on an
+> edited file, strip the first 3 bytes (`EF BB BF`) and re-save as UTF-8 without BOM.
+
 1. Create the database: `CREATE DATABASE dbrb_2026 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`
 2. Import the base schema: `mysql -u <user> -p dbrb_2026 < db/dbrb_2026.sql`
 3. Apply every file in `migrations/`, **in filename order** (they're additive/idempotent — safe to re-run):
