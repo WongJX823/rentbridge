@@ -308,18 +308,25 @@ test.describe('Flow 4G — All 4 tenants e-sign in turn', () => {
 
 });
 
-test.describe('Flow 4H — Late co-tenant addition (not implemented)', () => {
+test.describe('Flow 4H — Late co-tenant addition', () => {
 
-  test('UC-16: agent/admin adding a co-tenant after signing has started', async () => {
-    // NOTE: neither agent/case.php nor admin/tenancy.php exposes any UI to
-    // add a co-tenant to an existing tenancy — includes/co_tenants.php's
-    // add_co_tenant() is only ever called from chat/submit_cotenants.php,
-    // which is the OLD landlord-modal path (dead since tenant-info-form
-    // recipients are now always students, per chat/conversation.php's
-    // hardcoded recipient_role=student). This is a real feature gap, not a
-    // stale selector — skipping rather than asserting against a UI that
-    // doesn't exist.
-    test.skip(true, 'No UI exists (agent or admin) to add a co-tenant to an already-created tenancy');
+  test('UC-16: add-co-tenant is blocked once the tenancy is fully active', async ({ page }) => {
+    // agent/case.php now has an "Add a late co-tenant" form (agent/add_cotenant.php),
+    // gated server-side to tenancy status agent_verifying/agent_verified/
+    // contract_pending. By this point in the flow all 4 tenants have e-signed
+    // and the tenancy is 'active', so the correct behavior is for the button
+    // to be gone — adding a party after the contract has gone live needs a
+    // formal amendment, not this form.
+    if (!tenancyId) {
+      test.skip(true, 'No tenancyId captured — earlier steps may not have completed');
+      return;
+    }
+
+    await login(page, 'agent');
+    await page.goto(`agent/case.php?id=${tenancyId}`);
+    await page.waitForLoadState('networkidle');
+
+    await expect(page.getByText('Add a late co-tenant')).toHaveCount(0);
   });
 
 });
