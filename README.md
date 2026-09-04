@@ -64,9 +64,8 @@ rentbridge/
 ├── api/             # small JSON endpoints (notifications, reports)
 ├── assets/          # css / js / images
 ├── uploads/         # user-uploaded files (images, documents, signatures, contracts)
-├── migrations/      # incremental SQL migrations
-├── dbrb_2026.sql    # database schema (+ reference data)
-├── seed_data.sql    # sample/seed data
+├── migrations/      # incremental SQL migrations (apply in filename order after db/dbrb_2026.sql)
+├── db/              # dbrb_2026.sql (base schema), seed_data.sql (sample data)
 └── vendor/          # Composer dependencies
 ```
 
@@ -95,15 +94,16 @@ rentbridge/
 3. **Create the database** and import the schema (via phpMyAdmin or CLI):
    ```bash
    mysql -u root -e "CREATE DATABASE dbrb_2026 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-   mysql -u root dbrb_2026 < dbrb_2026.sql
+   mysql -u root dbrb_2026 < db/dbrb_2026.sql
+   # then apply every migration, in filename order (additive/idempotent, safe to re-run):
+   for f in migrations/*.sql; do mysql -u root dbrb_2026 < "$f"; done
    # optional sample data:
-   mysql -u root dbrb_2026 < seed_data.sql
+   mysql -u root dbrb_2026 < db/seed_data.sql
    ```
-   Then apply any newer migrations in `migrations/` as needed.
 
-4. **Configure the app**
-   - `config/database.php` — set `DB_HOST`, `DB_NAME`, and DB credentials.
-   - `includes/mail_config.php` — set SMTP details for email/notifications.
+4. **Configure the app** — all of these can be set via environment variable instead (see `DEPLOY.md` for the full list); for local dev the simplest path is a git-ignored local file:
+   - `config/database.php` — set `DB_HOST`, `DB_NAME`, and DB credentials (or `RB_DB_*` env vars).
+   - `includes/mail_config.php` — set SMTP details for email/notifications (or `RB_SMTP_*` env vars). Not present by default; create it (same shape as `config/google.php`) if you need real email locally — the app falls back to empty/sandbox values otherwise.
 
 5. **Run**
    - Start **Apache** and **MySQL** in XAMPP.
@@ -121,18 +121,15 @@ rentbridge/
 
 ## Roadmap / Next Steps
 
-Planned work, roughly in priority order. See `TODO.md` for the full detail.
-
-- [ ] **Academic-calendar–driven tenancy durations.** Add an `academic_terms` table seeded from UTeM's official calendar so "1 semester" / "2 semesters" resolve to the *actual* semester start/end dates instead of approximate week counts. *(Interim fix already applied: 1 sem ≈ 18 weeks, 2 sem ≈ 9 months incl. the semester break, and contracts state the continuous period.)*
-- [ ] **Fix the `tenancies.duration_type` enum mismatch.** The booking form stores keys like `semester_4` / `academic_8`, but the column enum expects `1_semester` / `2_semesters` / `1_year` / `custom` — map the form key to the enum value on insert.
-- [ ] **Property status progress bar.** Show a landlord/agent status tracker: `pending → awaiting inspection → inspection complete → available`.
-- [ ] **Single-source the contract template.** Refactor `agent/generate_contract.php` to use the shared `rb_agreement_html()` builder (the signed-download PDF already does), so the blank and signed agreements can never drift.
-- [ ] **Magic-link e-signing for co-tenants without an account.** Let account-less co-tenants sign via a tokenised link instead of wet-signing a printed copy.
-- [ ] **Verify signed-contract signatures render** across environments (mPDF image path handling) with an end-to-end signed test contract.
+See `TODO.md` for full detail and `DEPLOY.md` for the deploy runbook. As of
+the current schedule snapshot, core dev/data-integrity/testing/security work
+is done; what's left is deploy prep → deploy → UAT.
 
 ### Recently completed
+- Academic-calendar–driven tenancy durations for the direct booking flow, and the `duration_type` enum data-corruption bug that surfaced while building it.
+- Property status progress bar, property map pinpoint, multi-role account support, audit log + soft-delete + backups, per-party mixed e-sign/manual contract signing, gender/race listing preferences.
 - Semester-accurate durations + contract clause covering the semester break.
-- Signed contract download now renders the **formal tenancy agreement** (not the summary card) with e-signatures embedded on the signature lines.
+- Signed contract download renders the **formal tenancy agreement** (not the summary card) with e-signatures embedded on the signature lines.
 - Agent commission accounting (one month's rent + 6% SST) with backfill for legacy contracts.
 
 ---

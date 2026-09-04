@@ -34,7 +34,11 @@ function db(): PDO {
                 ]
             );
         } catch (PDOException $e) {
-            die('Database connection failed: ' . $e->getMessage());
+            error_log('Database connection failed: ' . $e->getMessage());
+            // RB_DEBUG=1 shows the real error for local troubleshooting; production
+            // (RB_DEBUG unset) shows a generic message instead of DB/host details.
+            die(getenv('RB_DEBUG') ? 'Database connection failed: ' . $e->getMessage()
+                                    : 'Sorry, something went wrong. Please try again later.');
         }
     }
 

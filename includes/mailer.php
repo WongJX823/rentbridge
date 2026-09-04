@@ -8,7 +8,19 @@ use PHPMailer\PHPMailer\Exception;
  * Returns ['ok' => bool, 'error' => string|null].
  */
 function send_email(string $toEmail, string $toName, string $subject, string $htmlBody, string $plainBody = ''): array {
-    $config = require __DIR__ . '/mail_config.php';
+    // includes/mail_config.php is git-ignored (may hold real credentials).
+    // Fall back to environment variables / defaults so the app never fatals
+    // on a fresh clone, matching config/google.php and config/openai.php.
+    $mailConfigFile = __DIR__ . '/mail_config.php';
+    $config = is_file($mailConfigFile) ? require $mailConfigFile : [
+        'host'       => getenv('RB_SMTP_HOST') ?: 'sandbox.smtp.mailtrap.io',
+        'port'       => (int)(getenv('RB_SMTP_PORT') ?: 2525),
+        'username'   => getenv('RB_SMTP_USERNAME') ?: '',
+        'password'   => getenv('RB_SMTP_PASSWORD') ?: '',
+        'encryption' => getenv('RB_SMTP_ENCRYPTION') ?: 'tls',
+        'from_email' => getenv('RB_SMTP_FROM_EMAIL') ?: 'noreply@rentbridge.com',
+        'from_name'  => getenv('RB_SMTP_FROM_NAME') ?: 'RentBridge',
+    ];
 
     $mail = new PHPMailer(true);
 
