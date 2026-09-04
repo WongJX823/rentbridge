@@ -8,22 +8,31 @@ P4 Security · P5 Deploy prep · P6 Deploy · P7 UAT.
 - **Done:** property status bar; property map pinpoint; academic-calendar
   importer (GPT-4o); PHPUnit backend suite + single test runner; migrations
   applied to dev DB; Playwright E2E suite repaired and passing (36/39, 3
-  justified skips for real product gaps — see "Found while fixing E2E" below).
-- **In progress:** data integrity (soft-delete + audit coverage still open);
-  security review.
-- **Pending:** durations wiring + duration_type enum fix; multi-role app wiring;
-  deploy prep; deploy; UAT.
+  justified skips for real product gaps — see "Found while fixing E2E" below);
+  `/verify.php` public verify page; late co-tenant UI; audit coverage extended
+  to `users`/`properties`; DB backup script; security review (1 finding, fixed
+  — see below); multi-role app wiring; academic-calendar durations for the
+  direct booking flow + the `duration_type` enum data-corruption bug it uncovered.
+- **In progress:** data integrity (soft-delete done; nothing else currently open).
+- **Pending:** deploy prep; deploy; UAT. (Academic-calendar durations for the
+  agent-mediated flow intentionally deferred — see Option A section.)
 - **Report:** Ch2 / §3.3.1 / §4.3.2 done; Ch6 + Ch7 merged into Report_v3.docx;
   README done; Ch5 (Implementation) not written.
 
 ### Found while fixing E2E (two real gaps, not test bugs) — both DONE
 
 - **`/verify.php` doesn't exist.** [DONE] Built as a public, no-login page —
-  takes `?ref=<contract_code>`, shows non-sensitive details (property, city/
-  type, tenancy period, monthly rent, tenant name(s), status, issue date),
-  never IC/phone/email/signatures. `contracts/view.php`'s footer note now
+  takes `?ref=<contract_code>`. `contracts/view.php`'s footer note now
   links to the real URL instead of the fictitious `rentbridge.com/verify/<code>`
   path. `tests/flow3-3tenants-wetsign.spec.js` UC-11 un-skipped.
+  **Revised after security review** (see below): `generate_contract_code()`
+  produces sequential codes (`RB-YYYY-NNNNN`), making this page enumerable by
+  anyone with no auth — originally it showed the tenant's full name alongside
+  the property, which would let a scraper build a "who lives where" directory.
+  Now shows only property type/city, tenancy period, rent, status, and a
+  tenant *count* — enough to confirm a contract with that reference genuinely
+  exists (the page's actual purpose) without disclosing anyone's identity.
+  `faq.php`'s description of the page updated to match.
 - **No UI to add a co-tenant to an existing tenancy.** [DONE] `agent/case.php`
   now has an "Add a late co-tenant" form (name/IC/phone/email) in the
   co-tenants panel, posting to new `agent/add_cotenant.php`. Gated server-side
@@ -42,44 +51,58 @@ P4 Security · P5 Deploy prep · P6 Deploy · P7 UAT.
 ---
 
 
-## Option A: Academic-calendar–driven tenancy durations
+## Option A: Academic-calendar–driven tenancy durations — [DONE for the direct booking flow]
 
 **Goal:** Make tenancy/contract durations match the real UTeM academic calendar instead of approximate month/week arithmetic.
 
-**Context / why:** As of the B+C interim fix (see below), "1 semester" = +18 weeks and "2 semesters" = +39 weeks (~9 months, incl. semester break), counted from the student's chosen move-in date. This is far more accurate than the old "2 sem = 8 months", but it still floats from a fixed move-in date and does not land on the actual UTeM semester start/end dates.
+**What was built — `tenancies/new.php` (the student self-book flow):**
+1. `includes/academic_terms.php` (new): `get_upcoming_single_terms()`,
+   `get_upcoming_academic_years()` (sessions with both a sem1 and sem2 row),
+   `get_academic_term($id)`.
+2. `migrations/seed_academic_terms_placeholder.sql`: `academic_terms` was
+   created empty by the earlier academic-calendar-importer work — nothing had
+   ever populated it. Seeded 2 upcoming sessions with realistic-pattern UTeM
+   dates (Sem 1 mid-Sept, Sem 2 mid-Feb, short sem late June) as a placeholder;
+   `INSERT IGNORE` so importing the real calendar via `admin/academic_calendar.php`
+   later just adds to / supersedes it, no conflict.
+3. `tenancies/new.php` rebuilt: student picks **"1 Semester"** (choose a specific
+   upcoming semester from a dropdown) or **"2 Semesters (Full Year)"** (choose
+   an academic-year session; dates span sem1.start_date → sem2.end_date,
+   continuous through the break) or **"Custom range"** (free dates, unchanged
+   fallback — also what's offered if no upcoming terms exist yet). Dates are
+   **resolved server-side** from the `id`/`session` the client sent, never
+   trusted from client-supplied dates, for the two term-based options.
+4. **Fixed the real `duration_type` enum bug this uncovered**: `tenancies/new.php`
+   was inserting `three_semesters`/`four_semesters`/`two_years` — none of which
+   match the actual column enum `('1_semester','2_semesters','1_year','custom')`.
+   Since this DB's `sql_mode` has no `STRICT_TRANS_TABLES`, MySQL was **silently
+   truncating every one of those to `''`** instead of erroring — confirmed live,
+   6 existing rows had `duration_type = ''`. Now inserts the correct enum value
+   every time (verified: single-term → `1_semester`, academic-year → `2_semesters`,
+   custom → `custom`, all with real, correct dates).
 
-**What to build:**
-1. Add an `academic_terms` reference table, e.g.
-   `academic_terms(id, session VARCHAR, term ENUM('sem1','sem2','short'), start_date DATE, end_date DATE)`,
-   seeded once per session from the official UTeM calendar
-   (https://www.utem.edu.my/en/academic-calendar.html).
-2. In the booking flow (`tenancies/new.php`) and the agent term form
-   (`chat/conversation.php` term picker + `chat/send_tenant_form.php` +
-   `student/tenant_form.php`), let the user pick a **term** (e.g. "Semester 1
-   2025/2026") rather than a raw month count. Resolve `start_date` / `end_date`
-   from `academic_terms`:
-   - 1 semester  -> chosen term's start_date .. end_date
-   - 2 semesters -> sem1.start_date .. sem2.end_date (spans the inter-semester
-     break as continuous occupancy)
-3. Keep `tenancies.duration_type` and the contract month count derived from the
-   real dates (`includes/contracts.php` already computes months from
-   start/end), so the contract stays accurate automatically.
-4. Show the breakdown in the contract: "Semester 1 (dates) + semester break
-   (dates) + Semester 2 (dates)".
-5. Decide & store the break policy (continuous occupancy vs vacate) — currently
-   the contract states continuous occupancy (terms clause 9).
+**Scoped out (left on the interim week-based approximation, on purpose):**
+the agent-mediated flow — `chat/conversation.php`'s term picker,
+`chat/send_tenant_form.php`, `student/tenant_form.php` — already inserts
+*correct* enum values (unlike `tenancies/new.php` above) via the Option B+C
+interim math, and has real Playwright E2E coverage (flows 2–4) riding on its
+current behavior. Rewiring all three to real `academic_terms` sessions too is
+the same pattern applied here and is a reasonable follow-up, but doing it in
+the same pass risked the agent-flow test suite for a second, smaller
+correctness gain (that path isn't silently corrupting data — only
+`tenancies/new.php` was). Contract term-breakdown clause (build item 4, "Semester
+1 + break + Semester 2") also not added — `includes/contracts.php`'s existing
+clause 9 (continuous occupancy) still applies since dates are real either way.
 
-**Files involved:**
-- `tenancies/new.php` — duration switch + option cards
-- `chat/conversation.php` (~line 892) — agent term picker
-- `chat/send_tenant_form.php`, `student/tenant_form.php` — term_months handling
-- `includes/contracts.php` — term label + contract render
-- DB migration: new `academic_terms` table
-
-**Note:** Also fix the latent `tenancies.duration_type` enum mismatch — the form
-stores keys like `semester_4`/`academic_8`/`full_year_12`, but the column enum
-is `('1_semester','2_semesters','1_year','custom')`. Map form key -> enum value
-on insert.
+Verified: booked one property each via `single_term` / `academic_year` /
+`custom`, confirmed correct `duration_type` + dates in the DB for each,
+confirmed a tampered/invalid `term_id` is rejected server-side, and confirmed
+no bogus row is inserted. PHPUnit (13/13) and the full Playwright suite
+(37/39, same 2 justified skips — see `tests/flow6-admin.spec.js` UC-25's
+conditional runtime skip, unrelated to this change) both green.
+`tests/flow4-housemate-post.spec.js` UC-16 rewritten from "not implemented" to
+verify the late-co-tenant form (added earlier this session) is correctly
+absent once a tenancy is fully active.
 
 ---
 
@@ -188,31 +211,61 @@ Property map pinpoint (Google Maps)  [IN PROGRESS]
    - Decide provider: Google Maps JS API (needs an API key) vs Leaflet +
      OpenStreetMap (no key). Note: strict CSP if embedding in artifacts.
 
-## Multi-role support (overlapping roles)
+## Multi-role support (overlapping roles) — [DONE]
 
 **Goal:** Let one user hold more than one role at the same time (e.g. a student
-who is also a landlord). Today the model is **disjoint + partial**: authorization
-reads a single `users.primary_role`, so a user is effectively one role only, and
-`admin` has no subtype table.
+who is also a landlord). Previously the model was **disjoint + partial**:
+authorization read a single `users.primary_role`, so a user was effectively one
+role only.
 
-**Status:** DB migration added — `migrations/add_user_roles.sql` creates a
-`user_roles(user_id, role, is_primary)` junction (the explicit overlapping M:M)
-and backfills it from `primary_role` and from existing `students` / `landlords`
-/ `agents` profile rows. **Not yet wired into the app.**
+**What was built:**
+1. `includes/auth.php`: `get_user_roles()` / `user_has_role()` read
+   `user_roles` (falling back to `primary_role` if the table's missing, same
+   degrade-safely convention used elsewhere). `require_role($role)` now passes
+   if the user holds `$role` at all — even if it's not their currently active
+   session role — and calls the new `switch_active_role()` to flip the active
+   context (and persist `users.last_used_role`) to match. So navigating to a
+   role's pages *is* how you switch into that role. `login_user()` now lands
+   the user back in `last_used_role` (if still held) instead of always
+   `primary_role`.
+2. The 4 functional lookups TODO called out — `includes/agent_assignment.php`,
+   `includes/tenancies.php` (2 spots), `includes/transfers.php` (2 spots),
+   `includes/reports.php` — now use `EXISTS (SELECT 1 FROM user_roles ...)`
+   instead of `primary_role = 'agent'/'admin'`, so a user who holds that role
+   as a secondary role is correctly found/notified. (Left alone by design:
+   admin's own user-management listings — `admin/agents.php`,
+   `admin/landlords.php`, `admin/students.php`, `admin/dashboard.php` counts,
+   `admin/statistics/*` — still filter by `primary_role`; those are "primary
+   occupation" views for oversight/reporting, and making them multi-role-aware
+   is a separate, larger UX decision than this pass covers.)
+3. Role switcher: a "Switch to X" link per other-held-role + "Add another
+   role" link, added to the user dropdown in `student_layout.php` /
+   `landlord_layout.php` / `agent_layout.php`, and to the sidebar footer in
+   `admin_layout.php` (which has no dropdown). Backed by `other_user_roles()`.
+4. `auth/add_role.php`: self-service "become a student / become a landlord"
+   flow for an already-logged-in user — collects the minimum subtype fields,
+   inserts the profile row + `user_roles` row, switches active role, redirects
+   to that role's dashboard. **Agent is excluded from self-service** — agent
+   accounts require UTeM-staff verification via account `status='pending'` at
+   registration (`auth/register_agent.php`), and there's no equivalent
+   approval gate for an already-active account without risking locking them
+   out of their existing role too. Points to contacting admin instead.
+5. Admin subtype: decided **not** to add an `admins` table. `user_roles`
+   membership already fully represents "is this user an admin", and admin has
+   no profile fields (name/phone/etc.) the other subtypes need. Revisit only
+   if admin-specific fields are ever needed.
+6. All 3 registration forms (`register_student.php`, `register_landlord_step2.php`,
+   `register_agent.php`) now call `grant_user_role()` (new — degrades safely,
+   same pattern) so newly-registered users get a `user_roles` row going
+   forward; `tests/e2e_fixtures_seed.sql` and `tests/php/bootstrap.php` updated
+   to match so the test DB stays consistent.
 
-**Still to do (application layer):**
-1. Change authorization to "does the user have role X?" — update `require_role()`
-   / login / dashboards to check `user_roles` (EXISTS/join) instead of comparing
-   `users.primary_role` directly.
-2. Replace hard-coded `WHERE primary_role = 'agent' / 'admin'` queries (e.g.
-   `includes/agent_assignment.php`, `includes/tenancies.php`,
-   `includes/transfers.php`, `includes/reports.php`) with `user_roles` lookups.
-3. Add a **role switcher** in the UI and activate the dormant
-   `users.last_used_role` column to remember the active context.
-4. Add "become a landlord / register another role" flows that insert into
-   `user_roles` + create the matching subtype profile row.
-5. Decide completeness: give `admin` a proper subtype/flag so the model can be
-   made **total** if desired.
+Verified end-to-end against the dev DB: logged in as a single-role student,
+added the landlord role via `auth/add_role.php`, confirmed the landlord
+dashboard rendered and `last_used_role` updated; navigated back to
+`/student/dashboard.php` and confirmed `require_role()` auto-switched back;
+logged out and back in and landed in the last-used role. PHPUnit (13/13)
+still green; landlord/agent/admin single-role logins unaffected.
 
 ---
 
@@ -247,11 +300,21 @@ separate database is needed — keep everything in `dbrb_2026`.
    `properties.landlord_id` -> `users` is still `CASCADE`, so deleting a
    landlord still deletes their properties outright (RESTRICT now stops it
    one hop later, at tenancies/contracts).
-3. **Extend audit coverage** to more tables (users, properties) and add more
-   columns to the `JSON_OBJECT(...)` snapshots as needed.
-4. **Backups** — schedule regular dumps as the real recover-lost-data safety net:
-   `mysqldump -u root dbrb_2026 > backups/dbrb_2026_$(date +%F).sql`
-   and consider enabling the MySQL binary log for point-in-time recovery.
+3. [DONE] **Extend audit coverage** to more tables —
+   `migrations/add_audit_log_users_properties.sql` adds AFTER insert/update/
+   delete triggers on `users` (email, primary_role, status, last_used_role —
+   `password_hash` deliberately excluded from every snapshot) and `properties`
+   (landlord_id, title, property_type, monthly_rent, deposit, status,
+   assigned_agent_id, agent_status). Applied to dev DB and verified: updating
+   either table now writes a row to `audit_log` with the correct actor.
+4. [DONE] **Backups** — `backups/backup_db.ps1` runs `mysqldump` (routines +
+   triggers + single-transaction) to a timestamped file, verifies the dump is
+   non-empty, and prunes dumps older than 30 days. `backups/*.sql` is
+   gitignored so dumps never get committed. Not wired to run automatically —
+   register it as a daily Windows Task Scheduler job (command in the script's
+   header comment) since this box has no cron. Still worth enabling the MySQL
+   binary log (`log_bin` in my.ini) for point-in-time recovery beyond daily
+   snapshots — that's a server-config change, left alone here.
 
 ---
 
