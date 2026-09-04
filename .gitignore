@@ -17,3 +17,6 @@ appPassword.txt
 playwright-report/
 test-results/
 node_modules/
+
+# DB backup dumps (backups/backup_db.ps1) — never commit real data
+backups/*.sql
