@@ -1,5 +1,6 @@
 ﻿<?php
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/academic_terms.php';
 require_role('student');  // Only students can book
 
 $propertyId = (int)($_GET['property_id'] ?? $_POST['property_id'] ?? 0);
@@ -26,74 +27,96 @@ if (!$prop) {
     die('Property not found or no longer available.');
 }
 
+$singleTerms   = get_upcoming_single_terms();
+$academicYears = get_upcoming_academic_years();
+$hasTerms      = !empty($singleTerms) || !empty($academicYears);
+
 $errors = [];
 $old = [
+    'plan'          => $hasTerms ? 'single_term' : 'custom',
+    'term_id'       => '',
+    'session'       => '',
     'start_date'    => '',
-    'duration_type' => 'two_years',
     'end_date'      => '',
     'student_note'  => '',
 ];
+$durationType = null; // resolved DB enum value: 1_semester | 2_semesters | custom
 
 // ---- HANDLE FORM SUBMIT ----
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
 
-    $old['start_date']    = trim($_POST['start_date'] ?? '');
-    $old['duration_type'] = $_POST['duration_type'] ?? 'semester_4';
-    $old['end_date']      = trim($_POST['end_date'] ?? '');
-    $old['student_note']  = trim($_POST['student_note'] ?? '');
+    $old['plan']         = $_POST['plan'] ?? 'custom';
+    $old['term_id']      = trim($_POST['term_id'] ?? '');
+    $old['session']      = trim($_POST['session'] ?? '');
+    $old['start_date']   = trim($_POST['start_date'] ?? '');
+    $old['end_date']     = trim($_POST['end_date'] ?? '');
+    $old['student_note'] = trim($_POST['student_note'] ?? '');
 
-    // ---- Validate start date ----
-    if ($old['start_date'] === '') {
-        $errors['start_date'] = 'Move-in date is required.';
-    } else {
-        $startTs = strtotime($old['start_date']);
-        if ($startTs === false) {
-            $errors['start_date'] = 'Invalid date format.';
-        } elseif ($startTs < strtotime('today')) {
-            $errors['start_date'] = 'Move-in date cannot be in the past.';
-        }
-    }
+    // ---- Resolve start/end dates from the chosen plan (server-side —
+    // never trust the client's dates for term-based plans) ----
+    switch ($old['plan']) {
+        case 'single_term':
+            $term = $old['term_id'] !== '' ? get_academic_term((int)$old['term_id']) : null;
+            if (!$term || $term['start_date'] < date('Y-m-d')) {
+                $errors['duration_type'] = 'Please pick a valid upcoming semester.';
+            } else {
+                $old['start_date'] = $term['start_date'];
+                $old['end_date']   = $term['end_date'];
+                $durationType      = '1_semester';
+            }
+            break;
 
-    // ---- Calculate / validate end date (server-side, never trust client) ----
-    if (!isset($errors['start_date'])) {
-        $startTs = strtotime($old['start_date']);
-        $endTs   = null;
+        case 'academic_year':
+            $stmt = $pdo->prepare("
+                SELECT s1.start_date AS sem1_start, s2.end_date AS sem2_end
+                  FROM academic_terms s1
+                  JOIN academic_terms s2 ON s2.session = s1.session AND s2.term = 'sem2'
+                 WHERE s1.term = 'sem1' AND s1.session = ?
+                 LIMIT 1
+            ");
+            $stmt->execute([$old['session']]);
+            $pair = $stmt->fetch();
+            if (!$pair || $pair['sem1_start'] < date('Y-m-d')) {
+                $errors['duration_type'] = 'Please pick a valid upcoming academic year.';
+            } else {
+                $old['start_date'] = $pair['sem1_start'];
+                $old['end_date']   = $pair['sem2_end'];
+                $durationType      = '2_semesters';
+            }
+            break;
 
-        switch ($old['duration_type']) {
-            case 'three_semesters':
-                $endTs = strtotime('+13 months', $startTs);
-                break;
-            case 'four_semesters':
-                $endTs = strtotime('+18 months', $startTs);
-                break;
-            case 'two_years':
-                $endTs = strtotime('+24 months', $startTs);
-                break;
-            case 'custom':
+        case 'custom':
+            if ($old['start_date'] === '') {
+                $errors['start_date'] = 'Move-in date is required.';
+            } else {
+                $startTs = strtotime($old['start_date']);
+                if ($startTs === false) {
+                    $errors['start_date'] = 'Invalid date format.';
+                } elseif ($startTs < strtotime('today')) {
+                    $errors['start_date'] = 'Move-in date cannot be in the past.';
+                }
+            }
+            if (!isset($errors['start_date'])) {
                 if ($old['end_date'] === '') {
-                    $errors['end_date'] = 'End date is required for custom duration.';
+                    $errors['end_date'] = 'End date is required for a custom range.';
                 } else {
                     $endTs = strtotime($old['end_date']);
+                    $startTs = strtotime($old['start_date']);
                     if ($endTs === false) {
                         $errors['end_date'] = 'Invalid end date.';
                     } elseif ($endTs <= $startTs) {
                         $errors['end_date'] = 'End date must be after the start date.';
-                    } else {
-                        $diffDays = ($endTs - $startTs) / 86400;
-                        if ($diffDays < 390) {
-                            $errors['end_date'] = 'Minimum tenancy is 3 semesters (about 13 months).';
-                        }
+                    } elseif (($endTs - $startTs) / 86400 < 30) {
+                        $errors['end_date'] = 'Minimum tenancy is 1 month.';
                     }
                 }
-                break;
-            default:
-                $errors['duration_type'] = 'Invalid duration type.';
-        }
+            }
+            $durationType = 'custom';
+            break;
 
-        if ($endTs && !isset($errors['end_date'])) {
-            $old['end_date'] = date('Y-m-d', $endTs);
-        }
+        default:
+            $errors['duration_type'] = 'Invalid duration type.';
     }
 
     // ---- Check for overlapping tenancies on this property ----
@@ -134,7 +157,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $prop['landlord_id'],
                 $old['start_date'],
                 $old['end_date'],
-                $old['duration_type'],
+                $durationType,
                 $prop['monthly_rent'],
                 $prop['deposit'],
                 $old['student_note'],
@@ -227,54 +250,105 @@ $today = date('Y-m-d');
                     <?= csrf_field() ?>
                     <input type="hidden" name="property_id" value="<?= (int)$propertyId ?>">
 
-                    <!-- Move-in date -->
-                    <div class="mb-4">
-                        <label class="form-label fw-semibold">Move-in date</label>
-                        <input type="date" name="start_date" id="start_date" min="<?= $today ?>"
-                               class="form-control <?= isset($errors['start_date']) ? 'is-invalid' : '' ?>"
-                               value="<?= e($old['start_date']) ?>" required>
-                        <?php if (isset($errors['start_date'])): ?>
-                            <div class="invalid-feedback"><?= e($errors['start_date']) ?></div>
-                        <?php endif; ?>
-                    </div>
-
                     <!-- Duration choice -->
                     <div class="mb-4">
                         <label class="form-label fw-semibold mb-3">How long?</label>
 
+                        <?php if (!$hasTerms): ?>
+                            <div class="alert alert-warning small">
+                                <i class="bi bi-exclamation-triangle"></i>
+                                No upcoming semester dates are published yet — pick custom dates below.
+                            </div>
+                        <?php endif; ?>
+
+                        <?php if (isset($errors['duration_type'])): ?>
+                            <div class="alert alert-danger small"><?= e($errors['duration_type']) ?></div>
+                        <?php endif; ?>
+
                         <div class="row g-3">
-                            <?php
-                            $options = [
-                                'three_semesters' => ['3 Semesters', '≈ 13 months (incl. breaks)', 'months', 13],
-                                'four_semesters'  => ['4 Semesters', '≈ 18 months',                'months', 18],
-                                'two_years'       => ['2 Years',     '24 months',                  'months', 24],
-                                'custom'          => ['Custom range', 'Min. 3 semesters',           null,     null],
-                            ];
-                            foreach ($options as $key => [$label, $sub, $unit, $value]):
-                            ?>
+                            <?php if (!empty($singleTerms)): ?>
                             <div class="col-md-6">
-                                <label class="duration-card <?= $old['duration_type'] === $key ? 'selected' : '' ?>">
-                                    <input type="radio" name="duration_type" value="<?= $key ?>"
-                                           <?= $old['duration_type'] === $key ? 'checked' : '' ?>
-                                           <?= $unit === 'months' ? 'data-months="'.$value.'"' : '' ?>
-                                           <?= $unit === 'days'   ? 'data-days="'.$value.'"'   : '' ?>>
-                                    <div class="duration-card__label"><?= e($label) ?></div>
-                                    <div class="duration-card__sub"><?= e($sub) ?></div>
+                                <label class="duration-card <?= $old['plan'] === 'single_term' ? 'selected' : '' ?>">
+                                    <input type="radio" name="plan" value="single_term"
+                                           <?= $old['plan'] === 'single_term' ? 'checked' : '' ?>>
+                                    <div class="duration-card__label">1 Semester</div>
+                                    <div class="duration-card__sub">Pick an upcoming semester</div>
                                 </label>
                             </div>
-                            <?php endforeach; ?>
+                            <?php endif; ?>
+                            <?php if (!empty($academicYears)): ?>
+                            <div class="col-md-6">
+                                <label class="duration-card <?= $old['plan'] === 'academic_year' ? 'selected' : '' ?>">
+                                    <input type="radio" name="plan" value="academic_year"
+                                           <?= $old['plan'] === 'academic_year' ? 'checked' : '' ?>>
+                                    <div class="duration-card__label">2 Semesters (Full Year)</div>
+                                    <div class="duration-card__sub">Continuous, incl. semester break</div>
+                                </label>
+                            </div>
+                            <?php endif; ?>
+                            <div class="col-md-6">
+                                <label class="duration-card <?= $old['plan'] === 'custom' ? 'selected' : '' ?>">
+                                    <input type="radio" name="plan" value="custom"
+                                           <?= $old['plan'] === 'custom' ? 'checked' : '' ?>>
+                                    <div class="duration-card__label">Custom range</div>
+                                    <div class="duration-card__sub">Pick your own dates</div>
+                                </label>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Custom end date (shown only if "Custom range" selected) -->
-                    <div class="mb-4" id="custom_end_wrap" style="display: <?= $old['duration_type']==='custom' ? 'block' : 'none' ?>;">
-                        <label class="form-label fw-semibold">End date</label>
-                        <input type="date" name="end_date" id="end_date"
-                               class="form-control <?= isset($errors['end_date']) ? 'is-invalid' : '' ?>"
-                               value="<?= e($old['end_date']) ?>">
-                        <?php if (isset($errors['end_date'])): ?>
-                            <div class="invalid-feedback"><?= e($errors['end_date']) ?></div>
-                        <?php endif; ?>
+                    <!-- Semester picker (shown only if "1 Semester" selected) -->
+                    <div class="mb-4" id="term_wrap" style="display: <?= $old['plan']==='single_term' ? 'block' : 'none' ?>;">
+                        <label class="form-label fw-semibold">Which semester?</label>
+                        <select name="term_id" id="term_id" class="form-select">
+                            <option value="">Select a semester…</option>
+                            <?php foreach ($singleTerms as $t): ?>
+                                <option value="<?= (int)$t['id'] ?>"
+                                        data-start="<?= e($t['start_date']) ?>" data-end="<?= e($t['end_date']) ?>"
+                                        <?= (string)$old['term_id'] === (string)$t['id'] ? 'selected' : '' ?>>
+                                    <?= e($t['label']) ?> <?= e($t['session']) ?>
+                                    (<?= e(date('d M Y', strtotime($t['start_date']))) ?> – <?= e(date('d M Y', strtotime($t['end_date']))) ?>)
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <!-- Academic-year picker (shown only if "2 Semesters" selected) -->
+                    <div class="mb-4" id="session_wrap" style="display: <?= $old['plan']==='academic_year' ? 'block' : 'none' ?>;">
+                        <label class="form-label fw-semibold">Which academic year?</label>
+                        <select name="session" id="session" class="form-select">
+                            <option value="">Select an academic year…</option>
+                            <?php foreach ($academicYears as $y): ?>
+                                <option value="<?= e($y['session']) ?>"
+                                        data-start="<?= e($y['sem1_start']) ?>" data-end="<?= e($y['sem2_end']) ?>"
+                                        <?= $old['session'] === $y['session'] ? 'selected' : '' ?>>
+                                    <?= e($y['session']) ?>
+                                    (<?= e(date('d M Y', strtotime($y['sem1_start']))) ?> – <?= e(date('d M Y', strtotime($y['sem2_end']))) ?>)
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <!-- Custom dates (shown only if "Custom range" selected) -->
+                    <div id="custom_wrap" style="display: <?= $old['plan']==='custom' ? 'block' : 'none' ?>;">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Move-in date</label>
+                            <input type="date" name="start_date" id="start_date" min="<?= $today ?>"
+                                   class="form-control <?= isset($errors['start_date']) ? 'is-invalid' : '' ?>"
+                                   value="<?= e($old['start_date']) ?>">
+                            <?php if (isset($errors['start_date'])): ?>
+                                <div class="invalid-feedback"><?= e($errors['start_date']) ?></div>
+                            <?php endif; ?>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">End date</label>
+                            <input type="date" name="end_date" id="end_date"
+                                   class="form-control <?= isset($errors['end_date']) ? 'is-invalid' : '' ?>"
+                                   value="<?= e($old['end_date']) ?>">
+                            <?php if (isset($errors['end_date'])): ?>
+                                <div class="invalid-feedback"><?= e($errors['end_date']) ?></div>
+                            <?php endif; ?>
+                        </div>
                     </div>
 
                     <!-- Tenancy summary -->
@@ -319,75 +393,71 @@ $today = date('Y-m-d');
 <script>
 (function () {
     const rent       = <?= (float)$prop['monthly_rent'] ?>;
+    const termWrap    = document.getElementById('term_wrap');
+    const sessionWrap = document.getElementById('session_wrap');
+    const customWrap  = document.getElementById('custom_wrap');
+    const termSelect    = document.getElementById('term_id');
+    const sessionSelect = document.getElementById('session');
     const startInput = document.getElementById('start_date');
     const endInput   = document.getElementById('end_date');
-    const customWrap = document.getElementById('custom_end_wrap');
     const summary    = document.getElementById('summary');
     const sumStart   = document.getElementById('sum_start');
     const sumEnd     = document.getElementById('sum_end');
     const sumTotal   = document.getElementById('sum_total');
-    const radios     = document.querySelectorAll('input[name="duration_type"]');
+    const radios     = document.querySelectorAll('input[name="plan"]');
 
     function fmt(d) {
         return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
     }
 
-    function addMonths(d, n) {
-        const r = new Date(d);
-        r.setMonth(r.getMonth() + n);
-        return r;
+    function monthsBetween(startDate, endDate) {
+        return Math.max(1, (endDate.getFullYear() - startDate.getFullYear()) * 12
+                          + (endDate.getMonth() - startDate.getMonth()));
     }
-    function addDays(d, n) {
-        const r = new Date(d);
-        r.setDate(r.getDate() + n);
-        return r;
+
+    function showSummary(startDate, endDate) {
+        if (!startDate || !endDate || isNaN(startDate) || isNaN(endDate) || endDate <= startDate) {
+            summary.style.display = 'none';
+            return;
+        }
+        sumStart.textContent = fmt(startDate);
+        sumEnd.textContent   = fmt(endDate);
+        sumTotal.textContent = 'RM ' + Math.round(rent * monthsBetween(startDate, endDate)).toLocaleString('en-MY');
+        summary.style.display = 'block';
     }
 
     function update() {
-        const startVal = startInput.value;
-        const selected = document.querySelector('input[name="duration_type"]:checked');
+        const selected = document.querySelector('input[name="plan"]:checked');
         if (!selected) return;
+        const plan = selected.value;
 
-        const months   = selected.dataset.months ? parseInt(selected.dataset.months) : null;
-        const days     = selected.dataset.days   ? parseInt(selected.dataset.days)   : null;
-        const isCustom = selected.value === 'custom';
-
-        customWrap.style.display = isCustom ? 'block' : 'none';
-
-        if (!startVal) { summary.style.display = 'none'; return; }
-
-        const startDate = new Date(startVal);
-        let endDate;
-        let totalCost;
-
-        if (isCustom) {
-            if (!endInput.value) { summary.style.display = 'none'; return; }
-            endDate = new Date(endInput.value);
-            if (endDate <= startDate) { summary.style.display = 'none'; return; }
-            const diffMonths = (endDate.getFullYear() - startDate.getFullYear()) * 12
-                             + (endDate.getMonth() - startDate.getMonth());
-            totalCost = rent * Math.max(1, diffMonths);
-        } else if (days !== null) {
-            endDate   = addDays(startDate, days);
-            totalCost = rent * (days / 30.44); // prorate by actual days
-        } else {
-            endDate   = addMonths(startDate, months);
-            totalCost = rent * months;
-        }
+        termWrap.style.display    = plan === 'single_term'   ? 'block' : 'none';
+        sessionWrap.style.display = plan === 'academic_year' ? 'block' : 'none';
+        customWrap.style.display  = plan === 'custom'         ? 'block' : 'none';
 
         const cards = document.querySelectorAll('.duration-card');
         cards.forEach(c => c.classList.remove('selected'));
         selected.closest('.duration-card').classList.add('selected');
 
-        sumStart.textContent = fmt(startDate);
-        sumEnd.textContent   = fmt(endDate);
-        sumTotal.textContent = 'RM ' + Math.round(totalCost).toLocaleString('en-MY');
-        summary.style.display = 'block';
+        if (plan === 'single_term') {
+            const opt = termSelect.selectedOptions[0];
+            if (!opt || !opt.dataset.start) { summary.style.display = 'none'; return; }
+            showSummary(new Date(opt.dataset.start), new Date(opt.dataset.end));
+        } else if (plan === 'academic_year') {
+            const opt = sessionSelect.selectedOptions[0];
+            if (!opt || !opt.dataset.start) { summary.style.display = 'none'; return; }
+            showSummary(new Date(opt.dataset.start), new Date(opt.dataset.end));
+        } else {
+            if (!startInput.value || !endInput.value) { summary.style.display = 'none'; return; }
+            showSummary(new Date(startInput.value), new Date(endInput.value));
+        }
     }
 
+    radios.forEach(r => r.addEventListener('change', update));
+    if (termSelect)    termSelect.addEventListener('change', update);
+    if (sessionSelect) sessionSelect.addEventListener('change', update);
     startInput.addEventListener('change', update);
     endInput.addEventListener('change', update);
-    radios.forEach(r => r.addEventListener('change', update));
     update();
 })();
 </script>
