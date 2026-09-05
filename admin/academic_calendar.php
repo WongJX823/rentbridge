@@ -108,7 +108,6 @@ $keyMissing = (OPENAI_API_KEY === '');
 ob_start();
 ?>
 <div class="mb-4">
-    <h4 class="mb-1">Academic Calendar</h4>
     <p class="text-secondary mb-0">These UTeM semester dates drive tenancy durations. Import the official
         calendar, review the AI-extracted dates, then save.</p>
 </div>
