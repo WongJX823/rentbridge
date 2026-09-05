@@ -296,7 +296,7 @@ ob_start();
     <div class="col-md-6 col-lg-4 col-xl-3">
         <a href="<?= BASE_PATH ?>/property.php?id=<?= (int)$p['id'] ?>" class="rb-listing-card">
             <div class="rb-listing-img">
-                <?php if (!empty($p['image_path']) && !str_contains($p['image_path'], 'placeholder')): ?>
+                <?php if (!empty($p['image_path'])): ?>
                     <img src="<?= BASE_PATH ?>/<?= e($p['image_path']) ?>" alt="<?= e($p['title']) ?>">
                 <?php else: ?>
                     <div style="display:flex; align-items:center; justify-content:center; height:100%; color:rgba(15,44,82,0.15);">
