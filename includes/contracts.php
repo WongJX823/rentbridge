@@ -468,15 +468,20 @@ function apply_signature(int $contractId, int $userId, string $dataUrl): array {
                     '' . BASE_PATH . '/contracts/view.php?id=' . $contractId);
             }
         } else {
-            // Notify the next signer
+            // Notify the next signer — 'awaiting_manual' (some parties chose
+            // a physical copy and are resolved later by the agent's upload,
+            // not through this queue) and 'all_done' have no concrete user
+            // to notify.
             $next = contract_next_signer($contract);
-            notify(
-                $next['user_id'],
-                'contract_your_turn',
-                'It is your turn to sign',
-                'Contract ' . $contract['contract_code'] . ' is ready for your signature.',
-                '' . BASE_PATH . '/contracts/view.php?id=' . $contractId
-            );
+            if ($next['user_id'] !== null) {
+                notify(
+                    $next['user_id'],
+                    'contract_your_turn',
+                    'It is your turn to sign',
+                    'Contract ' . $contract['contract_code'] . ' is ready for your signature.',
+                    '' . BASE_PATH . '/contracts/view.php?id=' . $contractId
+                );
+            }
         }
 
         return [
