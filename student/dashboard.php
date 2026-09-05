@@ -50,7 +50,7 @@ ob_start();
 <!-- QUICK ACTIONS -->
 <div class="row g-3 mb-4">
     <div class="col-md-6">
-        <a href="/rentbridge/listings.php"
+        <a href="<?= BASE_PATH ?>/listings.php"
            class="d-block bg-white rounded-3 border p-4 text-decoration-none text-dark h-100">
             <div class="d-flex align-items-center gap-3">
                 <div style="width:48px; height:48px; background:#E4F2EA; border-radius:12px;
@@ -65,7 +65,7 @@ ob_start();
         </a>
     </div>
     <div class="col-md-6">
-        <a href="/rentbridge/saved.php"
+        <a href="<?= BASE_PATH ?>/saved.php"
            class="d-block bg-white rounded-3 border p-4 text-decoration-none text-dark h-100">
             <div class="d-flex align-items-center gap-3">
                 <div style="width:48px; height:48px; background:#FFF4D6; border-radius:12px;
@@ -87,7 +87,7 @@ ob_start();
 <div class="row g-3 mb-4">
     <?php foreach ($recentProperties as $p): ?>
         <div class="col-md-6 col-lg-4 col-xl-3">
-                <a href="/rentbridge/property.php?id=<?= (int)$p['id'] ?>"
+                <a href="<?= BASE_PATH ?>/property.php?id=<?= (int)$p['id'] ?>"
                class="d-block text-decoration-none text-dark">
                 <div class="bg-white border rounded-3 overflow-hidden h-100"
                      style="transition: transform 0.15s, box-shadow 0.15s;"
@@ -95,7 +95,7 @@ ob_start();
                      onmouseout="this.style.transform='';this.style.boxShadow=''">
                     <div style="aspect-ratio: 4/3; background: linear-gradient(135deg,#E6ECF4,#E4F2EA);">
                         <?php if (!empty($p['image_path'])): ?>
-                            <img src="/rentbridge/<?= e($p['image_path']) ?>"
+                            <img src="<?= BASE_PATH ?>/<?= e($p['image_path']) ?>"
                                  style="width:100%; height:100%; object-fit:cover;" alt="">
                         <?php endif; ?>
                     </div>

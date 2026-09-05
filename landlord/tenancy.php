@@ -95,12 +95,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'Landlord approved your tenancy application',
                 'Your tenancy #' . $tenancyId . ' for "' . $tenancy['property_title']
                     . '" was approved. An agent will inspect the property next.',
-                '/rentbridge/student/tenancy.php?id=' . $tenancyId
+                '' . BASE_PATH . '/student/tenancy.php?id=' . $tenancyId
             );
 
             $pdo->commit();
             set_flash('success', 'Tenancy approved. Agent will be assigned for inspection.');
-            header('Location: /rentbridge/landlord/tenancy.php?id=' . $tenancyId);
+            header('Location: ' . BASE_PATH . '/landlord/tenancy.php?id=' . $tenancyId);
             exit;
         }
 
@@ -126,12 +126,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'Tenancy application not approved',
                     'Your tenancy #' . $tenancyId . ' for "' . $tenancy['property_title']
                         . '" was not approved. Reason: ' . $reason,
-                    '/rentbridge/student/tenancy.php?id=' . $tenancyId
+                    '' . BASE_PATH . '/student/tenancy.php?id=' . $tenancyId
                 );
 
                 $pdo->commit();
                 set_flash('warning', 'Tenancy rejected. Student has been notified.');
-                header('Location: /rentbridge/landlord/tenancy.php?id=' . $tenancyId);
+                header('Location: ' . BASE_PATH . '/landlord/tenancy.php?id=' . $tenancyId);
                 exit;
             }
         }
@@ -161,7 +161,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'tenancy_cancelled',
                     'Tenancy cancelled by landlord',
                     'Tenancy #' . $tenancyId . ' cancelled. Reason: ' . $reason,
-                    '/rentbridge/student/tenancies.php'
+                    '' . BASE_PATH . '/student/tenancies.php'
                 );
                 if (!empty($tenancy['agent_id'])) {
                     notify(
@@ -169,13 +169,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'tenancy_cancelled',
                         'Tenancy cancelled by landlord',
                         'Tenancy #' . $tenancyId . ' was cancelled. Case closed.',
-                        '/rentbridge/agent/cases.php'
+                        '' . BASE_PATH . '/agent/cases.php'
                     );
                 }
 
                 $pdo->commit();
                 set_flash('warning', 'Tenancy cancelled. All parties notified.');
-                header('Location: /rentbridge/landlord/tenancy.php?id=' . $tenancyId);
+                header('Location: ' . BASE_PATH . '/landlord/tenancy.php?id=' . $tenancyId);
                 exit;
             }
         }
@@ -220,7 +220,7 @@ ob_start();
 ?>
 
 <p class="small mb-3">
-    <a href="/rentbridge/landlord/properties.php" class="text-secondary text-decoration-none">
+    <a href="<?= BASE_PATH ?>/landlord/properties.php" class="text-secondary text-decoration-none">
         <i class="bi bi-arrow-left"></i> Back to properties
     </a>
 </p>
@@ -313,7 +313,7 @@ ob_start();
     <h6 class="text-secondary text-uppercase small mb-3">Property</h6>
     <div class="d-flex justify-content-between flex-wrap gap-3">
         <div>
-            <a href="/rentbridge/landlord/property.php?id=<?= (int)$tenancy['property_id'] ?>"
+            <a href="<?= BASE_PATH ?>/landlord/property.php?id=<?= (int)$tenancy['property_id'] ?>"
                class="text-decoration-none text-dark">
                 <strong class="fs-5"><?= e($tenancy['property_title']) ?></strong>
             </a>
@@ -351,7 +351,7 @@ ob_start();
                 <i class="bi bi-telephone"></i> <?= e($tenancy['student_phone']) ?>
             </div>
         </div>
-        <a href="/rentbridge/chat/start.php?with=<?= (int)$tenancy['student_id'] ?>&tenancy_id=<?= (int)$tenancyId ?>"
+        <a href="<?= BASE_PATH ?>/chat/start.php?with=<?= (int)$tenancy['student_id'] ?>&tenancy_id=<?= (int)$tenancyId ?>"
            class="btn btn-outline-primary btn-sm">
             <i class="bi bi-chat-dots me-1"></i> Open chat
         </a>
@@ -383,7 +383,7 @@ ob_start();
                     <i class="bi bi-whatsapp"></i> WhatsApp
                 </a>
             <?php endif; ?>
-            <a href="/rentbridge/chat/start.php?with=<?= (int)$tenancy['agent_id'] ?>&tenancy_id=<?= (int)$tenancyId ?>"
+            <a href="<?= BASE_PATH ?>/chat/start.php?with=<?= (int)$tenancy['agent_id'] ?>&tenancy_id=<?= (int)$tenancyId ?>"
                class="btn btn-outline-primary btn-sm">
                 <i class="bi bi-chat-dots me-1"></i> Open chat
             </a>
@@ -432,7 +432,7 @@ ob_start();
 <div class="bg-white border rounded-3 p-4 mb-3">
     <div class="d-flex justify-content-between align-items-center mb-2">
         <h6 class="text-secondary text-uppercase small mb-0">Inspection report</h6>
-        <a href="/rentbridge/agent/inspection_view.php?id=<?= (int)$tenancy['verification_id'] ?>"
+        <a href="<?= BASE_PATH ?>/agent/inspection_view.php?id=<?= (int)$tenancy['verification_id'] ?>"
            class="btn btn-sm btn-outline-dark">
             View full report <i class="bi bi-arrow-right ms-1"></i>
         </a>
@@ -484,18 +484,18 @@ ob_start();
         $landlordPdfFull = $bestLandlordPdf ? __DIR__ . '/../' . $bestLandlordPdf : null;
     ?>
     <div class="d-flex gap-2 flex-wrap">
-        <a href="/rentbridge/contracts/view.php?id=<?= (int)$tenancy['contract_id'] ?>"
+        <a href="<?= BASE_PATH ?>/contracts/view.php?id=<?= (int)$tenancy['contract_id'] ?>"
            class="btn btn-sm btn-primary">
             View contract <i class="bi bi-arrow-right ms-1"></i>
         </a>
         <?php if ($bestLandlordPdf && $landlordPdfFull && file_exists($landlordPdfFull)): ?>
-            <a href="/rentbridge/contracts/pdf.php?id=<?= (int)$tenancy['contract_id'] ?>" target="_blank"
+            <a href="<?= BASE_PATH ?>/contracts/pdf.php?id=<?= (int)$tenancy['contract_id'] ?>" target="_blank"
                class="btn btn-sm btn-outline-success">
                 <i class="bi bi-download me-1"></i> Download PDF
             </a>
         <?php endif; ?>
         <?php if (empty($tenancy['landlord_signed_at']) && $tenancy['contract_status'] === 'pending_signatures'): ?>
-            <a href="/rentbridge/contracts/sign.php?id=<?= (int)$tenancy['contract_id'] ?>"
+            <a href="<?= BASE_PATH ?>/contracts/sign.php?id=<?= (int)$tenancy['contract_id'] ?>"
                class="btn btn-sm btn-success">
                 <i class="bi bi-pen-fill me-1"></i> Sign your part
             </a>

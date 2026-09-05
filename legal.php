@@ -181,7 +181,7 @@ ob_start();
     <h2 id="t5">5. User Accounts</h2>
     <ul>
         <li>You are responsible for maintaining the confidentiality of your login credentials. Do not share your password with anyone.</li>
-        <li>You must immediately notify UTeM if you suspect unauthorized access to your account via the <a href="/rentbridge/contact.php">Feedback &amp; Contact</a> page.</li>
+        <li>You must immediately notify UTeM if you suspect unauthorized access to your account via the <a href="<?= BASE_PATH ?>/contact.php">Feedback &amp; Contact</a> page.</li>
         <li>Each person may hold only one account per role. Creating duplicate accounts to circumvent restrictions is prohibited.</li>
         <li>Account information must be accurate and kept up to date. Outdated contact information that causes notification failures is your responsibility.</li>
         <li>UTeM reserves the right to verify account information at any time and to suspend accounts that cannot be verified.</li>
@@ -356,7 +356,7 @@ ob_start();
     </ul>
     <p>
         Messages are stored and may be reviewed by Admins in the event of a dispute, complaint,
-        or safety concern. See our <a href="/rentbridge/privacy.php">Privacy &amp; Security Policy</a>
+        or safety concern. See our <a href="<?= BASE_PATH ?>/privacy.php">Privacy &amp; Security Policy</a>
         for details on message data retention.
     </p>
 
@@ -399,7 +399,7 @@ ob_start();
     <p>
         Disputes between platform users (e.g., landlord vs. student regarding a listing,
         agent conduct complaints, fraudulent listing reports) should be submitted through the
-        <a href="/rentbridge/contact.php">Feedback &amp; Contact</a> page. Admins will investigate
+        <a href="<?= BASE_PATH ?>/contact.php">Feedback &amp; Contact</a> page. Admins will investigate
         and respond within <strong>5 working days</strong>.
     </p>
     <h3>16.2 Tenancy disputes</h3>
@@ -471,7 +471,7 @@ ob_start();
     <h3>19.2 By the user</h3>
     <p>
         You may request account deletion at any time through the
-        <a href="/rentbridge/contact.php">Feedback &amp; Contact</a> page. Deletion requests
+        <a href="<?= BASE_PATH ?>/contact.php">Feedback &amp; Contact</a> page. Deletion requests
         will be processed within 14 working days. Note that data subject to legal retention
         obligations (see Privacy Policy, Section 6) will be retained for the required period
         even after account deletion.
@@ -506,15 +506,15 @@ ob_start();
     <h3>20.4 Contact</h3>
     <p>
         For any queries relating to these Terms, contact us via the
-        <a href="/rentbridge/contact.php">Feedback &amp; Contact</a> page
+        <a href="<?= BASE_PATH ?>/contact.php">Feedback &amp; Contact</a> page
         with the subject line "Terms Query".
     </p>
 
     <div class="mt-4 pt-4 border-top small text-secondary">
         <p class="mb-1">© <?= date('Y') ?> RentBridge · Universiti Teknikal Malaysia Melaka</p>
         <p class="mb-0">
-            <a href="/rentbridge/privacy.php" class="text-secondary me-3">Privacy &amp; Security</a>
-            <a href="/rentbridge/how_it_works.php#safety" class="text-secondary">Policy &amp; Safety</a>
+            <a href="<?= BASE_PATH ?>/privacy.php" class="text-secondary me-3">Privacy &amp; Security</a>
+            <a href="<?= BASE_PATH ?>/how_it_works.php#safety" class="text-secondary">Policy &amp; Safety</a>
         </p>
     </div>
 

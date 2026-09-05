@@ -223,7 +223,7 @@ try {
             'tenant_info_submitted',
             'Tenant info submitted',
             'Landlord submitted tenant details for "' . $prop['title'] . '". Ready to generate contract.',
-            "/rentbridge/chat/conversation.php?id={$convId}"
+            "" . BASE_PATH . "/chat/conversation.php?id={$convId}"
         );
     }
 
@@ -245,7 +245,7 @@ if (function_exists('notify')) {
         'tenancy_in_progress',
         'Your property is being rented',
         sprintf('A student is submitting paperwork to rent "%s". The agent is handling the contract.', $prop['title']),
-        "/rentbridge/landlord/properties.php"
+        "" . BASE_PATH . "/landlord/properties.php"
     );
 }
 

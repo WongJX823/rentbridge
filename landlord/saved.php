@@ -15,7 +15,7 @@ ob_start();
         Browse other listings to see what's on the market.<br>
         Coming in the next update.
     </p>
-    <a href="/rentbridge/listings.php" class="btn btn-primary mt-2">
+    <a href="<?= BASE_PATH ?>/listings.php" class="btn btn-primary mt-2">
         <i class="bi bi-search me-1"></i> Browse listings
     </a>
 </div>

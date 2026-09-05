@@ -130,7 +130,7 @@ $activeNav = 'browse';
 ob_start();
 ?>
 
-<a href="/rentbridge/listings.php" class="small text-secondary text-decoration-none mb-3 d-inline-block">
+<a href="<?= BASE_PATH ?>/listings.php" class="small text-secondary text-decoration-none mb-3 d-inline-block">
     <i class="bi bi-arrow-left"></i> Back to listings
 </a>
 
@@ -157,7 +157,7 @@ ob_start();
             </div>
         <?php endif; ?>
     </div>
-    <a href="/rentbridge/chat/start.php?type=partner_inquiry&with=<?= (int)$fromPost['poster_id'] ?>&post_id=<?= (int)$fromPost['id'] ?>"
+    <a href="<?= BASE_PATH ?>/chat/start.php?type=partner_inquiry&with=<?= (int)$fromPost['poster_id'] ?>&post_id=<?= (int)$fromPost['id'] ?>"
         class="btn btn-success btn-sm" style="flex-shrink:0;">
         <i class="bi bi-chat-dots me-1"></i> Message
     </a>
@@ -178,7 +178,7 @@ ob_start();
             <?php endif; ?>
         </div>
     </div>
-    <a href="/rentbridge/student/partners.php?city=<?= e($prop['city']) ?>"
+    <a href="<?= BASE_PATH ?>/student/partners.php?city=<?= e($prop['city']) ?>"
        class="btn btn-sm btn-outline-dark" style="flex-shrink:0;">
         View posts <i class="bi bi-arrow-right ms-1"></i>
     </a>
@@ -196,7 +196,7 @@ ob_start();
             <div class="property-images mb-4">
                 <div class="property-main-photo">
                     <img id="propMainImg"
-                         src="/rentbridge/<?= e($photos[0]['image_path']) ?>"
+                         src="<?= BASE_PATH ?>/<?= e($photos[0]['image_path']) ?>"
                          alt="<?= e($prop['title']) ?>">
                 </div>
                 <?php if (count($photos) > 1): ?>
@@ -204,9 +204,9 @@ ob_start();
                         <?php foreach ($photos as $idx => $img): ?>
                             <button type="button"
                                     class="property-thumb <?= $idx === 0 ? 'active' : '' ?>"
-                                    data-src="/rentbridge/<?= e($img['image_path']) ?>"
+                                    data-src="<?= BASE_PATH ?>/<?= e($img['image_path']) ?>"
                                     aria-label="View photo <?= $idx + 1 ?>">
-                                <img src="/rentbridge/<?= e($img['image_path']) ?>" alt="">
+                                <img src="<?= BASE_PATH ?>/<?= e($img['image_path']) ?>" alt="">
                             </button>
                         <?php endforeach; ?>
                     </div>
@@ -362,7 +362,7 @@ ob_start();
                         </button>
                         <small class="text-secondary d-block mt-1"><?= e($chatBlockReason) ?></small>
                     <?php else: ?>
-                        <a href="/rentbridge/chat/start.php?type=property_inquiry&with=<?= $chatTargetUserId ?>&property_id=<?= (int)$prop['id'] ?>"
+                        <a href="<?= BASE_PATH ?>/chat/start.php?type=property_inquiry&with=<?= $chatTargetUserId ?>&property_id=<?= (int)$prop['id'] ?>"
                         class="btn btn-primary w-100">
                             <i class="bi <?= $chatTargetIcon ?> me-1"></i> <?= e($chatTargetLabel) ?>
                         </a>
@@ -388,7 +388,7 @@ ob_start();
 
                 <!-- STUDENT-ONLY: Post co-tenancy -->
                 <?php if (current_role() === 'student'): ?>
-                    <a href="/rentbridge/student/find_housemates.php?property_id=<?= (int)$prop['id'] ?>"
+                    <a href="<?= BASE_PATH ?>/student/find_housemates.php?property_id=<?= (int)$prop['id'] ?>"
                        class="btn btn-outline-primary rail-btn-secondary">
                         <i class="bi bi-people-fill me-1"></i> Post for housemates
                     </a>
@@ -440,11 +440,11 @@ ob_start();
     </h5>
     <div class="sim-strip">
         <?php foreach ($similar as $s): ?>
-        <a href="/rentbridge/property.php?id=<?= (int)$s['id'] ?>"
+        <a href="<?= BASE_PATH ?>/property.php?id=<?= (int)$s['id'] ?>"
            class="sim-card text-decoration-none text-dark">
             <div class="sim-img">
                 <?php if (!empty($s['image_path'])): ?>
-                    <img src="/rentbridge/<?= e($s['image_path']) ?>" alt="">
+                    <img src="<?= BASE_PATH ?>/<?= e($s['image_path']) ?>" alt="">
                 <?php endif; ?>
                 <?php if (!empty($s['agent_verified_at'])): ?>
                     <span class="sim-verified"><i class="bi bi-patch-check-fill"></i> Verified</span>
@@ -471,7 +471,7 @@ ob_start();
 <div class="property-mobile-bar d-lg-none">
     <?php if (is_logged_in()): ?>
         <?php if (current_role() !== 'landlord'): ?>
-        <a href="/rentbridge/chat/start.php?type=property_inquiry&with=<?= (int)$prop['landlord_user_id'] ?>&property_id=<?= (int)$prop['id'] ?>"
+        <a href="<?= BASE_PATH ?>/chat/start.php?type=property_inquiry&with=<?= (int)$prop['landlord_user_id'] ?>&property_id=<?= (int)$prop['id'] ?>"
            class="mobile-bar-btn primary">
             <i class="bi bi-chat-dots-fill"></i>
             <span>Chat</span>
@@ -491,7 +491,7 @@ ob_start();
             <span><?= $isSaved ? 'Saved' : 'Save' ?></span>
         </button>
         <?php if (current_role() === 'student'): ?>
-            <a href="/rentbridge/student/find_housemates.php?property_id=<?= (int)$prop['id'] ?>"
+            <a href="<?= BASE_PATH ?>/student/find_housemates.php?property_id=<?= (int)$prop['id'] ?>"
                class="mobile-bar-btn">
                 <i class="bi bi-people-fill"></i>
                 <span>Post</span>
@@ -534,10 +534,10 @@ ob_start();
                     Create a free account to message landlords, save properties, and book tenancies.
                 </p>
                 <div class="d-grid gap-2">
-                    <a href="/rentbridge/auth/login.php" class="btn btn-primary">
+                    <a href="<?= BASE_PATH ?>/auth/login.php" class="btn btn-primary">
                         <i class="bi bi-box-arrow-in-right me-1"></i> Log in now
                     </a>
-                    <a href="/rentbridge/auth/register.php" class="btn btn-outline-dark">
+                    <a href="<?= BASE_PATH ?>/auth/register.php" class="btn btn-outline-dark">
                         I don't have an account
                     </a>
                 </div>

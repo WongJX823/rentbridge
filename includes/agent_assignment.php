@@ -142,7 +142,7 @@ function assign_agent_to_property(int $propertyId): array {
             'property_assignment',
             'New property assigned for review',
             "You've been assigned to review property #{$propertyId}",
-            "/rentbridge/agent/property_review.php?id={$propertyId}"
+            "" . BASE_PATH . "/agent/property_review.php?id={$propertyId}"
         );
     }
 
@@ -239,7 +239,7 @@ function agent_accept_property(int $propertyId, int $agentId): array {
             'agent_accepted',
             'Agent accepted your property for inspection',
             "Agent {$agentName} has accepted your property \"{$prop['title']}\" and will schedule an inspection.",
-            "/rentbridge/chat/conversation.php?id={$convoId}"
+            "" . BASE_PATH . "/chat/conversation.php?id={$convoId}"
         );
     }
 
@@ -335,7 +335,7 @@ function agent_approve_listing(int $propertyId, int $agentId): array {
             'property_approved',
             'Your property is now live!',
             "Agent inspection passed. Your property \"{$prop['title']}\" is now listed on RentBridge.",
-            "/rentbridge/landlord/properties.php"
+            "" . BASE_PATH . "/landlord/properties.php"
         );
     }
 
@@ -431,7 +431,7 @@ function agent_reject_listing(int $propertyId, int $agentId, string $reason = ''
             'property_rejected',
             'Your property listing was rejected',
             "Your property listing has been rejected by our agent. Reason: {$reason}",
-            "/rentbridge/landlord/properties.php"
+            "" . BASE_PATH . "/landlord/properties.php"
         );
     }
 

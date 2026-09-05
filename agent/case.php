@@ -94,7 +94,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'Your UTeM agent is on the case!',
                     current_user_display_name() . ' will inspect "' . $case['property_title']
                         . '" within 5 days. The contract will be issued after inspection passes.',
-                    '/rentbridge/student/tenancies.php'
+                    '' . BASE_PATH . '/student/tenancies.php'
                 );
 
                 // Notify landlord
@@ -105,11 +105,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     current_user_display_name() . ' (UTeM staff) will inspect your property "'
                         . $case['property_title']
                         . '" within 5 days. Please arrange access (key handover or in-person meet).',
-                    '/rentbridge/landlord/tenancies.php'
+                    '' . BASE_PATH . '/landlord/tenancies.php'
                 );
 
                 set_flash('success', 'Case accepted. Please inspect the property within 5 days.');
-                header('Location: /rentbridge/agent/inspection.php?tenancy_id=' . $caseId);
+                header('Location: ' . BASE_PATH . '/agent/inspection.php?tenancy_id=' . $caseId);
                 exit;
             }
 
@@ -121,7 +121,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 set_flash('warning', 'Case declined. No other available agent — admin notified.');
             }
-            header('Location: /rentbridge/agent/cases.php');
+            header('Location: ' . BASE_PATH . '/agent/cases.php');
             exit;
 
         } catch (Throwable $e) {
@@ -171,7 +171,7 @@ $months  = max(1, (int)round(($endTs - $startTs) / (30.44 * 86400)));
         <div class="col-lg-9">
 
             <p class="small mb-3">
-                <a href="/rentbridge/agent/cases.php" class="text-secondary text-decoration-none">
+                <a href="<?= BASE_PATH ?>/agent/cases.php" class="text-secondary text-decoration-none">
                     <i class="bi bi-arrow-left"></i> All cases
                 </a>
             </p>
@@ -331,7 +331,7 @@ $months  = max(1, (int)round(($endTs - $startTs) / (30.44 * 86400)));
                         <?php endif; ?>
 
     <?php if (in_array($case['status'], ['agent_verifying', 'contract_pending'], true)): ?>
-    <form method="POST" action="/rentbridge/agent/send_cotenant_form.php" class="d-inline">
+    <form method="POST" action="<?= BASE_PATH ?>/agent/send_cotenant_form.php" class="d-inline">
         <?= csrf_field() ?>
         <input type="hidden" name="tenancy_id" value="<?= (int)$case['id'] ?>">
         <button type="submit" class="btn btn-warning btn-sm">
@@ -351,7 +351,7 @@ $months  = max(1, (int)round(($endTs - $startTs) / (30.44 * 86400)));
         <i class="bi bi-person-plus me-1"></i> Add a late co-tenant
     </button>
     <div class="collapse mt-3" id="addCotenantForm">
-        <form method="POST" action="/rentbridge/agent/add_cotenant.php" class="border rounded-3 p-3" style="background:#F4F4EE;">
+        <form method="POST" action="<?= BASE_PATH ?>/agent/add_cotenant.php" class="border rounded-3 p-3" style="background:#F4F4EE;">
             <?= csrf_field() ?>
             <input type="hidden" name="tenancy_id" value="<?= (int)$case['id'] ?>">
             <div class="row g-2">
@@ -420,7 +420,7 @@ foreach ($coTenants as $ct) {
             Generate the contract PDF. You'll download it and send to all parties
             (landlord + tenants) for handwritten signing via WhatsApp/email.
         </p>
-        <a href="/rentbridge/agent/generate_contract.php?tenancy_id=<?= (int)$case['id'] ?>"
+        <a href="<?= BASE_PATH ?>/agent/generate_contract.php?tenancy_id=<?= (int)$case['id'] ?>"
            class="btn btn-success">
             <i class="bi bi-file-earmark-pdf me-1"></i> Generate contract PDF
         </a>
@@ -448,7 +448,7 @@ foreach ($coTenants as $ct) {
         </div>
 
         <div class="d-flex gap-2 flex-wrap">
-            <a href="/rentbridge/agent/generate_contract.php?tenancy_id=<?= (int)$case['id'] ?>"
+            <a href="<?= BASE_PATH ?>/agent/generate_contract.php?tenancy_id=<?= (int)$case['id'] ?>"
                target="_blank" class="btn btn-primary">
                 <i class="bi bi-download me-1"></i> Download PDF
             </a>
@@ -493,7 +493,7 @@ foreach ($coTenants as $ct) {
     </div>
     <?php endif; ?>
 
-    <form method="POST" action="/rentbridge/agent/upload_signed_contract.php"
+    <form method="POST" action="<?= BASE_PATH ?>/agent/upload_signed_contract.php"
           enctype="multipart/form-data">
         <?= csrf_field() ?>
         <input type="hidden" name="tenancy_id" value="<?= (int)$case['id'] ?>">
@@ -520,7 +520,7 @@ foreach ($coTenants as $ct) {
                 Uploaded <?= e(date('d M Y, H:i', strtotime($contract['signed_uploaded_at']))) ?>
             </p>
         </div>
-        <a href="/rentbridge/contracts/pdf.php?id=<?= (int)$contract['id'] ?>"
+        <a href="<?= BASE_PATH ?>/contracts/pdf.php?id=<?= (int)$contract['id'] ?>"
            target="_blank" class="btn btn-outline-dark btn-sm">
             <i class="bi bi-file-earmark-pdf me-1"></i> Download signed copy
         </a>

@@ -124,11 +124,11 @@ $priceTable = $stmt->fetchAll();
 $pageTitle = 'Statistics — Summary';
 $activeNav = 'statistics';
 $pageTabs = [
-    ['label' => 'Summary',     'href' => '/rentbridge/admin/statistics/summary.php',    'active' => true],
-    ['label' => 'Users',       'href' => '/rentbridge/admin/statistics/users.php',     'active' => false],
-    ['label' => 'Properties',  'href' => '/rentbridge/admin/statistics/properties.php','active' => false],
-    ['label' => 'Tenancies',   'href' => '/rentbridge/admin/statistics/tenancies.php', 'active' => false],
-    ['label' => 'Financial',   'href' => '/rentbridge/admin/statistics/financial.php', 'active' => false],
+    ['label' => 'Summary',     'href' => '' . BASE_PATH . '/admin/statistics/summary.php',    'active' => true],
+    ['label' => 'Users',       'href' => '' . BASE_PATH . '/admin/statistics/users.php',     'active' => false],
+    ['label' => 'Properties',  'href' => '' . BASE_PATH . '/admin/statistics/properties.php','active' => false],
+    ['label' => 'Tenancies',   'href' => '' . BASE_PATH . '/admin/statistics/tenancies.php', 'active' => false],
+    ['label' => 'Financial',   'href' => '' . BASE_PATH . '/admin/statistics/financial.php', 'active' => false],
 ];
 ob_start()
 ?>
@@ -160,7 +160,7 @@ ob_start()
 
     <!-- Students -> users.php (when built) -->
     <div class="col-md-4 col-lg-2">
-        <a href="/rentbridge/admin/statistics/users.php"
+        <a href="<?= BASE_PATH ?>/admin/statistics/users.php"
            class="d-block text-decoration-none text-dark">
             <div class="bg-white border rounded-3 p-3 h-100 stat-card-clickable">
                 <div style="width:36px; height:36px; background:#E4F2EA; color:#2E8B57;
@@ -180,7 +180,7 @@ ob_start()
 
     <!-- Landlords -> users.php -->
     <div class="col-md-4 col-lg-2">
-        <a href="/rentbridge/admin/statistics/users.php"
+        <a href="<?= BASE_PATH ?>/admin/statistics/users.php"
            class="d-block text-decoration-none text-dark">
             <div class="bg-white border rounded-3 p-3 h-100 stat-card-clickable">
                 <div style="width:36px; height:36px; background:#E6ECF4; color:#0F2C52;
@@ -200,7 +200,7 @@ ob_start()
 
     <!-- Properties -> properties.php -->
     <div class="col-md-4 col-lg-2">
-        <a href="/rentbridge/admin/statistics/properties.php"
+        <a href="<?= BASE_PATH ?>/admin/statistics/properties.php"
            class="d-block text-decoration-none text-dark">
             <div class="bg-white border rounded-3 p-3 h-100 stat-card-clickable">
                 <div style="width:36px; height:36px; background:#FFF4D6; color:#D4A017;
@@ -220,7 +220,7 @@ ob_start()
 
     <!-- Tenancies -> tenancies.php (when built) -->
     <div class="col-md-4 col-lg-2">
-        <a href="/rentbridge/admin/statistics/tenancies.php"
+        <a href="<?= BASE_PATH ?>/admin/statistics/tenancies.php"
            class="d-block text-decoration-none text-dark">
             <div class="bg-white border rounded-3 p-3 h-100 stat-card-clickable">
                 <div style="width:36px; height:36px; background:#F4F4EE; color:#0F2C52;
@@ -240,7 +240,7 @@ ob_start()
 
     <!-- Active now -> tenancies.php -->
     <div class="col-md-4 col-lg-2">
-        <a href="/rentbridge/admin/statistics/tenancies.php"
+        <a href="<?= BASE_PATH ?>/admin/statistics/tenancies.php"
            class="d-block text-decoration-none text-dark">
             <div class="bg-white border rounded-3 p-3 h-100 stat-card-clickable">
                 <div style="width:36px; height:36px; background:#E4F2EA; color:#2E8B57;
@@ -260,7 +260,7 @@ ob_start()
 
     <!-- Total commission -> financial.php (when built) -->
     <div class="col-md-4 col-lg-2">
-        <a href="/rentbridge/admin/statistics/financial.php"
+        <a href="<?= BASE_PATH ?>/admin/statistics/financial.php"
            class="d-block text-decoration-none text-dark">
             <div class="bg-white border rounded-3 p-3 h-100 stat-card-clickable"
                  style="background: linear-gradient(135deg, #fff 0%, #F4FBF7 100%);">

@@ -4,11 +4,11 @@ require_once __DIR__ . '/includes/auth.php';
 // Logged-in users → their dashboard
 if (is_logged_in()) {
     $dashboardPath = match (current_role()) {
-        'student'  => '/rentbridge/student/dashboard.php',
-        'landlord' => '/rentbridge/landlord/dashboard.php',
-        'agent'    => '/rentbridge/agent/dashboard.php',
-        'admin'    => '/rentbridge/admin/dashboard.php',
-        default    => '/rentbridge/listings.php',
+        'student'  => '' . BASE_PATH . '/student/dashboard.php',
+        'landlord' => '' . BASE_PATH . '/landlord/dashboard.php',
+        'agent'    => '' . BASE_PATH . '/agent/dashboard.php',
+        'admin'    => '' . BASE_PATH . '/admin/dashboard.php',
+        default    => '' . BASE_PATH . '/listings.php',
     };
     header('Location: ' . $dashboardPath);
     exit;
@@ -248,10 +248,10 @@ ob_start();
             every listing is checked by an assigned agent before it goes live.
         </p>
         <div class="d-flex gap-3 flex-wrap">
-            <a href="/rentbridge/listings.php" class="btn btn-success btn-lg">
+            <a href="<?= BASE_PATH ?>/listings.php" class="btn btn-success btn-lg">
                 <i class="bi bi-search me-2"></i> Browse properties
             </a>
-            <a href="/rentbridge/auth/register_student.php" class="btn btn-outline-light btn-lg">
+            <a href="<?= BASE_PATH ?>/auth/register_student.php" class="btn btn-outline-light btn-lg">
                 <i class="bi bi-person-plus me-2"></i> Create account
             </a>
         </div>
@@ -285,7 +285,7 @@ ob_start();
      ============================================================ -->
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h2 class="mb-0" style="font-size:1.4rem;">Recent listings</h2>
-    <a href="/rentbridge/listings.php" class="btn btn-sm btn-outline-primary">
+    <a href="<?= BASE_PATH ?>/listings.php" class="btn btn-sm btn-outline-primary">
         View all <i class="bi bi-arrow-right ms-1"></i>
     </a>
 </div>
@@ -294,10 +294,10 @@ ob_start();
 <div class="row g-3 mb-5">
     <?php foreach ($featured as $p): ?>
     <div class="col-md-6 col-lg-4 col-xl-3">
-        <a href="/rentbridge/property.php?id=<?= (int)$p['id'] ?>" class="rb-listing-card">
+        <a href="<?= BASE_PATH ?>/property.php?id=<?= (int)$p['id'] ?>" class="rb-listing-card">
             <div class="rb-listing-img">
                 <?php if (!empty($p['image_path']) && !str_contains($p['image_path'], 'placeholder')): ?>
-                    <img src="/rentbridge/<?= e($p['image_path']) ?>" alt="<?= e($p['title']) ?>">
+                    <img src="<?= BASE_PATH ?>/<?= e($p['image_path']) ?>" alt="<?= e($p['title']) ?>">
                 <?php else: ?>
                     <div style="display:flex; align-items:center; justify-content:center; height:100%; color:rgba(15,44,82,0.15);">
                         <i class="bi bi-camera" style="font-size:2.5rem;"></i>
@@ -371,7 +371,7 @@ ob_start();
                 </div>
             </div>
         </div>
-        <a href="/rentbridge/auth/register_student.php" class="btn btn-primary">
+        <a href="<?= BASE_PATH ?>/auth/register_student.php" class="btn btn-primary">
             <i class="bi bi-person-plus me-1"></i> Get started free
         </a>
     </div>
@@ -391,10 +391,10 @@ ob_start();
                 Post a co-tenancy ad and connect with other UTeM students.
             </p>
             <div class="d-flex gap-2 justify-content-center flex-wrap">
-                <a href="/rentbridge/auth/register_student.php" class="btn btn-light fw-semibold">
+                <a href="<?= BASE_PATH ?>/auth/register_student.php" class="btn btn-light fw-semibold">
                     <i class="bi bi-megaphone me-1"></i> Find housemates
                 </a>
-                <a href="/rentbridge/listings.php" class="btn btn-outline-light">
+                <a href="<?= BASE_PATH ?>/listings.php" class="btn btn-outline-light">
                     Browse listings first
                 </a>
             </div>
@@ -418,10 +418,10 @@ ob_start();
         </p>
     </div>
     <div class="d-flex gap-2 flex-shrink-0 flex-wrap">
-        <a href="/rentbridge/auth/register_landlord.php" class="btn btn-outline-light">
+        <a href="<?= BASE_PATH ?>/auth/register_landlord.php" class="btn btn-outline-light">
             List a property
         </a>
-        <a href="/rentbridge/auth/login.php" class="btn"
+        <a href="<?= BASE_PATH ?>/auth/login.php" class="btn"
            style="background:rgba(255,255,255,0.15); color:#fff; border:1px solid rgba(255,255,255,0.25);">
             Sign in
         </a>

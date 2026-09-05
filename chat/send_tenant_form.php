@@ -179,7 +179,7 @@ if (function_exists('notify')) {
         'tenant_info_form_received',
         'Tenant info form to fill',
         'Your agent sent a form to collect tenant details for "' . $prop['title'] . '"',
-        "/rentbridge/chat/conversation.php?id={$convId}"
+        "" . BASE_PATH . "/chat/conversation.php?id={$convId}"
     );
 }   
 

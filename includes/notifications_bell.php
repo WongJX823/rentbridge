@@ -102,7 +102,7 @@ if (!function_exists('_nb_time_ago')) {
         <div class="notif-header">
             <span class="fw-semibold">Notifications</span>
             <?php if ($_nb_total > 0): ?>
-            <form method="POST" action="/rentbridge/api/mark_notifications_read.php" class="d-inline m-0">
+            <form method="POST" action="<?= BASE_PATH ?>/api/mark_notifications_read.php" class="d-inline m-0">
                 <input type="hidden" name="redirect" value="<?= e($_SERVER['REQUEST_URI']) ?>">
                 <button type="submit" class="notif-mark-all">Mark all read</button>
             </form>
@@ -120,7 +120,7 @@ if (!function_exists('_nb_time_ago')) {
             <?php else: ?>
 
                 <?php if ($_nb_chatCount > 0): ?>
-                <a href="/rentbridge/chat.php" class="notif-item notif-item--chat text-decoration-none">
+                <a href="<?= BASE_PATH ?>/chat.php" class="notif-item notif-item--chat text-decoration-none">
                     <div class="notif-icon notif-icon--chat"><i class="bi bi-chat-dots"></i></div>
                     <div class="notif-content">
                         <div class="notif-title"><?= e($_nb_chatText) ?></div>

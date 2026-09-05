@@ -92,7 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     " . nl2br(e($old['message'])) . "
                 </div>
                 <p style='color: #666; font-size: 12px; margin-top: 16px;'>
-                    Reply to this message in the admin dashboard at /rentbridge/admin/messages.php
+                    Reply to this message in the admin dashboard at " . BASE_PATH . "/admin/messages.php
                 </p>
             ";
 
@@ -151,7 +151,7 @@ ob_start();
                 </p>
             </div>
             <div class="text-center mt-3">
-                <a href="/rentbridge/" class="btn btn-outline-primary">Back to home</a>
+                <a href="<?= BASE_PATH ?>/" class="btn btn-outline-primary">Back to home</a>
             </div>
         <?php else: ?>
 
@@ -196,7 +196,7 @@ ob_start();
                 <div class="d-flex justify-content-between align-items-center mt-4">
                     <small class="text-secondary">
                         We'll never share your email. Read our
-                        <a href="/rentbridge/faq.php" class="text-decoration-none">FAQ</a> first for quick answers.
+                        <a href="<?= BASE_PATH ?>/faq.php" class="text-decoration-none">FAQ</a> first for quick answers.
                     </small>
                     <button type="submit" class="btn btn-primary px-4">
                         <i class="bi bi-send me-1"></i> Send message

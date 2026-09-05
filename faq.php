@@ -137,7 +137,7 @@ ob_start();
             <p class="text-secondary mb-3">
                 Reach out and we'll get back to you within 1-2 business days.
             </p>
-            <a href="/rentbridge/contact.php" class="btn btn-primary">
+            <a href="<?= BASE_PATH ?>/contact.php" class="btn btn-primary">
                 <i class="bi bi-envelope-fill me-1"></i> Contact us
             </a>
         </div>

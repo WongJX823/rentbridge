@@ -72,7 +72,7 @@ foreach ($tenancies as $b) {
                 <?= count($tenancies) ?> tenancy<?= count($tenancies) === 1 ? '' : 's' ?> total
             </p>
         </div>
-        <a href="/rentbridge/landlord/dashboard.php" class="btn btn-ghost">
+        <a href="<?= BASE_PATH ?>/landlord/dashboard.php" class="btn btn-ghost">
             <i class="bi bi-arrow-left me-1"></i> Back to dashboard
         </a>
     </div>
@@ -100,13 +100,13 @@ foreach ($tenancies as $b) {
                 $isPending = $b['status'] === 'pending_landlord';
             ?>
                 <div class="col-12">
-                    <a href="/rentbridge/landlord/tenancy.php?id=<?= (int)$b['id'] ?>"
+                    <a href="<?= BASE_PATH ?>/landlord/tenancy.php?id=<?= (int)$b['id'] ?>"
                        class="text-decoration-none text-dark d-block">
                         <div class="bg-white border rounded-3 overflow-hidden tenancy-row <?= $isPending ? 'tenancy-row--urgent' : '' ?>">
                             <div class="row g-0">
                                 <div class="col-md-3" style="background:linear-gradient(135deg,#E6ECF4,#E4F2EA); min-height: 160px;">
                                     <?php if (!empty($b['image_path'])): ?>
-                                        <img src="/rentbridge/<?= e($b['image_path']) ?>"
+                                        <img src="<?= BASE_PATH ?>/<?= e($b['image_path']) ?>"
                                              style="width:100%; height:100%; object-fit:cover;" alt="">
                                     <?php endif; ?>
                                 </div>

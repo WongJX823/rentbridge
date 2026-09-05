@@ -10,7 +10,7 @@ $transferId = (int)($_GET['id'] ?? $_POST['transfer_id'] ?? 0);
 
 if ($transferId <= 0) {
     set_flash('danger', 'Invalid transfer request.');
-    header('Location: /rentbridge/agent/cases.php');
+    header('Location: ' . BASE_PATH . '/agent/cases.php');
     exit;
 }
 
@@ -32,7 +32,7 @@ $transfer = $stmt->fetch();
 
 if (!$transfer) {
     set_flash('danger', 'Transfer offer not found or not addressed to you.');
-    header('Location: /rentbridge/agent/cases.php');
+    header('Location: ' . BASE_PATH . '/agent/cases.php');
     exit;
 }
 
@@ -43,13 +43,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($transfer['my_outcome'] !== 'pending') {
         set_flash('info', 'You have already responded to this transfer.');
-        header('Location: /rentbridge/agent/cases.php');
+        header('Location: ' . BASE_PATH . '/agent/cases.php');
         exit;
     }
 
     if ($transfer['status'] !== 'finding_agent') {
         set_flash('info', 'This transfer is no longer active.');
-        header('Location: /rentbridge/agent/cases.php');
+        header('Location: ' . BASE_PATH . '/agent/cases.php');
         exit;
     }
 
@@ -60,14 +60,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             set_flash('danger', 'Something went wrong. Please try again or contact admin.');
         }
-        header('Location: /rentbridge/agent/cases.php?tab=properties');
+        header('Location: ' . BASE_PATH . '/agent/cases.php?tab=properties');
         exit;
     }
 
     if ($action === 'decline') {
         decline_transfer_notification($transferId, $userId);
         set_flash('info', 'You declined the transfer. The system will offer it to the next agent.');
-        header('Location: /rentbridge/agent/cases.php');
+        header('Location: ' . BASE_PATH . '/agent/cases.php');
         exit;
     }
 }
@@ -137,7 +137,7 @@ ob_start();
     <div class="col-12">
         <div class="alert alert-secondary">
             You already responded: <strong><?= e($transfer['my_outcome']) ?></strong>.
-            <a href="/rentbridge/agent/cases.php" class="btn btn-sm btn-outline-secondary ms-2">Back to cases</a>
+            <a href="<?= BASE_PATH ?>/agent/cases.php" class="btn btn-sm btn-outline-secondary ms-2">Back to cases</a>
         </div>
     </div>
 
@@ -145,7 +145,7 @@ ob_start();
     <div class="col-12">
         <div class="alert alert-info">
             This transfer is no longer open (status: <?= e($transfer['status']) ?>).
-            <a href="/rentbridge/agent/cases.php" class="btn btn-sm btn-outline-secondary ms-2">Back to cases</a>
+            <a href="<?= BASE_PATH ?>/agent/cases.php" class="btn btn-sm btn-outline-secondary ms-2">Back to cases</a>
         </div>
     </div>
 

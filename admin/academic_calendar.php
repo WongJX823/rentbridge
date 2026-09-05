@@ -93,7 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save'
 
     if ($saved > 0) set_flash('success', "Saved $saved academic term(s).");
     if ($errors)    set_flash('warning', implode(' ', $errors));
-    header('Location: /rentbridge/admin/academic_calendar.php');
+    header('Location: ' . BASE_PATH . '/admin/academic_calendar.php');
     exit;
 }
 

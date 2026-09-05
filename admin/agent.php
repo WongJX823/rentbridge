@@ -64,10 +64,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'suspend'    => 'Your account has been suspended by an administrator.',
                 'reactivate' => 'Your account has been reactivated. Welcome back!',
             };
-            notify($userId, 'agent_status_change', 'Account status changed', $msg, '/rentbridge/auth/login.php');
+            notify($userId, 'agent_status_change', 'Account status changed', $msg, '' . BASE_PATH . '/auth/login.php');
 
             set_flash('success', 'Agent ' . $action . 'd successfully.');
-            header('Location: /rentbridge/admin/agents.php?status=' . $newStatus);
+            header('Location: ' . BASE_PATH . '/admin/agents.php?status=' . $newStatus);
             exit;
 
         } catch (Throwable $e) {
@@ -108,7 +108,7 @@ function user_status_badge(string $status): array {
         <div class="col-lg-8">
 
             <p class="small mb-3">
-                <a href="/rentbridge/admin/agents.php" class="text-secondary text-decoration-none">
+                <a href="<?= BASE_PATH ?>/admin/agents.php" class="text-secondary text-decoration-none">
                     <i class="bi bi-arrow-left"></i> All agents
                 </a>
             </p>

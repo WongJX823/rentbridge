@@ -205,11 +205,11 @@ $activeNav = 'statistics';
 
 // Tabs at the top
 $pageTabs = [
-    ['label' => 'Summary',     'href' => '/rentbridge/admin/statistics/summary.php',    'active' => false],
-    ['label' => 'Users',       'href' => '/rentbridge/admin/statistics/users.php',     'active' => false],
-    ['label' => 'Properties',  'href' => '/rentbridge/admin/statistics/properties.php','active' => true],
-    ['label' => 'Tenancies',   'href' => '/rentbridge/admin/statistics/tenancies.php', 'active' => false],
-    ['label' => 'Financial',   'href' => '/rentbridge/admin/statistics/financial.php', 'active' => false],
+    ['label' => 'Summary',     'href' => '' . BASE_PATH . '/admin/statistics/summary.php',    'active' => false],
+    ['label' => 'Users',       'href' => '' . BASE_PATH . '/admin/statistics/users.php',     'active' => false],
+    ['label' => 'Properties',  'href' => '' . BASE_PATH . '/admin/statistics/properties.php','active' => true],
+    ['label' => 'Tenancies',   'href' => '' . BASE_PATH . '/admin/statistics/tenancies.php', 'active' => false],
+    ['label' => 'Financial',   'href' => '' . BASE_PATH . '/admin/statistics/financial.php', 'active' => false],
 ];
 
 ob_start();
@@ -392,7 +392,7 @@ ob_start();
                                     <?= $i + 1 ?>
                                 </td>
                                 <td>
-                                    <a href="/rentbridge/admin/property.php?id=<?= (int)$p['id'] ?>"
+                                    <a href="<?= BASE_PATH ?>/admin/property.php?id=<?= (int)$p['id'] ?>"
                                        class="text-decoration-none text-dark">
                                         <strong class="small"><?= e($p['title']) ?></strong>
                                     </a>
@@ -430,7 +430,7 @@ ob_start();
                                     <?= $i + 1 ?>
                                 </td>
                                 <td>
-                                    <a href="/rentbridge/admin/property.php?id=<?= (int)$p['id'] ?>"
+                                    <a href="<?= BASE_PATH ?>/admin/property.php?id=<?= (int)$p['id'] ?>"
                                        class="text-decoration-none text-dark">
                                         <strong class="small"><?= e($p['title']) ?></strong>
                                     </a>

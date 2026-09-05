@@ -28,7 +28,7 @@ if (!contract_can_view($contract, current_user_id(), current_role())) {
 // Must be their turn
 if (!contract_can_sign($contract, current_user_id())) {
     set_flash('info', 'It is not your turn to sign right now.');
-    header('Location: /rentbridge/contracts/view.php?id=' . $contractId);
+    header('Location: ' . BASE_PATH . '/contracts/view.php?id=' . $contractId);
     exit;
 }
 
@@ -52,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $result = choose_manual_signing($contractId, current_user_id());
         if ($result['success']) {
             set_flash('info', $result['message']);
-            header('Location: /rentbridge/contracts/view.php?id=' . $contractId);
+            header('Location: ' . BASE_PATH . '/contracts/view.php?id=' . $contractId);
             exit;
         }
         $errors['general'] = $result['message'];
@@ -68,7 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         ? 'All signatures collected — contract is now active! 🎉'
                         : 'Your signature has been recorded.'
                 );
-                header('Location: /rentbridge/contracts/view.php?id=' . $contractId);
+                header('Location: ' . BASE_PATH . '/contracts/view.php?id=' . $contractId);
                 exit;
             } else {
                 $errors['general'] = $result['message'];
@@ -99,7 +99,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="col-lg-8">
 
             <p class="small mb-3">
-                <a href="/rentbridge/contracts/view.php?id=<?= (int)$contractId ?>"
+                <a href="<?= BASE_PATH ?>/contracts/view.php?id=<?= (int)$contractId ?>"
                    class="text-secondary text-decoration-none">
                     <i class="bi bi-arrow-left"></i> Back to contract
                 </a>

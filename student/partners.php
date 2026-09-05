@@ -51,7 +51,7 @@ ob_start();
                 and to see better-matched partners.
             </small>
         </div>
-        <a href="/rentbridge/student/profile.php" class="btn btn-sm btn-warning">
+        <a href="<?= BASE_PATH ?>/student/profile.php" class="btn btn-sm btn-warning">
             <i class="bi bi-toggle-on me-1"></i> Enable
         </a>
     </div>
@@ -79,7 +79,7 @@ ob_start();
                     <span class="badge bg-warning text-dark ms-1"><?= $mp['pending_count'] ?> pending</span>
                 <?php endif; ?>
             </div>
-            <a href="/rentbridge/student/manage_post.php?id=<?= (int)$mp['id'] ?>"
+            <a href="<?= BASE_PATH ?>/student/manage_post.php?id=<?= (int)$mp['id'] ?>"
                class="btn btn-sm btn-outline-primary flex-shrink-0">
                 <i class="bi bi-people me-1"></i> Manage
             </a>
@@ -121,7 +121,7 @@ ob_start();
         </div>
     <?php endif; ?>
     <?php if (!$myGender || !$myRace): ?>
-        <a href="/rentbridge/student/profile.php" class="small text-decoration-none"
+        <a href="<?= BASE_PATH ?>/student/profile.php" class="small text-decoration-none"
            title="Set your gender and race in your profile to filter by match">
             <i class="bi bi-info-circle"></i> Set gender/race to filter
         </a>
@@ -149,7 +149,7 @@ ob_start();
                 Browse a property → click "Share with housemates" to start.
             <?php endif; ?>
         </p>
-        <a href="/rentbridge/listings.php" class="btn btn-primary mt-2">
+        <a href="<?= BASE_PATH ?>/listings.php" class="btn btn-primary mt-2">
             <i class="bi bi-search me-1"></i> Browse properties
         </a>
     </div>
@@ -160,7 +160,7 @@ ob_start();
             $compat = $post['compatibility'];
         ?>
             <div class="col-md-6 col-lg-4">
-                <a href="/rentbridge/property.php?id=<?= (int)$post['property_id'] ?>&from_post=<?= (int)$post['id'] ?>"
+                <a href="<?= BASE_PATH ?>/property.php?id=<?= (int)$post['property_id'] ?>&from_post=<?= (int)$post['id'] ?>"
                     class="text-decoration-none text-dark d-block h-100">
                     <div class="bg-white border rounded-3 overflow-hidden h-100"
                          style="transition: transform 0.15s, box-shadow 0.15s;"
@@ -193,7 +193,7 @@ ob_start();
                         <!-- PROPERTY THUMBNAIL (compact 16/9 or just 4/3) -->
                         <div style="aspect-ratio: 4/3; background: linear-gradient(135deg,#E6ECF4,#E4F2EA); position:relative;">
                             <?php if (!empty($post['property_image'])): ?>
-                                <img src="/rentbridge/<?= e($post['property_image']) ?>"
+                                <img src="<?= BASE_PATH ?>/<?= e($post['property_image']) ?>"
                                      style="width:100%; height:100%; object-fit:cover;" alt="">
                             <?php else: ?>
                                 <div style="display:flex; align-items:center; justify-content:center; height:100%; color:rgba(15,44,82,0.2);">
@@ -252,7 +252,7 @@ ob_start();
                             <div class="d-flex justify-content-between align-items-center mt-3 pt-2"
                                  style="border-top: 1px solid rgba(15,44,82,0.06);">
                                 <button type="button"
-                                        onclick="event.preventDefault(); event.stopPropagation(); window.location='/rentbridge/student/housemate_post.php?id=<?= (int)$post['id'] ?>'; return false;"
+                                        onclick="event.preventDefault(); event.stopPropagation(); window.location='<?= BASE_PATH ?>/student/housemate_post.php?id=<?= (int)$post['id'] ?>'; return false;"
                                         class="btn btn-sm btn-primary"
                                         style="font-size:0.75rem;">
                                     <i class="bi bi-person-plus"></i> Apply to join

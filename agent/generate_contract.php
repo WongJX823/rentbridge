@@ -67,14 +67,14 @@ if (!$primary) {
 
 if ($primary['ic_number'] === 'PENDING' || empty($primary['ic_number'])) {
     set_flash('warning', 'Primary tenant has not submitted their IC number yet. Send the co-tenant form first.');
-    header('Location: /rentbridge/agent/case.php?id=' . $tenancyId);
+    header('Location: ' . BASE_PATH . '/agent/case.php?id=' . $tenancyId);
     exit;
 }
 
 // Check landlord IC exists
 if (empty($tenancy['landlord_ic'])) {
     set_flash('warning', 'Landlord profile missing IC number. Cannot generate contract.');
-    header('Location: /rentbridge/agent/case.php?id=' . $tenancyId);
+    header('Location: ' . BASE_PATH . '/agent/case.php?id=' . $tenancyId);
     exit;
 }
 
@@ -203,14 +203,14 @@ try {
         'contract_generated',
         'Tenancy contract generated',
         'Agent has generated contract ' . $contractCode . '. The agent will send it to you for signing.',
-        '/rentbridge/student/tenancy.php?id=' . $tenancyId
+        '' . BASE_PATH . '/student/tenancy.php?id=' . $tenancyId
     );
     notify(
         (int)$tenancy['landlord_id'],
         'contract_generated',
         'Tenancy contract generated',
         'Agent has generated contract ' . $contractCode . '. You will receive it from the agent for signing.',
-        '/rentbridge/landlord/tenancy.php?id=' . $tenancyId
+        '' . BASE_PATH . '/landlord/tenancy.php?id=' . $tenancyId
     );
 
     // Stream the PDF to the agent for download
@@ -222,6 +222,6 @@ try {
 
 } catch (Throwable $e) {
     set_flash('danger', 'Failed to generate contract: ' . $e->getMessage());
-    header('Location: /rentbridge/agent/case.php?id=' . $tenancyId);
+    header('Location: ' . BASE_PATH . '/agent/case.php?id=' . $tenancyId);
     exit;
 }

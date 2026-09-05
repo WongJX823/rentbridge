@@ -96,7 +96,7 @@ function get_avatar_path(int $userId, string $role): ?string {
 function render_avatar(?string $avatarPath, string $name, int $sizePx = 44, string $bgColor = '#E4F2EA'): void {
     if (!empty($avatarPath)) {
         ?>
-        <img src="/rentbridge/<?= e($avatarPath) ?>"
+        <img src="<?= BASE_PATH ?>/<?= e($avatarPath) ?>"
              alt="<?= e($name) ?>"
              style="width:<?= $sizePx ?>px; height:<?= $sizePx ?>px;
                     border-radius:50%; object-fit:cover; flex-shrink:0;">

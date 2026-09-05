@@ -105,7 +105,7 @@ ob_start();
             <?php if (!in_array('agent', $myRoles, true)): ?>
                 <p class="text-secondary small">
                     Want to become an agent? Agent accounts need UTeM-staff verification —
-                    <a href="/rentbridge/contact.php">contact admin</a> to be added.
+                    <a href="<?= BASE_PATH ?>/contact.php">contact admin</a> to be added.
                 </p>
             <?php endif; ?>
             <?php if (empty($addable) && in_array('agent', $myRoles, true)): ?>

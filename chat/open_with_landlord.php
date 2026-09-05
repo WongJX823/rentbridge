@@ -6,7 +6,7 @@ require_role('agent');
 $propertyId = (int)($_GET['property_id'] ?? 0);
 if ($propertyId <= 0) {
     set_flash('danger', 'Invalid property.');
-    header('Location: /rentbridge/chat.php');
+    header('Location: ' . BASE_PATH . '/chat.php');
     exit;
 }
 
@@ -17,7 +17,7 @@ $prop = $stmt->fetch();
 
 if (!$prop || empty($prop['landlord_id'])) {
     set_flash('danger', 'Property or landlord not found.');
-    header('Location: /rentbridge/chat.php');
+    header('Location: ' . BASE_PATH . '/chat.php');
     exit;
 }
 
@@ -26,11 +26,11 @@ $agentId    = current_user_id();
 
 if ($landlordId === $agentId) {
     set_flash('danger', 'You cannot chat with yourself.');
-    header('Location: /rentbridge/chat.php');
+    header('Location: ' . BASE_PATH . '/chat.php');
     exit;
 }
 
 $convId = find_or_create_conversation($agentId, $landlordId, 'agent_case', $propertyId);
 
-header('Location: /rentbridge/chat/conversation.php?id=' . $convId);
+header('Location: ' . BASE_PATH . '/chat/conversation.php?id=' . $convId);
 exit;

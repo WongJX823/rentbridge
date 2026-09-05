@@ -79,7 +79,7 @@ function _maybe_notify_admins_flagged(int $userId): void {
             'user_flagged',
             "High reports: {$userName}",
             "{$userName} has received {$count} reports in the last 30 days. Review and consider action.",
-            "/rentbridge/admin/reports.php?filter_user={$userId}"
+            "" . BASE_PATH . "/admin/reports.php?filter_user={$userId}"
         );
     }
 }
@@ -191,7 +191,7 @@ function render_report_modal(array $subjects, string $contextType, int $contextI
 
             const fd = new FormData(form);
 
-            fetch('/rentbridge/api/submit_report.php', { method: 'POST', body: fd })
+            fetch('<?= BASE_PATH ?>/api/submit_report.php', { method: 'POST', body: fd })
                 .then(r => r.json())
                 .then(data => {
                     if (data.ok) {

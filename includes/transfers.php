@@ -52,7 +52,7 @@ function dispatch_transfer_batch(int $transferId): bool {
             notify((int)$adminId, 'transfer_no_agent',
                 'No agents available for property transfer',
                 'Transfer request #' . $transferId . ': all eligible agents have declined. Manual reassignment needed.',
-                '/rentbridge/admin/transfers.php?id=' . $transferId
+                '' . BASE_PATH . '/admin/transfers.php?id=' . $transferId
             );
         }
         return false;
@@ -78,7 +78,7 @@ function dispatch_transfer_batch(int $transferId): bool {
             notify($agentId, 'transfer_offered',
                 'Property case transfer offered to you',
                 'You have been offered to take over the case for "' . $propTitle . '". Accept or decline in My Cases.',
-                '/rentbridge/agent/transfer_response.php?id=' . $transferId
+                '' . BASE_PATH . '/agent/transfer_response.php?id=' . $transferId
             );
         }
 
@@ -168,12 +168,12 @@ function complete_transfer(int $transferId, int $newAgentId): bool {
         notify($oldAgentId, 'transfer_completed',
             'Your property case has been transferred',
             '"' . $req['property_title'] . '" has been successfully handed to another agent.',
-            '/rentbridge/agent/cases.php'
+            '' . BASE_PATH . '/agent/cases.php'
         );
         notify($newAgentId, 'transfer_accepted',
             'You are now handling "' . $req['property_title'] . '"',
             'You accepted the case transfer. All active tenancies for this property are now assigned to you.',
-            '/rentbridge/agent/cases.php?tab=properties'
+            '' . BASE_PATH . '/agent/cases.php?tab=properties'
         );
 
         // Notify landlord
@@ -184,7 +184,7 @@ function complete_transfer(int $transferId, int $newAgentId): bool {
             notify((int)$landlordId, 'agent_changed',
                 'Your property agent has changed',
                 'A new agent has taken over the case for "' . $req['property_title'] . '".',
-                '/rentbridge/landlord/properties.php'
+                '' . BASE_PATH . '/landlord/properties.php'
             );
         }
 

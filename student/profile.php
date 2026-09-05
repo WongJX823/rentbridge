@@ -83,7 +83,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]);
 
             set_flash('success', 'Profile updated successfully.');
-            header('Location: /rentbridge/student/profile.php');
+            header('Location: ' . BASE_PATH . '/student/profile.php');
             exit;
         } catch (Throwable $e) {
             $errors['general'] = 'Failed to save: ' . $e->getMessage();
@@ -146,7 +146,7 @@ ob_start();
         <div class="d-flex align-items-center gap-4">
             <?php render_avatar($student['avatar_path'] ?? null, $student['full_name'] ?? 'User', 96); ?>
             <div class="flex-grow-1">
-                <form method="POST" action="/rentbridge/auth/avatar_upload.php"
+                <form method="POST" action="<?= BASE_PATH ?>/auth/avatar_upload.php"
                     enctype="multipart/form-data" class="d-flex gap-2 align-items-center">
                     <?= csrf_field() ?>
                     <input type="file" name="avatar" class="form-control form-control-sm"
@@ -291,7 +291,7 @@ ob_start();
         </div>
 
         <div class="d-flex justify-content-end gap-2">
-            <a href="/rentbridge/student/profile.php" class="btn btn-outline-secondary">Cancel</a>
+            <a href="<?= BASE_PATH ?>/student/profile.php" class="btn btn-outline-secondary">Cancel</a>
             <button type="submit" class="btn btn-primary">
                 <i class="bi bi-check-circle me-1"></i> Save changes
             </button>
@@ -482,7 +482,7 @@ ob_start();
         sendStatus.textContent = 'Sending...';
 
         try {
-            const resp = await fetch('/rentbridge/auth/password_send_code.php', {
+            const resp = await fetch('<?= BASE_PATH ?>/auth/password_send_code.php', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/x-www-form-urlencoded'},
                 body: new URLSearchParams({_csrf: csrfToken}),
@@ -525,7 +525,7 @@ ob_start();
         submitBtn.innerHTML = '<i class="bi bi-hourglass me-1"></i> Verifying...';
 
         try {
-            const resp = await fetch('/rentbridge/auth/password_change.php', {
+            const resp = await fetch('<?= BASE_PATH ?>/auth/password_change.php', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/x-www-form-urlencoded'},
                 body: new URLSearchParams({
@@ -583,7 +583,7 @@ ob_start();
         const checked = this.checked;
         label.textContent = checked ? 'Actively looking' : 'Not looking';
         try {
-            const resp = await fetch('/rentbridge/student/toggle_looking.php', {
+            const resp = await fetch('<?= BASE_PATH ?>/student/toggle_looking.php', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/x-www-form-urlencoded'},
                 body: new URLSearchParams({_csrf: '<?= csrf_token() ?>', looking: checked ? 1 : 0}),

@@ -55,7 +55,7 @@ ob_start();
             </p>
         </div>
 
-        <form method="get" action="/rentbridge/verify.php" class="card border-0 shadow-sm mb-4">
+        <form method="get" action="<?= BASE_PATH ?>/verify.php" class="card border-0 shadow-sm mb-4">
             <div class="card-body p-4">
                 <label for="ref" class="form-label small text-secondary">Contract reference code</label>
                 <div class="input-group">

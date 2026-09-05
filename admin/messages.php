@@ -9,7 +9,7 @@ if (isset($_GET['mark_read'])) {
     $id = (int)$_GET['mark_read'];
     $stmt = $pdo->prepare("UPDATE contact_messages SET status = 'read' WHERE id = ?");
     $stmt->execute([$id]);
-    header('Location: /rentbridge/admin/messages.php');
+    header('Location: ' . BASE_PATH . '/admin/messages.php');
     exit;
 }
 
@@ -17,7 +17,7 @@ if (isset($_GET['mark_replied'])) {
     $id = (int)$_GET['mark_replied'];
     $stmt = $pdo->prepare("UPDATE contact_messages SET status = 'replied', replied_at = NOW(), replied_by = ? WHERE id = ?");
     $stmt->execute([current_user_id(), $id]);
-    header('Location: /rentbridge/admin/messages.php');
+    header('Location: ' . BASE_PATH . '/admin/messages.php');
     exit;
 }
 
@@ -25,7 +25,7 @@ if (isset($_GET['archive'])) {
     $id = (int)$_GET['archive'];
     $stmt = $pdo->prepare("UPDATE contact_messages SET status = 'archived' WHERE id = ?");
     $stmt->execute([$id]);
-    header('Location: /rentbridge/admin/messages.php');
+    header('Location: ' . BASE_PATH . '/admin/messages.php');
     exit;
 }
 

@@ -190,7 +190,7 @@ ob_start();
                             <?= e(date('d M Y', strtotime($t['created_at']))) ?>
                         </td>
                         <td class="text-end pe-3">
-                            <a href="/rentbridge/landlord/tenancy.php?id=<?= (int)$t['id'] ?>"
+                            <a href="<?= BASE_PATH ?>/landlord/tenancy.php?id=<?= (int)$t['id'] ?>"
                                class="btn btn-sm btn-primary">
                                 Review <i class="bi bi-arrow-right"></i>
                             </a>
@@ -205,7 +205,7 @@ ob_start();
 <!-- QUICK ACTIONS -->
 <div class="row g-3 mb-4">
     <div class="col-md-6">
-        <a href="/rentbridge/landlord/add_property.php"
+        <a href="<?= BASE_PATH ?>/landlord/add_property.php"
            class="d-block bg-white rounded-3 border p-4 text-decoration-none text-dark h-100">
             <div class="d-flex align-items-center gap-3">
                 <div style="width:48px; height:48px; background:#E4F2EA; border-radius:12px;
@@ -220,7 +220,7 @@ ob_start();
         </a>
     </div>
     <div class="col-md-6">
-        <a href="/rentbridge/landlord/properties.php"
+        <a href="<?= BASE_PATH ?>/landlord/properties.php"
            class="d-block bg-white rounded-3 border p-4 text-decoration-none text-dark h-100">
             <div class="d-flex align-items-center gap-3">
                 <div style="width:48px; height:48px; background:#E6ECF4; border-radius:12px;
@@ -244,7 +244,7 @@ ob_start();
         [$statusLabel, $statusColor] = landlord_prop_status_badge($p['status']);
     ?>
         <div class="col-md-3 col-sm-6">
-            <a href="/rentbridge/landlord/property.php?id=<?= (int)$p['id'] ?>"
+            <a href="<?= BASE_PATH ?>/landlord/property.php?id=<?= (int)$p['id'] ?>"
                class="d-block text-decoration-none text-dark">
                 <div class="bg-white border rounded-3 overflow-hidden h-100"
                      style="transition: transform 0.15s, box-shadow 0.15s;"
@@ -252,7 +252,7 @@ ob_start();
                      onmouseout="this.style.transform='';this.style.boxShadow=''">
                     <div style="aspect-ratio: 4/3; background: linear-gradient(135deg,#E6ECF4,#E4F2EA); position:relative;">
                         <?php if (!empty($p['image_path'])): ?>
-                            <img src="/rentbridge/<?= e($p['image_path']) ?>"
+                            <img src="<?= BASE_PATH ?>/<?= e($p['image_path']) ?>"
                                  style="width:100%; height:100%; object-fit:cover;" alt="">
                         <?php endif; ?>
                         <span class="badge bg-<?= $statusColor ?>"

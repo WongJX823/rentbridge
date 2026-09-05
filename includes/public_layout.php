@@ -18,9 +18,9 @@ $pageTabs  = $pageTabs  ?? [];
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-    <link href="/rentbridge/assets/css/style.css" rel="stylesheet">
-    <link href="/rentbridge/assets/css/student.css" rel="stylesheet">
-    <link href="/rentbridge/assets/css/public_layout.css" rel="stylesheet">
+    <link href="<?= BASE_PATH ?>/assets/css/style.css" rel="stylesheet">
+    <link href="<?= BASE_PATH ?>/assets/css/student.css" rel="stylesheet">
+    <link href="<?= BASE_PATH ?>/assets/css/public_layout.css" rel="stylesheet">
 </head>
 <body class="student-body">
 
@@ -30,7 +30,7 @@ $pageTabs  = $pageTabs  ?? [];
             data-tooltip="Hide sidebar" aria-label="Toggle sidebar">
         <i class="bi bi-list"></i>
     </button>
-    <a href="/rentbridge/index.php" class="topbar-brand">
+    <a href="<?= BASE_PATH ?>/index.php" class="topbar-brand">
         <span class="topbar-logo">R</span>
         <span class="topbar-name">RentBridge</span>
     </a>
@@ -38,19 +38,19 @@ $pageTabs  = $pageTabs  ?? [];
         <?php if (is_logged_in()): ?>
             <?php
             $dashboardPath = match (current_role()) {
-                'student'  => '/rentbridge/student/dashboard.php',
-                'landlord' => '/rentbridge/landlord/dashboard.php',
-                'agent'    => '/rentbridge/agent/dashboard.php',
-                'admin'    => '/rentbridge/admin/dashboard.php',
-                default    => '/rentbridge/index.php',
+                'student'  => '' . BASE_PATH . '/student/dashboard.php',
+                'landlord' => '' . BASE_PATH . '/landlord/dashboard.php',
+                'agent'    => '' . BASE_PATH . '/agent/dashboard.php',
+                'admin'    => '' . BASE_PATH . '/admin/dashboard.php',
+                default    => '' . BASE_PATH . '/index.php',
             };
             ?>
             <a href="<?= e($dashboardPath) ?>" class="btn btn-sm btn-outline-primary me-2">
                 <i class="bi bi-speedometer2 me-1"></i> Dashboard
             </a>
         <?php else: ?>
-            <a href="/rentbridge/auth/login.php" class="btn btn-sm btn-primary me-2">Log in</a>
-            <a href="/rentbridge/auth/register_student.php" class="btn btn-sm btn-outline-secondary">Register</a>
+            <a href="<?= BASE_PATH ?>/auth/login.php" class="btn btn-sm btn-primary me-2">Log in</a>
+            <a href="<?= BASE_PATH ?>/auth/register_student.php" class="btn btn-sm btn-outline-secondary">Register</a>
         <?php endif; ?>
     </div>
 </header>
@@ -60,12 +60,12 @@ $pageTabs  = $pageTabs  ?? [];
     <!-- SIDEBAR -->
     <aside class="user-sidebar" id="userSidebar">
         <nav class="sidebar-nav">
-            <a href="/rentbridge/index.php"
+            <a href="<?= BASE_PATH ?>/index.php"
                class="sidebar-link <?= $activeNav === 'home' ? 'active' : '' ?>">
                 <i class="bi bi-house-fill"></i>
                 <span class="sidebar-label">Home</span>
             </a>
-            <a href="/rentbridge/listings.php"
+            <a href="<?= BASE_PATH ?>/listings.php"
                class="sidebar-link <?= $activeNav === 'browse' ? 'active' : '' ?>">
                 <i class="bi bi-search"></i>
                 <span class="sidebar-label">Browse</span>
@@ -79,12 +79,12 @@ $pageTabs  = $pageTabs  ?? [];
                     <i class="bi bi-chevron-down sidebar-chevron"></i>
                 </button>
                 <div class="sidebar-submenu">
-                    <a href="/rentbridge/about.php"        class="sidebar-link sidebar-sublink <?= $activeNav === 'about'        ? 'active' : '' ?>">About RentBridge</a>
-                    <a href="/rentbridge/how_it_works.php" class="sidebar-link sidebar-sublink <?= $activeNav === 'how_it_works' ? 'active' : '' ?>">How it works</a>
-                    <a href="/rentbridge/faq.php"          class="sidebar-link sidebar-sublink <?= $activeNav === 'faq'          ? 'active' : '' ?>">FAQ</a>
-                    <a href="/rentbridge/contact.php"      class="sidebar-link sidebar-sublink <?= $activeNav === 'contact'      ? 'active' : '' ?>">Feedback &amp; Contact</a>
-                    <a href="/rentbridge/legal.php"        class="sidebar-link sidebar-sublink <?= $activeNav === 'legal'        ? 'active' : '' ?>">Terms &amp; Conditions</a>
-                    <a href="/rentbridge/privacy.php"      class="sidebar-link sidebar-sublink <?= $activeNav === 'privacy'      ? 'active' : '' ?>">Privacy &amp; Security</a>
+                    <a href="<?= BASE_PATH ?>/about.php"        class="sidebar-link sidebar-sublink <?= $activeNav === 'about'        ? 'active' : '' ?>">About RentBridge</a>
+                    <a href="<?= BASE_PATH ?>/how_it_works.php" class="sidebar-link sidebar-sublink <?= $activeNav === 'how_it_works' ? 'active' : '' ?>">How it works</a>
+                    <a href="<?= BASE_PATH ?>/faq.php"          class="sidebar-link sidebar-sublink <?= $activeNav === 'faq'          ? 'active' : '' ?>">FAQ</a>
+                    <a href="<?= BASE_PATH ?>/contact.php"      class="sidebar-link sidebar-sublink <?= $activeNav === 'contact'      ? 'active' : '' ?>">Feedback &amp; Contact</a>
+                    <a href="<?= BASE_PATH ?>/legal.php"        class="sidebar-link sidebar-sublink <?= $activeNav === 'legal'        ? 'active' : '' ?>">Terms &amp; Conditions</a>
+                    <a href="<?= BASE_PATH ?>/privacy.php"      class="sidebar-link sidebar-sublink <?= $activeNav === 'privacy'      ? 'active' : '' ?>">Privacy &amp; Security</a>
                     <div class="sidebar-submenu-social">
                         <a href="#" title="Twitter"   aria-label="Twitter"><i class="bi bi-twitter-x"></i></a>
                         <a href="#" title="Instagram" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
@@ -98,27 +98,27 @@ $pageTabs  = $pageTabs  ?? [];
             <?php if (is_logged_in()): ?>
                 <?php
                 $dashboardPath = match (current_role()) {
-                    'student'  => '/rentbridge/student/dashboard.php',
-                    'landlord' => '/rentbridge/landlord/dashboard.php',
-                    'agent'    => '/rentbridge/agent/dashboard.php',
-                    'admin'    => '/rentbridge/admin/dashboard.php',
-                    default    => '/rentbridge/index.php',
+                    'student'  => '' . BASE_PATH . '/student/dashboard.php',
+                    'landlord' => '' . BASE_PATH . '/landlord/dashboard.php',
+                    'agent'    => '' . BASE_PATH . '/agent/dashboard.php',
+                    'admin'    => '' . BASE_PATH . '/admin/dashboard.php',
+                    default    => '' . BASE_PATH . '/index.php',
                 };
                 ?>
                 <a href="<?= e($dashboardPath) ?>" class="sidebar-link">
                     <i class="bi bi-speedometer2"></i>
                     <span class="sidebar-label">Dashboard</span>
                 </a>
-                <a href="/rentbridge/auth/logout.php" class="sidebar-link sidebar-logout">
+                <a href="<?= BASE_PATH ?>/auth/logout.php" class="sidebar-link sidebar-logout">
                     <i class="bi bi-box-arrow-right"></i>
                     <span class="sidebar-label">Sign out</span>
                 </a>
             <?php else: ?>
-                <a href="/rentbridge/auth/login.php" class="sidebar-link">
+                <a href="<?= BASE_PATH ?>/auth/login.php" class="sidebar-link">
                     <i class="bi bi-box-arrow-in-right"></i>
                     <span class="sidebar-label">Log in</span>
                 </a>
-                <a href="/rentbridge/auth/register_student.php" class="sidebar-link" style="color: var(--user-accent);">
+                <a href="<?= BASE_PATH ?>/auth/register_student.php" class="sidebar-link" style="color: var(--user-accent);">
                     <i class="bi bi-person-plus"></i>
                     <span class="sidebar-label">Register</span>
                 </a>

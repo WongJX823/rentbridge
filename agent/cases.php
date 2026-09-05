@@ -210,7 +210,7 @@ function render_property_rows(array $props): void { ?>
             <?php endif; ?>
         </td>
         <td class="text-end pe-3">
-            <a href="/rentbridge/agent/property_review.php?id=<?= (int)$p['id'] ?>"
+            <a href="<?= BASE_PATH ?>/agent/property_review.php?id=<?= (int)$p['id'] ?>"
                class="btn btn-sm btn-primary">
                 Review <i class="bi bi-arrow-right"></i>
             </a>
@@ -312,7 +312,7 @@ function render_property_rows(array $props): void { ?>
                     </td>
                     <td><span class="badge bg-<?= $color ?>"><?= e($label) ?></span></td>
                     <td class="text-end pe-3">
-                        <a href="/rentbridge/agent/case.php?id=<?= (int)$c['id'] ?>"
+                        <a href="<?= BASE_PATH ?>/agent/case.php?id=<?= (int)$c['id'] ?>"
                            class="btn btn-sm btn-primary">Review <i class="bi bi-arrow-right"></i></a>
                     </td>
                 </tr>
@@ -395,17 +395,17 @@ function render_property_rows(array $props): void { ?>
                         <td><span class="badge bg-<?= $color ?>"><?= e($label) ?></span></td>
                         <td class="text-end pe-3">
                             <?php if ($c['status'] === 'pending_agent'): ?>
-                                <a href="/rentbridge/agent/case.php?id=<?= (int)$c['id'] ?>"
+                                <a href="<?= BASE_PATH ?>/agent/case.php?id=<?= (int)$c['id'] ?>"
                                    class="btn btn-sm btn-primary">
                                     Review <i class="bi bi-arrow-right"></i>
                                 </a>
                             <?php elseif ($c['status'] === 'agent_verifying'): ?>
-                                <a href="/rentbridge/agent/inspection.php?tenancy_id=<?= (int)$c['id'] ?>"
+                                <a href="<?= BASE_PATH ?>/agent/inspection.php?tenancy_id=<?= (int)$c['id'] ?>"
                                    class="btn btn-sm btn-primary">
                                     Inspect <i class="bi bi-arrow-right"></i>
                                 </a>
                             <?php else: ?>
-                                <a href="/rentbridge/agent/case.php?id=<?= (int)$c['id'] ?>"
+                                <a href="<?= BASE_PATH ?>/agent/case.php?id=<?= (int)$c['id'] ?>"
                                    class="btn btn-sm btn-outline-dark">
                                     View <i class="bi bi-arrow-right"></i>
                                 </a>

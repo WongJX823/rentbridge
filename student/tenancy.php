@@ -101,7 +101,7 @@ $months  = max(1, (int)round(($endTs - $startTs) / (30.44 * 86400)));
         <div class="col-lg-10">
 
             <p class="small mb-3">
-                <a href="/rentbridge/student/tenancies.php" class="text-secondary text-decoration-none">
+                <a href="<?= BASE_PATH ?>/student/tenancies.php" class="text-secondary text-decoration-none">
                     <i class="bi bi-arrow-left"></i> All my tenancies
                 </a>
             </p>
@@ -124,7 +124,7 @@ $months  = max(1, (int)round(($endTs - $startTs) / (30.44 * 86400)));
                         <div class="row g-0">
                             <div class="col-md-4" style="background:linear-gradient(135deg,#E6ECF4,#E4F2EA); min-height: 200px;">
                                 <?php if (!empty($tenancy['image_path'])): ?>
-                                    <img src="/rentbridge/<?= e($tenancy['image_path']) ?>"
+                                    <img src="<?= BASE_PATH ?>/<?= e($tenancy['image_path']) ?>"
                                          style="width:100%; height:100%; object-fit:cover;" alt="">
                                 <?php endif; ?>
                             </div>
@@ -273,7 +273,7 @@ $months  = max(1, (int)round(($endTs - $startTs) / (30.44 * 86400)));
                                     <strong>Your signature is needed</strong>
                                     <div class="small">You sign first, then your landlord, then the witness agent.</div>
                                 </div>
-                                <a href="/rentbridge/contracts/sign.php?id=<?= (int)$tenancy['contract_id'] ?>"
+                                <a href="<?= BASE_PATH ?>/contracts/sign.php?id=<?= (int)$tenancy['contract_id'] ?>"
                                    class="btn btn-success">
                                     Sign now <i class="bi bi-arrow-right ms-1"></i>
                                 </a>
@@ -317,12 +317,12 @@ $months  = max(1, (int)round(($endTs - $startTs) / (30.44 * 86400)));
 
                         <div class="d-flex gap-2 flex-wrap">
                             <?php if ($bestPdf && $pdfFullPath && file_exists($pdfFullPath)): ?>
-                                <a href="/rentbridge/contracts/pdf.php?id=<?= (int)$tenancy['contract_id'] ?>"
+                                <a href="<?= BASE_PATH ?>/contracts/pdf.php?id=<?= (int)$tenancy['contract_id'] ?>"
                                    target="_blank" class="btn btn-success">
                                     <i class="bi bi-download me-1"></i> Download PDF
                                 </a>
                             <?php endif; ?>
-                            <a href="/rentbridge/contracts/view.php?id=<?= (int)$tenancy['contract_id'] ?>"
+                            <a href="<?= BASE_PATH ?>/contracts/view.php?id=<?= (int)$tenancy['contract_id'] ?>"
                                class="btn btn-outline-dark">
                                 <i class="bi bi-file-earmark-text me-1"></i> View full contract
                             </a>

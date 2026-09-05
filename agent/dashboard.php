@@ -114,7 +114,7 @@ ob_start();
 <div class="row g-3 mb-4">
 
     <div class="col-md-4 col-lg-3">
-        <a href="/rentbridge/agent/cases.php?tab=pending"
+        <a href="<?= BASE_PATH ?>/agent/cases.php?tab=pending"
            class="d-block bg-white border rounded-3 p-3 text-decoration-none text-dark h-100"
            style="transition: transform 0.15s, box-shadow 0.15s;"
            onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(15,44,82,0.08)'"
@@ -131,7 +131,7 @@ ob_start();
     </div>
 
     <div class="col-md-4 col-lg-3">
-        <a href="/rentbridge/agent/cases.php?tab=verifying"
+        <a href="<?= BASE_PATH ?>/agent/cases.php?tab=verifying"
            class="d-block bg-white border rounded-3 p-3 text-decoration-none text-dark h-100"
            style="transition: transform 0.15s, box-shadow 0.15s;"
            onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(15,44,82,0.08)'"
@@ -148,7 +148,7 @@ ob_start();
     </div>
 
     <div class="col-md-4 col-lg-3">
-        <a href="/rentbridge/agent/contracts.php"
+        <a href="<?= BASE_PATH ?>/agent/contracts.php"
            class="d-block bg-white border rounded-3 p-3 text-decoration-none text-dark h-100"
            style="transition: transform 0.15s, box-shadow 0.15s;"
            onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(15,44,82,0.08)'"
@@ -165,7 +165,7 @@ ob_start();
     </div>
 
     <div class="col-md-4 col-lg-3">
-        <a href="/rentbridge/agent/cases.php?tab=active"
+        <a href="<?= BASE_PATH ?>/agent/cases.php?tab=active"
            class="d-block bg-white border rounded-3 p-3 text-decoration-none text-dark h-100"
            style="transition: transform 0.15s, box-shadow 0.15s;"
            onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 12px rgba(15,44,82,0.08)'"
@@ -195,7 +195,7 @@ ob_start();
     </div>
 
     <div class="col-md-8 col-lg-6">
-        <a href="/rentbridge/agent/earnings.php"
+        <a href="<?= BASE_PATH ?>/agent/earnings.php"
            class="d-block bg-white border rounded-3 p-3 text-decoration-none text-dark h-100"
            style="transition: transform 0.15s, box-shadow 0.15s;
                   background: linear-gradient(135deg, #fff 0%, #F4FBF7 100%);"
@@ -244,7 +244,7 @@ ob_start();
                 <td class="small"><?= e($t['requesting_agent_name']) ?></td>
                 <td class="small text-secondary"><?= e(mb_strimwidth($t['reason'], 0, 60, '…')) ?></td>
                 <td>
-                    <a href="/rentbridge/agent/transfer_response.php?id=<?= (int)$t['transfer_request_id'] ?>"
+                    <a href="<?= BASE_PATH ?>/agent/transfer_response.php?id=<?= (int)$t['transfer_request_id'] ?>"
                        class="btn btn-sm btn-primary">Respond</a>
                 </td>
             </tr>
@@ -289,7 +289,7 @@ ob_start();
                         <?php endif; ?>
                     </td>
                     <td>
-                        <a href="/rentbridge/agent/property_review.php?id=<?= (int)$r['id'] ?>"
+                        <a href="<?= BASE_PATH ?>/agent/property_review.php?id=<?= (int)$r['id'] ?>"
                            class="btn btn-sm btn-primary">Review</a>
                     </td>
                 </tr>
@@ -330,7 +330,7 @@ ob_start();
                         <?= e(date('d M', strtotime($u['created_at']))) ?>
                     </td>
                     <td>
-                        <a href="/rentbridge/agent/upload_signed_contract.php?tenancy_id=<?= (int)$u['id'] ?>"
+                        <a href="<?= BASE_PATH ?>/agent/upload_signed_contract.php?tenancy_id=<?= (int)$u['id'] ?>"
                            class="btn btn-sm btn-success">
                             <i class="bi bi-upload me-1"></i> Upload signed PDF
                         </a>
@@ -395,12 +395,12 @@ ob_start();
                         </td>
                         <td class="text-end pe-3">
                             <?php if ($c['status'] === 'pending_agent'): ?>
-                                <a href="/rentbridge/agent/case.php?id=<?= (int)$c['id'] ?>"
+                                <a href="<?= BASE_PATH ?>/agent/case.php?id=<?= (int)$c['id'] ?>"
                                    class="btn btn-sm btn-primary">
                                     Review <i class="bi bi-arrow-right"></i>
                                 </a>
                             <?php else: ?>
-                                <a href="/rentbridge/agent/inspection.php?tenancy_id=<?= (int)$c['id'] ?>"
+                                <a href="<?= BASE_PATH ?>/agent/inspection.php?tenancy_id=<?= (int)$c['id'] ?>"
                                    class="btn btn-sm btn-outline-dark">
                                     Continue <i class="bi bi-arrow-right"></i>
                                 </a>

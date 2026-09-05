@@ -126,20 +126,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'contract_signed',
                         'Contract activated',
                         'Signed contract for "' . $tenancy['property_title'] . '" has been uploaded. Your tenancy is now active.',
-                        '/rentbridge/student/tenancy.php?id=' . $tenancyId
+                        '' . BASE_PATH . '/student/tenancy.php?id=' . $tenancyId
                     );
                     notify(
                         (int)$tenancy['landlord_id'],
                         'contract_signed',
                         'Contract activated',
                         'Signed contract for "' . $tenancy['property_title'] . '" is on file. The tenancy is now active.',
-                        '/rentbridge/landlord/tenancy.php?id=' . $tenancyId
+                        '' . BASE_PATH . '/landlord/tenancy.php?id=' . $tenancyId
                     );
                 }
 
                 $pdo->commit();
                 set_flash('success', 'Signed contract uploaded. Tenancy is now active.');
-                header('Location: /rentbridge/agent/dashboard.php');
+                header('Location: ' . BASE_PATH . '/agent/dashboard.php');
                 exit;
             } catch (Throwable $e) {
                 $pdo->rollBack();
@@ -157,7 +157,7 @@ $showPageTitle = false;
 ob_start();
 ?>
 
-<a href="/rentbridge/agent/dashboard.php" class="small text-secondary text-decoration-none mb-3 d-inline-block">
+<a href="<?= BASE_PATH ?>/agent/dashboard.php" class="small text-secondary text-decoration-none mb-3 d-inline-block">
     <i class="bi bi-arrow-left"></i> Back to dashboard
 </a>
 
@@ -202,7 +202,7 @@ ob_start();
         </div>
 
         <div class="d-flex justify-content-end gap-2">
-            <a href="/rentbridge/agent/dashboard.php" class="btn btn-outline-secondary">Cancel</a>
+            <a href="<?= BASE_PATH ?>/agent/dashboard.php" class="btn btn-outline-secondary">Cancel</a>
             <button type="submit" class="btn btn-primary">
                 <i class="bi bi-upload me-1"></i> Upload signed contract
             </button>

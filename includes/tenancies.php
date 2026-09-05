@@ -63,7 +63,7 @@ function auto_assign_agent(int $tenancyId): ?int {
 
         notify((int)$agentId, 'agent_assigned', 'New tenancy case assigned',
             'A new tenancy tenancy has been assigned to you — please review and accept.',
-            '/rentbridge/agent/case.php?id=' . $tenancyId);
+            '' . BASE_PATH . '/agent/case.php?id=' . $tenancyId);
 
         return (int)$agentId;
     } catch (Throwable $e) {
@@ -146,7 +146,7 @@ function notify_admins_no_agent(int $tenancyId): void {
             'no_agent_available',
             'Tenancy needs manual agent assignment',
             'No eligible agent could be auto-assigned to tenancy #' . $tenancyId . '. Please review.',
-            '/rentbridge/admin/dashboard.php'
+            '' . BASE_PATH . '/admin/dashboard.php'
         );
     }
 }

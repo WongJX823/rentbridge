@@ -189,7 +189,7 @@ ob_start();
             </div>
         <?php endif; ?>
         <?php if (!$myGender || !$myRace): ?>
-            <a href="/rentbridge/student/profile.php" class="text-decoration-none"
+            <a href="<?= BASE_PATH ?>/student/profile.php" class="text-decoration-none"
                title="Set your gender/race in your profile to filter listings by match">
                 <i class="bi bi-info-circle"></i> Set gender/race in profile to filter listings
             </a>
@@ -207,8 +207,8 @@ ob_start();
         to save listings, message landlords, and book properties.
     </div>
     <div class="d-flex gap-2">
-        <a href="/rentbridge/auth/login.php" class="btn btn-sm btn-primary">Log in</a>
-        <a href="/rentbridge/auth/register_student.php" class="btn btn-sm btn-outline-secondary">Sign up</a>
+        <a href="<?= BASE_PATH ?>/auth/login.php" class="btn btn-sm btn-primary">Log in</a>
+        <a href="<?= BASE_PATH ?>/auth/register_student.php" class="btn btn-sm btn-outline-secondary">Sign up</a>
     </div>
 </div>
 <?php endif; ?>
@@ -219,7 +219,7 @@ ob_start();
         <i class="bi bi-house" style="font-size: 3rem; color: rgba(15,44,82,0.15);"></i>
         <h4 class="mt-3">No properties match your filters</h4>
         <p class="text-secondary small">Try clearing some filters or broadening your search.</p>
-        <a href="/rentbridge/listings.php" class="btn btn-outline-dark mt-2">
+        <a href="<?= BASE_PATH ?>/listings.php" class="btn btn-outline-dark mt-2">
             Clear all filters
         </a>
     </div>
@@ -227,7 +227,7 @@ ob_start();
     <div class="row g-3">
         <?php foreach ($properties as $p): ?>
             <div class="col-md-6 col-lg-4 col-xl-3">
-                <a href="/rentbridge/property.php?id=<?= (int)$p['id'] ?>"
+                <a href="<?= BASE_PATH ?>/property.php?id=<?= (int)$p['id'] ?>"
                    class="text-decoration-none text-dark">
                     <div class="bg-white border rounded-3 overflow-hidden h-100"
                          style="transition: transform 0.15s, box-shadow 0.15s;"
@@ -236,7 +236,7 @@ ob_start();
 
                         <div style="aspect-ratio: 4/3; background: linear-gradient(135deg,#E6ECF4,#E4F2EA); position:relative;">
                             <?php if (!empty($p['image_path'])): ?>
-                                <img src="/rentbridge/<?= e($p['image_path']) ?>"
+                                <img src="<?= BASE_PATH ?>/<?= e($p['image_path']) ?>"
                                      style="width:100%; height:100%; object-fit:cover;" alt="">
                             <?php endif; ?>
                             <?php if (!empty($p['agent_verified_at'])): ?>

@@ -82,14 +82,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt = $pdo->prepare("UPDATE properties SET status = 'hidden' WHERE id = ?");
         $stmt->execute([$propertyId]);
         set_flash('info', 'Property hidden from listings.');
-        header('Location: /rentbridge/landlord/property.php?id=' . $propertyId);
+        header('Location: ' . BASE_PATH . '/landlord/property.php?id=' . $propertyId);
         exit;
     }
     if ($action === 'unhide' && $property['status'] === 'hidden') {
         $stmt = $pdo->prepare("UPDATE properties SET status = 'available' WHERE id = ?");
         $stmt->execute([$propertyId]);
         set_flash('success', 'Property visible again.');
-        header('Location: /rentbridge/landlord/property.php?id=' . $propertyId);
+        header('Location: ' . BASE_PATH . '/landlord/property.php?id=' . $propertyId);
         exit;
     }
     if ($action === 'change_viewing_mode') {
@@ -100,7 +100,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->prepare("UPDATE properties SET viewing_mode = ? WHERE id = ? AND landlord_id = ?")
                 ->execute([$newMode, $propertyId, $userId]);
             set_flash('success', 'Viewing mode updated.');
-            header('Location: /rentbridge/landlord/property.php?id=' . $propertyId);
+            header('Location: ' . BASE_PATH . '/landlord/property.php?id=' . $propertyId);
             exit;
         }
     }
@@ -118,7 +118,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $pdo->prepare("DELETE FROM properties WHERE id = ? AND landlord_id = ?");
             $stmt->execute([$propertyId, $userId]);
             set_flash('warning', 'Property deleted.');
-            header('Location: /rentbridge/landlord/properties.php');
+            header('Location: ' . BASE_PATH . '/landlord/properties.php');
             exit;
         }
     }
@@ -151,7 +151,7 @@ ob_start();
 ?>
 
 <p class="small mb-3">
-    <a href="/rentbridge/landlord/properties.php" class="text-secondary text-decoration-none">
+    <a href="<?= BASE_PATH ?>/landlord/properties.php" class="text-secondary text-decoration-none">
         <i class="bi bi-arrow-left"></i> Back to properties
     </a>
 </p>
@@ -201,7 +201,7 @@ render_property_status_bar($property);
 <!-- ACTION BUTTONS -->
 <div class="d-flex gap-2 mb-4 flex-wrap">
     <?php if (in_array($property['status'], ['pending_approval','rejected','hidden','available'], true)): ?>
-        <a href="/rentbridge/landlord/add_property.php?edit=<?= (int)$propertyId ?>"
+        <a href="<?= BASE_PATH ?>/landlord/add_property.php?edit=<?= (int)$propertyId ?>"
            class="btn btn-primary">
             <i class="bi bi-pencil me-1"></i> Edit property
         </a>
@@ -294,7 +294,7 @@ render_property_status_bar($property);
     <div class="row g-2">
         <?php foreach ($images as $i => $img): ?>
             <div class="col-md-4 col-6">
-                <img src="/rentbridge/<?= e($img['image_path']) ?>"
+                <img src="<?= BASE_PATH ?>/<?= e($img['image_path']) ?>"
                      class="w-100 rounded-3"
                      style="aspect-ratio: 4/3; object-fit: cover; cursor:pointer;"
                      data-bs-toggle="modal" data-bs-target="#img<?= (int)$img['id'] ?>"
@@ -308,7 +308,7 @@ render_property_status_bar($property);
                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                         </div>
                         <div class="modal-body p-0">
-                            <img src="/rentbridge/<?= e($img['image_path']) ?>" class="w-100" alt="">
+                            <img src="<?= BASE_PATH ?>/<?= e($img['image_path']) ?>" class="w-100" alt="">
                         </div>
                     </div>
                 </div>
@@ -343,7 +343,7 @@ $documents = get_property_documents($propertyId);
             $icon = strpos($d['mime_type'], 'pdf') !== false ? 'bi-file-pdf' : 'bi-file-image';
         ?>
             <div class="col-md-6">
-                <a href="/rentbridge/<?= e($d['file_path']) ?>" target="_blank"
+                <a href="<?= BASE_PATH ?>/<?= e($d['file_path']) ?>" target="_blank"
                    class="d-flex gap-2 align-items-center p-3 border rounded-3 text-decoration-none text-dark"
                    style="transition: background 0.1s;"
                    onmouseover="this.style.background='#FAF8F3'"
@@ -493,7 +493,7 @@ $documents = get_property_documents($propertyId);
                     </td>
                     <td><span class="badge bg-<?= $sLabel[1] ?>"><?= e($sLabel[0]) ?></span></td>
                     <td class="text-end">
-                        <a href="/rentbridge/landlord/tenancy.php?id=<?= (int)$t['id'] ?>"
+                        <a href="<?= BASE_PATH ?>/landlord/tenancy.php?id=<?= (int)$t['id'] ?>"
                            class="btn btn-sm btn-outline-dark">
                             View <i class="bi bi-arrow-right"></i>
                         </a>

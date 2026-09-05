@@ -510,7 +510,7 @@ ob_start();
         <ol class="mb-0" style="line-height: 2; font-size: 0.9rem;">
             <li><strong>Stop all payments immediately.</strong> Do not send any more money.</li>
             <li><strong>Screenshot everything</strong> — messages, bank transfers, receipts, profile pages.</li>
-            <li><strong>Report through RentBridge</strong> using the <a href="/rentbridge/contact.php">Feedback &amp; Contact</a> page — include screenshots.</li>
+            <li><strong>Report through RentBridge</strong> using the <a href="<?= BASE_PATH ?>/contact.php">Feedback &amp; Contact</a> page — include screenshots.</li>
             <li><strong>File a police report</strong> at your nearest Balai Polis. Bring all evidence.</li>
             <li><strong>Contact your bank</strong> immediately if you made a transfer — request a fraud investigation (within 24 hours is critical).</li>
             <li><strong>Report to MCMC</strong> via <a href="https://aduan.mcmc.gov.my" target="_blank" rel="noopener">aduan.mcmc.gov.my</a> for online fraud cases.</li>

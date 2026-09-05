@@ -369,7 +369,7 @@ function apply_to_co_tenancy_post(int $postId, int $applicantId, string $message
             'housemate_application',
             'New housemate application',
             "{$name} applied to join your housemate group.",
-            "/rentbridge/student/manage_post.php?id={$postId}"
+            "" . BASE_PATH . "/student/manage_post.php?id={$postId}"
         );
     }
 
@@ -419,7 +419,7 @@ function respond_to_application(int $applicationId, int $posterId, string $decis
                     'housemate_accepted',
                     'You were accepted!',
                     'Your housemate application was accepted. Check the group chat.',
-                    "/rentbridge/student/housemate_post.php?id={$postId}"
+                    "" . BASE_PATH . "/student/housemate_post.php?id={$postId}"
                 );
             } else {
                 notify(
@@ -427,7 +427,7 @@ function respond_to_application(int $applicationId, int $posterId, string $decis
                     'housemate_rejected',
                     'Application not accepted',
                     'Your housemate application was not accepted this time.',
-                    "/rentbridge/student/partners.php"
+                    "" . BASE_PATH . "/student/partners.php"
                 );
             }
         }
@@ -488,7 +488,7 @@ function respond_to_application(int $applicationId, int $posterId, string $decis
                                 'housemate_group_ready',
                                 'Housemate group is ready!',
                                 'Your group is full. A group chat has been created.',
-                                "/rentbridge/chat/conversation.php?id={$groupConvId}"
+                                "" . BASE_PATH . "/chat/conversation.php?id={$groupConvId}"
                             );
                         }
                     }

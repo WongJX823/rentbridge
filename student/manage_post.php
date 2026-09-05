@@ -9,7 +9,7 @@ $postId = (int)($_GET['id'] ?? 0);
 
 if ($postId <= 0) {
     set_flash('danger', 'Invalid post.');
-    header('Location: /rentbridge/student/partners.php');
+    header('Location: ' . BASE_PATH . '/student/partners.php');
     exit;
 }
 
@@ -19,7 +19,7 @@ $stmt->execute([$postId, $userId]);
 $post = $stmt->fetch();
 if (!$post) {
     set_flash('danger', 'Post not found or not yours.');
-    header('Location: /rentbridge/student/partners.php');
+    header('Location: ' . BASE_PATH . '/student/partners.php');
     exit;
 }
 
@@ -42,7 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($ok) {
                 $msg = $decision === 'accepted' ? 'Applicant accepted.' : 'Applicant rejected.';
                 if ($groupConvId) {
-                    $msg .= ' Group is full — <a href="/rentbridge/chat/conversation.php?id=' . $groupConvId . '">group chat created</a>.';
+                    $msg .= ' Group is full — <a href="' . BASE_PATH . '/chat/conversation.php?id=' . $groupConvId . '">group chat created</a>.';
                 }
                 $flash = ['type' => 'success', 'html' => $msg];
             } else {
@@ -52,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($action === 'cancel_post') {
         cancel_co_tenancy_post($postId, $userId);
         set_flash('info', 'Post cancelled.');
-        header('Location: /rentbridge/student/partners.php');
+        header('Location: ' . BASE_PATH . '/student/partners.php');
         exit;
     }
 
@@ -75,7 +75,7 @@ ob_start();
 ?>
 
 <p class="small mb-3">
-    <a href="/rentbridge/student/partners.php" class="text-secondary text-decoration-none">
+    <a href="<?= BASE_PATH ?>/student/partners.php" class="text-secondary text-decoration-none">
         <i class="bi bi-arrow-left"></i> Back to Find Housemates
     </a>
 </p>
@@ -150,7 +150,7 @@ ob_start();
         </div>
         <?php if ($groupConvId > 0): ?>
         <div>
-            <a href="/rentbridge/chat/conversation.php?id=<?= $groupConvId ?>"
+            <a href="<?= BASE_PATH ?>/chat/conversation.php?id=<?= $groupConvId ?>"
                class="btn btn-sm btn-outline-primary">
                 <i class="bi bi-chat-dots me-1"></i> Group chat
             </a>

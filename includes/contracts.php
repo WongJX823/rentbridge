@@ -105,7 +105,7 @@ function create_contract_from_tenancy(int $tenancyId): ?int {
             'contract_ready',
             'Contract ready for your signature',
             'Your tenancy contract (' . $code . ') is ready. Please review and sign.',
-            '/rentbridge/contracts/view.php?id=' . $contractId
+            '' . BASE_PATH . '/contracts/view.php?id=' . $contractId
         );
 
         return $contractId;
@@ -315,7 +315,7 @@ function choose_manual_signing(int $contractId, int $userId): array {
             'A party chose to sign a physical copy',
             $nextInfo['name'] . ' will sign contract ' . $contract['contract_code']
                 . ' on a physical copy instead of e-signing — collect their signature and upload the merged PDF.',
-            '/rentbridge/agent/case.php?id=' . (int)$contract['tenancy_id']
+            '' . BASE_PATH . '/agent/case.php?id=' . (int)$contract['tenancy_id']
         );
     }
 
@@ -458,14 +458,14 @@ function apply_signature(int $contractId, int $userId, string $dataUrl): array {
 
             foreach ([(int)$contract['landlord_id'], (int)$contract['agent_id']] as $uid) {
                 notify($uid, 'contract_active', 'Contract activated', $msg,
-                    '/rentbridge/contracts/view.php?id=' . $contractId);
+                    '' . BASE_PATH . '/contracts/view.php?id=' . $contractId);
             }
             // Notify all co-tenants
             $stmt = $pdo->prepare("SELECT student_id FROM co_tenants WHERE tenancy_id = ?");
             $stmt->execute([(int)$contract['tenancy_id']]);
             foreach ($stmt->fetchAll() as $ct) {
                 notify((int)$ct['student_id'], 'contract_active', 'Contract activated', $msg,
-                    '/rentbridge/contracts/view.php?id=' . $contractId);
+                    '' . BASE_PATH . '/contracts/view.php?id=' . $contractId);
             }
         } else {
             // Notify the next signer
@@ -475,7 +475,7 @@ function apply_signature(int $contractId, int $userId, string $dataUrl): array {
                 'contract_your_turn',
                 'It is your turn to sign',
                 'Contract ' . $contract['contract_code'] . ' is ready for your signature.',
-                '/rentbridge/contracts/view.php?id=' . $contractId
+                '' . BASE_PATH . '/contracts/view.php?id=' . $contractId
             );
         }
 
@@ -521,7 +521,7 @@ function ensure_cotenant_sign_tokens(int $tenancyId): void {
 
 /** Absolute path to the link-signing page for a token. */
 function cotenant_sign_url(string $token): string {
-    return '/rentbridge/contracts/sign_link.php?token=' . urlencode($token);
+    return '' . BASE_PATH . '/contracts/sign_link.php?token=' . urlencode($token);
 }
 
 /**
@@ -648,14 +648,14 @@ function apply_signature_by_token(string $token, string $dataUrl): array {
                  . ($pdfPath ? ' The signed PDF is now downloadable.' : '');
             foreach ([(int)$contract['landlord_id'], (int)$contract['agent_id']] as $uid) {
                 if ($uid > 0) notify($uid, 'contract_active', 'Contract activated', $msg,
-                    '/rentbridge/contracts/view.php?id=' . $contractId);
+                    '' . BASE_PATH . '/contracts/view.php?id=' . $contractId);
             }
         } else {
             $nx = contract_next_signer($contract);
             if (!empty($nx['user_id'])) {
                 notify($nx['user_id'], 'contract_your_turn', 'It is your turn to sign',
                     'Contract ' . $contract['contract_code'] . ' is ready for your signature.',
-                    '/rentbridge/contracts/view.php?id=' . $contractId);
+                    '' . BASE_PATH . '/contracts/view.php?id=' . $contractId);
             }
         }
         return ['success'=>true,'all_signed'=>$allSigned,
@@ -1070,7 +1070,7 @@ function check_contract_expiry_notifications(): void {
             'Your tenancy ends in ~4 months',
             "Your contract ({$c['contract_code']}) for \"{$c['property_title']}\" ends {$endDate}. "
             . "Plan your next tenancy or move-out. Standard notice to landlord: 2 months before end date.",
-            "/rentbridge/contracts/view.php?id={$c['id']}"
+            "" . BASE_PATH . "/contracts/view.php?id={$c['id']}"
         );
     }
 
@@ -1099,7 +1099,7 @@ function check_contract_expiry_notifications(): void {
             'Tenancy ending soon — plan ahead',
             "Contract {$c['contract_code']} for \"{$c['property_title']}\" ends {$endDate}. "
             . "The tenant was notified 4 months ago. If you plan to re-list, update your property listing.",
-            "/rentbridge/contracts/view.php?id={$c['id']}"
+            "" . BASE_PATH . "/contracts/view.php?id={$c['id']}"
         );
     }
 }

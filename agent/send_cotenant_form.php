@@ -60,9 +60,9 @@ notify(
     'cotenant_form_request',
     'Agent requested co-tenant details',
     'Please open the chat to fill in co-tenant info for "' . $tenancy['property_title'] . '".',
-    '/rentbridge/chat.php?id=' . $convoId
+    '' . BASE_PATH . '/chat.php?id=' . $convoId
 );
 
 set_flash('success', 'Co-tenant form sent to student via chat.');
-header('Location: /rentbridge/agent/case.php?id=' . $tenancyId);
+header('Location: ' . BASE_PATH . '/agent/case.php?id=' . $tenancyId);
 exit;

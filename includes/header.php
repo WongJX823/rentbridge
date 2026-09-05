@@ -7,7 +7,7 @@ require_once __DIR__ . '/auth.php';
     <div class="container">
 
         <!-- Brand (logo + name) -->
-        <a class="navbar-brand" href="/rentbridge/index.php">
+        <a class="navbar-brand" href="<?= BASE_PATH ?>/index.php">
             <span class="brand-mark">R</span>
             RentBridge
         </a>
@@ -37,7 +37,7 @@ require_once __DIR__ . '/auth.php';
                 require_once __DIR__ . '/chat.php';
                 $unreadCount = unread_message_count(current_user_id());
             ?>
-                <a href="/rentbridge/chat.php"
+                <a href="<?= BASE_PATH ?>/chat.php"
                     class="position-relative me-3 d-inline-flex align-items-center justify-content-center"
                     style="width: 40px; height: 40px; color: white; border-radius: 50%;
                             text-decoration: none; transition: background 0.15s;"
@@ -56,15 +56,15 @@ require_once __DIR__ . '/auth.php';
 
             <div class="d-flex gap-2">
                 <?php if (is_logged_in()): ?>
-                    <a class="btn btn-outline-light" href="/rentbridge/<?= e(current_role()) ?>/dashboard.php">
+                    <a class="btn btn-outline-light" href="<?= BASE_PATH ?>/<?= e(current_role()) ?>/dashboard.php">
                         <i class="bi bi-person-circle me-1"></i> <?= e(current_user_display_name()) ?>
                     </a>
-                    <a class="btn btn-success" href="/rentbridge/auth/logout.php">
+                    <a class="btn btn-success" href="<?= BASE_PATH ?>/auth/logout.php">
                         Sign out
                     </a>
                 <?php else: ?>
-                    <a class="btn btn-success" href="/rentbridge/auth/login.php">Log in</a>
-                    <a class="btn btn-outline-light" href="/rentbridge/auth/register.php">Register</a>
+                    <a class="btn btn-success" href="<?= BASE_PATH ?>/auth/login.php">Log in</a>
+                    <a class="btn btn-outline-light" href="<?= BASE_PATH ?>/auth/register.php">Register</a>
                 <?php endif; ?>
             </div>
 

@@ -97,15 +97,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 notify((int)$tenancy['student_id'], 'admin_cancelled',
                     'Tenancy cancelled by admin',
                     'Your tenancy #' . $tenancyId . ' was cancelled. Reason: ' . $reason,
-                    '/rentbridge/student/tenancies.php');
+                    '' . BASE_PATH . '/student/tenancies.php');
                 notify((int)$tenancy['landlord_id'], 'admin_cancelled',
                     'Tenancy cancelled by admin',
                     'Tenancy #' . $tenancyId . ' was cancelled. Reason: ' . $reason,
-                    '/rentbridge/landlord/tenancies.php');
+                    '' . BASE_PATH . '/landlord/tenancies.php');
 
                 $pdo->commit();
                 set_flash('warning', 'Tenancy cancelled and parties notified.');
-                header('Location: /rentbridge/admin/tenancy.php?id=' . $tenancyId);
+                header('Location: ' . BASE_PATH . '/admin/tenancy.php?id=' . $tenancyId);
                 exit;
             } catch (Throwable $e) {
                 if ($pdo->inTransaction()) $pdo->rollBack();
@@ -142,7 +142,7 @@ ob_start();
 ?>
 
 <p class="small mb-3">
-    <a href="/rentbridge/admin/tenancies.php" class="text-secondary text-decoration-none">
+    <a href="<?= BASE_PATH ?>/admin/tenancies.php" class="text-secondary text-decoration-none">
         <i class="bi bi-arrow-left"></i> Back to tenancies
     </a>
 </p>
@@ -167,7 +167,7 @@ ob_start();
     <h6 class="text-secondary text-uppercase small mb-3">Property</h6>
     <div class="d-flex justify-content-between flex-wrap gap-3">
         <div>
-            <a href="/rentbridge/admin/property.php?id=<?= (int)$tenancy['property_id'] ?>"
+            <a href="<?= BASE_PATH ?>/admin/property.php?id=<?= (int)$tenancy['property_id'] ?>"
                class="text-decoration-none text-dark">
                 <strong class="fs-5"><?= e($tenancy['property_title']) ?></strong>
             </a>
@@ -195,7 +195,7 @@ ob_start();
                 <div><i class="bi bi-envelope"></i> <?= e($tenancy['student_email']) ?></div>
                 <div><i class="bi bi-telephone"></i> <?= e($tenancy['student_phone']) ?></div>
             </div>
-            <a href="/rentbridge/admin/user.php?id=<?= (int)$tenancy['student_id'] ?>"
+            <a href="<?= BASE_PATH ?>/admin/user.php?id=<?= (int)$tenancy['student_id'] ?>"
                class="btn btn-sm btn-outline-dark w-100 mt-2">View profile</a>
         </div>
     </div>
@@ -209,7 +209,7 @@ ob_start();
                 <div><i class="bi bi-envelope"></i> <?= e($tenancy['landlord_email']) ?></div>
                 <div><i class="bi bi-telephone"></i> <?= e($tenancy['landlord_phone']) ?></div>
             </div>
-            <a href="/rentbridge/admin/user.php?id=<?= (int)$tenancy['landlord_id'] ?>"
+            <a href="<?= BASE_PATH ?>/admin/user.php?id=<?= (int)$tenancy['landlord_id'] ?>"
                class="btn btn-sm btn-outline-dark w-100 mt-2">View profile</a>
         </div>
     </div>
@@ -224,7 +224,7 @@ ob_start();
                 <div class="small text-secondary mt-2">
                     <div><i class="bi bi-envelope"></i> <?= e($tenancy['agent_email']) ?></div>
                 </div>
-                <a href="/rentbridge/admin/user.php?id=<?= (int)$tenancy['agent_id'] ?>"
+                <a href="<?= BASE_PATH ?>/admin/user.php?id=<?= (int)$tenancy['agent_id'] ?>"
                    class="btn btn-sm btn-outline-dark w-100 mt-2">View profile</a>
             <?php else: ?>
                 <div class="text-secondary small mt-2">No agent assigned yet</div>
@@ -342,7 +342,7 @@ ob_start();
                 </div>
             </div>
             <div class="col-md-4 text-md-end">
-                <a href="/rentbridge/contracts/pdf.php?id=<?= (int)$tenancy['contract_id'] ?>"
+                <a href="<?= BASE_PATH ?>/contracts/pdf.php?id=<?= (int)$tenancy['contract_id'] ?>"
                    target="_blank" class="btn btn-sm btn-outline-dark">
                     <i class="bi bi-file-pdf me-1"></i> View signed PDF
                 </a>

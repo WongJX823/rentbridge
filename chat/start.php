@@ -62,7 +62,7 @@ if ($type === 'property_inquiry') {
         ")->execute([substr($notice, 0, 120), $agentUserId, $convoId]);
     }
 
-    header('Location: /rentbridge/chat/conversation.php?id=' . $convoId);
+    header('Location: ' . BASE_PATH . '/chat/conversation.php?id=' . $convoId);
     exit;
 }
 
@@ -77,7 +77,7 @@ elseif ($type === 'friend') {
     }
 
     $convoId = find_or_create_conversation($userId, $friendId, 'friend', null, null);
-    header('Location: /rentbridge/chat/conversation.php?id=' . $convoId);
+    header('Location: ' . BASE_PATH . '/chat/conversation.php?id=' . $convoId);
     exit;
 }
 
@@ -104,7 +104,7 @@ elseif ($type === 'agent_case') {
 
     $otherId = $isStudent ? (int)$b['agent_id'] : (int)$b['student_id'];
     $convoId = find_or_create_conversation($userId, $otherId, 'agent_case', null, $tenancyId);
-    header('Location: /rentbridge/chat/conversation.php?id=' . $convoId);
+    header('Location: ' . BASE_PATH . '/chat/conversation.php?id=' . $convoId);
     exit;
 }
 elseif ($type === 'partner_inquiry') {
@@ -179,7 +179,7 @@ elseif ($type === 'partner_inquiry') {
         $stmt->execute([$convoId, $userId, $opener]);
     }
 
-    header('Location: /rentbridge/chat/conversation.php?id=' . $convoId);
+    header('Location: ' . BASE_PATH . '/chat/conversation.php?id=' . $convoId);
     exit;
 }
 else {

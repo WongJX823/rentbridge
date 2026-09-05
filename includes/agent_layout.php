@@ -55,8 +55,8 @@ $urgentCases = (int)$stmt->fetchColumn();
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-    <link href="/rentbridge/assets/css/style.css" rel="stylesheet">
-    <link href="/rentbridge/assets/css/student.css" rel="stylesheet">
+    <link href="<?= BASE_PATH ?>/assets/css/style.css" rel="stylesheet">
+    <link href="<?= BASE_PATH ?>/assets/css/student.css" rel="stylesheet">
 </head>
 <body class="agent-body">
 
@@ -65,7 +65,7 @@ $urgentCases = (int)$stmt->fetchColumn();
             data-tooltip="Hide sidebar" aria-label="Toggle sidebar">
         <i class="bi bi-list"></i>
     </button>
-    <a href="/rentbridge/agent/dashboard.php" class="topbar-brand">
+    <a href="<?= BASE_PATH ?>/agent/dashboard.php" class="topbar-brand">
         <span class="topbar-logo">R</span>
         <span class="topbar-name">RentBridge</span>
         <span style="opacity:0.5; margin: 0 4px;">·</span>
@@ -96,12 +96,12 @@ $urgentCases = (int)$stmt->fetchColumn();
             </li>
             <li><hr class="dropdown-divider"></li>
             <li>
-                <a class="dropdown-item" href="/rentbridge/landlord/profile.php">
+                <a class="dropdown-item" href="<?= BASE_PATH ?>/landlord/profile.php">
                     <i class="bi bi-person-circle me-2"></i> Profile
                 </a>
             </li>
             <li>
-                <a class="dropdown-item" href="/rentbridge/landlord/properties.php">
+                <a class="dropdown-item" href="<?= BASE_PATH ?>/landlord/properties.php">
                     <i class="bi bi-buildings me-2"></i> My properties
                 </a>
             </li>
@@ -114,13 +114,13 @@ $urgentCases = (int)$stmt->fetchColumn();
                 </li>
             <?php endforeach; ?>
             <li>
-                <a class="dropdown-item" href="/rentbridge/auth/add_role.php">
+                <a class="dropdown-item" href="<?= BASE_PATH ?>/auth/add_role.php">
                     <i class="bi bi-plus-circle me-2"></i> Add another role
                 </a>
             </li>
             <li><hr class="dropdown-divider"></li>
             <li>
-                <a class="dropdown-item text-danger" href="/rentbridge/auth/logout.php">
+                <a class="dropdown-item text-danger" href="<?= BASE_PATH ?>/auth/logout.php">
                     <i class="bi bi-box-arrow-right me-2"></i> Sign out
                 </a>
             </li>
@@ -132,12 +132,12 @@ $urgentCases = (int)$stmt->fetchColumn();
 
     <aside class="user-sidebar" id="userSidebar">
         <nav class="sidebar-nav">
-            <a href="/rentbridge/agent/dashboard.php"
+            <a href="<?= BASE_PATH ?>/agent/dashboard.php"
                class="sidebar-link <?= $activeNav === 'dashboard' ? 'active' : '' ?>">
                 <i class="bi bi-grid-1x2-fill"></i>
                 <span class="sidebar-label">Dashboard</span>
             </a>
-            <a href="/rentbridge/agent/cases.php"
+            <a href="<?= BASE_PATH ?>/agent/cases.php"
                class="sidebar-link <?= $activeNav === 'cases' ? 'active' : '' ?>">
                 <i class="bi bi-clipboard-data-fill"></i>
                 <span class="sidebar-label">My Cases</span>
@@ -145,32 +145,32 @@ $urgentCases = (int)$stmt->fetchColumn();
                     <span class="sidebar-badge"><?= $urgentCases ?></span>
                 <?php endif; ?>
             </a>
-            <a href="/rentbridge/agent/inspections.php"
+            <a href="<?= BASE_PATH ?>/agent/inspections.php"
                class="sidebar-link <?= $activeNav === 'inspections' ? 'active' : '' ?>">
                 <i class="bi bi-clipboard-check-fill"></i>
                 <span class="sidebar-label">Inspections</span>
             </a>
-            <a href="/rentbridge/agent/contracts.php"
+            <a href="<?= BASE_PATH ?>/agent/contracts.php"
                class="sidebar-link <?= $activeNav === 'contracts' ? 'active' : '' ?>">
                 <i class="bi bi-file-earmark-text-fill"></i>
                 <span class="sidebar-label">Contracts</span>
             </a>
-            <a href="/rentbridge/agent/earnings.php"
+            <a href="<?= BASE_PATH ?>/agent/earnings.php"
                class="sidebar-link <?= $activeNav === 'earnings' ? 'active' : '' ?>">
                 <i class="bi bi-cash-stack"></i>
                 <span class="sidebar-label">Earnings</span>
             </a>
-            <a href="/rentbridge/agent/request_transfer.php"
+            <a href="<?= BASE_PATH ?>/agent/request_transfer.php"
                class="sidebar-link <?= $activeNav === 'transfer' ? 'active' : '' ?>">
                 <i class="bi bi-arrow-left-right"></i>
                 <span class="sidebar-label">Transfer Case</span>
             </a>
-            <a href="/rentbridge/agent/profile.php"
+            <a href="<?= BASE_PATH ?>/agent/profile.php"
             class="sidebar-link <?= $activeNav === 'profile' ? 'active' : '' ?>">
                 <i class="bi bi-person-circle"></i>
                 <span class="sidebar-label">Profile</span>
             </a>
-            <a href="/rentbridge/chat.php"
+            <a href="<?= BASE_PATH ?>/chat.php"
                class="sidebar-link <?= $activeNav === 'chat' ? 'active' : '' ?>">
                 <i class="bi bi-chat-dots-fill"></i>
                 <span class="sidebar-label">Chat &amp; Notif</span>
@@ -186,12 +186,12 @@ $urgentCases = (int)$stmt->fetchColumn();
                     <i class="bi bi-chevron-down sidebar-chevron"></i>
                 </button>
                 <div class="sidebar-submenu">
-                    <a href="/rentbridge/about.php"        class="sidebar-link sidebar-sublink <?= $activeNav === 'about'        ? 'active' : '' ?>">About RentBridge</a>
-                    <a href="/rentbridge/how_it_works.php" class="sidebar-link sidebar-sublink <?= $activeNav === 'how_it_works' ? 'active' : '' ?>">How it works</a>
-                    <a href="/rentbridge/faq.php"          class="sidebar-link sidebar-sublink <?= $activeNav === 'faq'          ? 'active' : '' ?>">FAQ</a>
-                    <a href="/rentbridge/contact.php"      class="sidebar-link sidebar-sublink <?= $activeNav === 'contact'      ? 'active' : '' ?>">Feedback &amp; Contact</a>
-                    <a href="/rentbridge/legal.php"        class="sidebar-link sidebar-sublink <?= $activeNav === 'legal'        ? 'active' : '' ?>">Terms &amp; Conditions</a>
-                    <a href="/rentbridge/privacy.php"      class="sidebar-link sidebar-sublink <?= $activeNav === 'privacy'      ? 'active' : '' ?>">Privacy &amp; Security</a>
+                    <a href="<?= BASE_PATH ?>/about.php"        class="sidebar-link sidebar-sublink <?= $activeNav === 'about'        ? 'active' : '' ?>">About RentBridge</a>
+                    <a href="<?= BASE_PATH ?>/how_it_works.php" class="sidebar-link sidebar-sublink <?= $activeNav === 'how_it_works' ? 'active' : '' ?>">How it works</a>
+                    <a href="<?= BASE_PATH ?>/faq.php"          class="sidebar-link sidebar-sublink <?= $activeNav === 'faq'          ? 'active' : '' ?>">FAQ</a>
+                    <a href="<?= BASE_PATH ?>/contact.php"      class="sidebar-link sidebar-sublink <?= $activeNav === 'contact'      ? 'active' : '' ?>">Feedback &amp; Contact</a>
+                    <a href="<?= BASE_PATH ?>/legal.php"        class="sidebar-link sidebar-sublink <?= $activeNav === 'legal'        ? 'active' : '' ?>">Terms &amp; Conditions</a>
+                    <a href="<?= BASE_PATH ?>/privacy.php"      class="sidebar-link sidebar-sublink <?= $activeNav === 'privacy'      ? 'active' : '' ?>">Privacy &amp; Security</a>
                     <div class="sidebar-submenu-social">
                         <a href="#" title="Twitter"   aria-label="Twitter"><i class="bi bi-twitter-x"></i></a>
                         <a href="#" title="Instagram" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
@@ -201,12 +201,12 @@ $urgentCases = (int)$stmt->fetchColumn();
             </div>
         </nav>
         <div class="sidebar-footer">
-            <a href="/rentbridge/agent/settings.php"
+            <a href="<?= BASE_PATH ?>/agent/settings.php"
                class="sidebar-link <?= $activeNav === 'settings' ? 'active' : '' ?>">
                 <i class="bi bi-gear-fill"></i>
                 <span class="sidebar-label">Settings</span>
             </a>
-            <a href="/rentbridge/auth/logout.php" class="sidebar-link sidebar-logout">
+            <a href="<?= BASE_PATH ?>/auth/logout.php" class="sidebar-link sidebar-logout">
                 <i class="bi bi-box-arrow-right"></i>
                 <span class="sidebar-label">Sign out</span>
             </a>

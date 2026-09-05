@@ -203,7 +203,7 @@ ob_start();
                         </td>
                         <td>
                             <div class="small text-secondary">#<?= (int)$p['landlord_user_id'] ?></div>
-                            <a href="/rentbridge/admin/user.php?id=<?= (int)$p['landlord_user_id'] ?>"
+                            <a href="<?= BASE_PATH ?>/admin/user.php?id=<?= (int)$p['landlord_user_id'] ?>"
                                class="text-decoration-none text-dark fw-semibold">
                                 <?= e($p['landlord_name']) ?>
                             </a>
@@ -230,7 +230,7 @@ ob_start();
                             <div class="mt-2"><?php render_property_status_bar($p, true); ?></div>
                         </td>
                         <td class="text-end pe-3">
-                            <a href="/rentbridge/admin/property.php?id=<?= (int)$p['id'] ?>"
+                            <a href="<?= BASE_PATH ?>/admin/property.php?id=<?= (int)$p['id'] ?>"
                                class="btn btn-sm btn-outline-dark">
                                 Review <i class="bi bi-arrow-right ms-1"></i>
                             </a>

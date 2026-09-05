@@ -33,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 notify((int)$req['requesting_agent_id'], 'transfer_approved',
                     'Your transfer request has been approved',
                     'Admin approved your property transfer request. The system is now finding a replacement agent.',
-                    '/rentbridge/agent/request_transfer.php'
+                    '' . BASE_PATH . '/agent/request_transfer.php'
                 );
 
                 set_flash('success', 'Transfer approved. First batch of agents notified.');
@@ -48,7 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'Your transfer request was not approved',
                     'Admin reviewed your transfer request and did not approve it.'
                         . ($adminNote ? ' Note: ' . $adminNote : ''),
-                    '/rentbridge/agent/request_transfer.php'
+                    '' . BASE_PATH . '/agent/request_transfer.php'
                 );
 
                 set_flash('info', 'Transfer request rejected.');
@@ -56,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    header('Location: /rentbridge/admin/transfers.php');
+    header('Location: ' . BASE_PATH . '/admin/transfers.php');
     exit;
 }
 

@@ -31,7 +31,7 @@ if ($isEdit) {
     // Don't allow edit on already-rented properties
     if (in_array($existing['status'], ['rented','reserved'], true)) {
         set_flash('warning', 'Cannot edit a property that is currently rented or reserved.');
-        header('Location: /rentbridge/landlord/property.php?id=' . $editId);
+        header('Location: ' . BASE_PATH . '/landlord/property.php?id=' . $editId);
         exit;
     }
 }
@@ -81,7 +81,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 delete_property_document($docId);
                 set_flash('info', 'Document removed.');
             }
-            header('Location: /rentbridge/landlord/add_property.php?edit=' . $editId);
+            header('Location: ' . BASE_PATH . '/landlord/add_property.php?edit=' . $editId);
             exit;
         }
     }
@@ -386,13 +386,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 $old['city'],
                                 $old['property_type']
                             ),
-                            "/rentbridge/landlord/add_property.php?edit={$propertyId}"
+                            "" . BASE_PATH . "/landlord/add_property.php?edit={$propertyId}"
                         );
                     }
                 }
             }
 
-            header('Location: /rentbridge/landlord/properties.php');
+            header('Location: ' . BASE_PATH . '/landlord/properties.php');
             exit;
         } catch (Throwable $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
@@ -409,7 +409,7 @@ ob_start();
 ?>
 
 <p class="small mb-3">
-    <a href="<?= $isEdit ? '/rentbridge/landlord/property.php?id=' . $editId : '/rentbridge/landlord/properties.php' ?>"
+    <a href="<?= $isEdit ? '' . BASE_PATH . '/landlord/property.php?id=' . $editId : '' . BASE_PATH . '/landlord/properties.php' ?>"
        class="text-secondary text-decoration-none">
         <i class="bi bi-arrow-left"></i> Back
     </a>
@@ -682,7 +682,7 @@ ob_start();
                 <?php foreach ($existingPhotos as $photo): ?>
                     <div class="col-6 col-md-4 col-lg-3" id="photoRow_<?= (int)$photo['id'] ?>">
                         <div class="position-relative existing-photo-card">
-                            <img src="/rentbridge/<?= e($photo['image_path']) ?>"
+                            <img src="<?= BASE_PATH ?>/<?= e($photo['image_path']) ?>"
                                 class="w-100 rounded"
                                 style="aspect-ratio:1; object-fit:cover; border:1px solid rgba(15,44,82,0.1);">
                             
@@ -939,7 +939,7 @@ ob_start();
                 formData.append('_csrf', '<?= csrf_token() ?>');
                 formData.append('image_id', imageId);
 
-                const resp = await fetch('/rentbridge/landlord/delete_property_image.php', {
+                const resp = await fetch('<?= BASE_PATH ?>/landlord/delete_property_image.php', {
                     method: 'POST',
                     body: formData,
                 });
@@ -1035,7 +1035,7 @@ ob_start();
                     <?php foreach ($existingDocs as $doc): ?>
                         <tr>
                             <td><small><?= e(ucwords(str_replace('_', ' ', $doc['document_type']))) ?></small></td>
-                            <td><small><a href="/rentbridge/documents/property_doc.php?id=<?= (int)$doc['id'] ?>" target="_blank">View</a></small></td>
+                            <td><small><a href="<?= BASE_PATH ?>/documents/property_doc.php?id=<?= (int)$doc['id'] ?>" target="_blank">View</a></small></td>
                             <td><small><?= e($doc['notes'] ?: '—') ?></small></td>
                             <td><small><?= e(date('d M Y', strtotime($doc['uploaded_at']))) ?></small></td>
                             <td><small>
@@ -1058,7 +1058,7 @@ ob_start();
 
 <!-- SUBMIT -->
 <div class="d-flex justify-content-end gap-2 mb-5">
-    <a href="<?= $isEdit ? '/rentbridge/landlord/property.php?id=' . $editId : '/rentbridge/landlord/properties.php' ?>"
+    <a href="<?= $isEdit ? '' . BASE_PATH . '/landlord/property.php?id=' . $editId : '' . BASE_PATH . '/landlord/properties.php' ?>"
        class="btn btn-outline-secondary">
         Cancel
     </a>
@@ -1115,7 +1115,7 @@ let benchmarkSuggested = null;
             const params = new URLSearchParams({
                 city, type, furnishing: furn, facilities, maps_url: mapsUrl,
             });
-            const resp = await fetch('/rentbridge/landlord/pricing_check.php?' + params);
+            const resp = await fetch('<?= BASE_PATH ?>/landlord/pricing_check.php?' + params);
             const data = await resp.json();
 
             if (mapsStatusEl) {

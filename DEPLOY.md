@@ -17,12 +17,20 @@ whichever your host supports):
 | `RB_DB_USER` | MySQL user | `root` |
 | `RB_DB_PASS` | MySQL password | empty |
 | `RB_DEBUG` | Set to `1` to show real DB-connection errors instead of a generic message. **Leave unset in production.** | unset |
+| `RB_BASE_PATH` | URL path prefix the app is served under. Local XAMPP serves it from a `/rentbridge/` subfolder; a host that serves it from the domain root (e.g. InfinityFree) needs this set to `` (empty). | `/rentbridge` |
 | `GOOGLE_MAPS_API_KEY` | Interactive map picker (Maps JS API) | key in git-ignored `config/google.php` if present |
 | `OPENAI_API_KEY` | Academic-calendar PDF importer (admin-only tool) | key in git-ignored `config/openai.php` if present |
 | `OPENAI_MODEL` | Vision model for the importer | `gpt-4o` |
 | `RB_SMTP_HOST` / `RB_SMTP_PORT` / `RB_SMTP_USERNAME` / `RB_SMTP_PASSWORD` / `RB_SMTP_ENCRYPTION` / `RB_SMTP_FROM_EMAIL` / `RB_SMTP_FROM_NAME` | Outbound email (verification codes, contract links, notifications) | Mailtrap sandbox creds in git-ignored `includes/mail_config.php` if present |
 
 **Before going live:**
+- If the host has no env-var UI (e.g. InfinityFree), edit the `BASE_PATH`
+  fallback directly in `includes/auth.php` on the uploaded copy — change
+  `'/rentbridge'` to `''` when serving from the domain root. Every internal
+  link, redirect, and asset path in the app is built from this constant; if
+  it's wrong, pages load with no CSS and every internal link 404s (the
+  homepage still renders because it needs no internal links, which is why
+  this is easy to miss until you click something).
 - Point `RB_SMTP_*` at a real transactional sender (Mailtrap is a sandbox —
   emails never actually reach recipients). Use a real provider (SES, Postmark,
   a real SMTP account, etc.).

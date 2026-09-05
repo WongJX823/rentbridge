@@ -16,7 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             UPDATE reports SET status = ?, reviewed_at = NOW(), reviewed_by = ? WHERE id = ?
         ")->execute([$newStatus, current_user_id(), $reportId]);
     }
-    header('Location: /rentbridge/admin/reports.php' . ($_SERVER['QUERY_STRING'] ? '?' . $_SERVER['QUERY_STRING'] : ''));
+    header('Location: ' . BASE_PATH . '/admin/reports.php' . ($_SERVER['QUERY_STRING'] ? '?' . $_SERVER['QUERY_STRING'] : ''));
     exit;
 }
 
@@ -167,7 +167,7 @@ ob_start();
     </div>
     <?php if ($filterUser > 0): ?>
     <div class="col-auto">
-        <a href="/rentbridge/admin/reports.php" class="btn btn-sm btn-outline-secondary">
+        <a href="<?= BASE_PATH ?>/admin/reports.php" class="btn btn-sm btn-outline-secondary">
             <i class="bi bi-x"></i> Clear user filter
         </a>
     </div>

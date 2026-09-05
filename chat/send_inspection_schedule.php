@@ -100,7 +100,7 @@ try {
             'inspection_schedule_request',
             'Agent proposed inspection times',
             "The agent proposed inspection time(s) for your property \"{$prop['title']}\". Please confirm a slot.",
-            "/rentbridge/chat/conversation.php?id={$convId}"
+            "" . BASE_PATH . "/chat/conversation.php?id={$convId}"
         );
     }
 

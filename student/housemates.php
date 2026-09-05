@@ -81,7 +81,7 @@ $flash     = get_flash();
             <h1 class="mb-1">Housemates</h1>
             <p class="text-secondary mb-0">Connect with classmates, find housemates, manage your housing network.</p>
         </div>
-        <a href="/rentbridge/student/housemates_profile.php" class="btn btn-ghost">
+        <a href="<?= BASE_PATH ?>/student/housemates_profile.php" class="btn btn-ghost">
             <i class="bi bi-person-gear me-1"></i> My housing profile
         </a>
     </div>
@@ -98,7 +98,7 @@ $flash     = get_flash();
                 <strong>You're not visible to other housemate-seekers</strong>
                 <div class="small">Switch on "I'm looking for housing" in your profile to appear in discovery.</div>
             </div>
-            <a href="/rentbridge/student/housemates_profile.php" class="btn btn-sm btn-primary">
+            <a href="<?= BASE_PATH ?>/student/housemates_profile.php" class="btn btn-sm btn-primary">
                 Update profile
             </a>
         </div>
@@ -114,7 +114,7 @@ $flash     = get_flash();
                     <?php endif; ?>
                 </div>
             </div>
-            <a href="/rentbridge/student/housemates_profile.php" class="btn btn-sm btn-outline-success">
+            <a href="<?= BASE_PATH ?>/student/housemates_profile.php" class="btn btn-sm btn-outline-success">
                 Edit
             </a>
         </div>
@@ -190,7 +190,7 @@ $flash     = get_flash();
                                 Since <?= e(date('d M Y', strtotime($f['became_friends_at']))) ?>
                             </small>
                             <div class="d-flex gap-2">
-                                <a href="/rentbridge/chat/start.php?type=friend&friend_id=<?= (int)$f['friend_id'] ?>"
+                                <a href="<?= BASE_PATH ?>/chat/start.php?type=friend&friend_id=<?= (int)$f['friend_id'] ?>"
                                    class="btn btn-sm btn-outline-primary flex-fill">
                                     <i class="bi bi-chat-dots me-1"></i> Message
                                 </a>

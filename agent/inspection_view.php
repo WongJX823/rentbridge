@@ -102,11 +102,11 @@ $checklist = [
 
 // Back link depends on role
 $backLink = match ($role) {
-    'agent'    => '/rentbridge/agent/cases.php',
-    'student'  => '/rentbridge/student/tenancy.php?id=' . (int)$v['tenancy_id'],
-    'landlord' => '/rentbridge/landlord/tenancy.php?id=' . (int)$v['tenancy_id'],
-    'admin'    => '/rentbridge/admin/tenancy.php?id=' . (int)$v['tenancy_id'],
-    default    => '/rentbridge/index.php',
+    'agent'    => '' . BASE_PATH . '/agent/cases.php',
+    'student'  => '' . BASE_PATH . '/student/tenancy.php?id=' . (int)$v['tenancy_id'],
+    'landlord' => '' . BASE_PATH . '/landlord/tenancy.php?id=' . (int)$v['tenancy_id'],
+    'admin'    => '' . BASE_PATH . '/admin/tenancy.php?id=' . (int)$v['tenancy_id'],
+    default    => '' . BASE_PATH . '/index.php',
 };
 ?>
 <!DOCTYPE html>
@@ -298,7 +298,7 @@ $backLink = match ($role) {
                         <div class="row g-3">
                             <?php foreach ($photos as $i => $photo): ?>
                                 <div class="col-md-4 col-sm-6">
-                                    <img src="/rentbridge/<?= e($photo['photo_path']) ?>"
+                                    <img src="<?= BASE_PATH ?>/<?= e($photo['photo_path']) ?>"
                                          class="w-100 inspect-photo"
                                          alt="Inspection photo <?= $i + 1 ?>"
                                          onclick="window.open(this.src, '_blank');">

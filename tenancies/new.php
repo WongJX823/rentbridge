@@ -172,11 +172,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'tenancy_request',
                 'New tenancy request',
                 'A student has requested to book "' . $prop['title'] . '".',
-                '/rentbridge/landlord/tenancies.php?id=' . $tenancyId
+                '' . BASE_PATH . '/landlord/tenancies.php?id=' . $tenancyId
             );
 
             set_flash('success', 'Tenancy request sent! The landlord will review and respond shortly.');
-            header('Location: /rentbridge/student/tenancies.php');
+            header('Location: ' . BASE_PATH . '/student/tenancies.php');
             exit;
 
         } catch (Throwable $e) {
@@ -211,7 +211,7 @@ $today = date('Y-m-d');
         <div class="col-lg-8">
 
             <p class="small mb-3">
-                <a href="/rentbridge/property.php?id=<?= (int)$propertyId ?>" class="text-secondary text-decoration-none">
+                <a href="<?= BASE_PATH ?>/property.php?id=<?= (int)$propertyId ?>" class="text-secondary text-decoration-none">
                     <i class="bi bi-arrow-left"></i> Back to property
                 </a>
             </p>

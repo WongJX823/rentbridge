@@ -183,7 +183,7 @@ ob_start();
                             </div>
                         </td>
                         <td>
-                            <a href="/rentbridge/admin/property.php?id=<?= (int)$b['property_id'] ?>"
+                            <a href="<?= BASE_PATH ?>/admin/property.php?id=<?= (int)$b['property_id'] ?>"
                                class="text-decoration-none text-dark">
                                 <strong class="small"><?= e($b['property_title']) ?></strong>
                             </a>
@@ -220,7 +220,7 @@ ob_start();
                         </td>
                         <td><span class="badge bg-<?= $color ?>"><?= e($label) ?></span></td>
                         <td class="text-end pe-3">
-                            <a href="/rentbridge/admin/tenancy.php?id=<?= (int)$b['id'] ?>"
+                            <a href="<?= BASE_PATH ?>/admin/tenancy.php?id=<?= (int)$b['id'] ?>"
                                class="btn btn-sm btn-outline-dark">
                                 View <i class="bi bi-arrow-right ms-1"></i>
                             </a>

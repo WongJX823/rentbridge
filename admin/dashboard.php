@@ -41,31 +41,31 @@ ob_start();
             <strong><?= $totalAttention ?> item<?= $totalAttention === 1 ? '' : 's' ?> need your attention</strong>
             <div class="small d-flex flex-wrap gap-2 mt-1">
                 <?php if ($attention['pending_agents'] > 0): ?>
-                    <a href="/rentbridge/admin/agents.php?tab=pending" class="badge bg-warning text-dark text-decoration-none">
+                    <a href="<?= BASE_PATH ?>/admin/agents.php?tab=pending" class="badge bg-warning text-dark text-decoration-none">
                         <i class="bi bi-person-badge me-1"></i>
                         <?= $attention['pending_agents'] ?> agent<?= $attention['pending_agents'] === 1 ? '' : 's' ?> awaiting approval
                     </a>
                 <?php endif; ?>
                 <?php if ($attention['pending_properties'] > 0): ?>
-                    <a href="/rentbridge/admin/properties.php?tab=pending" class="badge bg-warning text-dark text-decoration-none">
+                    <a href="<?= BASE_PATH ?>/admin/properties.php?tab=pending" class="badge bg-warning text-dark text-decoration-none">
                         <i class="bi bi-house me-1"></i>
                         <?= $attention['pending_properties'] ?> propert<?= $attention['pending_properties'] === 1 ? 'y' : 'ies' ?> pending review
                     </a>
                 <?php endif; ?>
                 <?php if ($attention['aborted_inspections'] > 0): ?>
-                    <a href="/rentbridge/admin/tenancies.php?tab=stuck" class="badge bg-danger text-white text-decoration-none">
+                    <a href="<?= BASE_PATH ?>/admin/tenancies.php?tab=stuck" class="badge bg-danger text-white text-decoration-none">
                         <i class="bi bi-x-octagon me-1"></i>
                         <?= $attention['aborted_inspections'] ?> tenanc<?= $attention['aborted_inspections'] === 1 ? 'y' : 'ies' ?> stuck — needs resolution
                     </a>
                 <?php endif; ?>
                 <?php if ($attention['pending_transfers'] > 0): ?>
-                    <a href="/rentbridge/admin/transfers.php?filter=pending" class="badge bg-warning text-dark text-decoration-none">
+                    <a href="<?= BASE_PATH ?>/admin/transfers.php?filter=pending" class="badge bg-warning text-dark text-decoration-none">
                         <i class="bi bi-arrow-left-right me-1"></i>
                         <?= $attention['pending_transfers'] ?> case transfer<?= $attention['pending_transfers'] === 1 ? '' : 's' ?> awaiting review
                     </a>
                 <?php endif; ?>
                 <?php if ($attention['pending_reports'] > 0): ?>
-                    <a href="/rentbridge/admin/reports.php?filter_status=pending" class="badge bg-danger text-white text-decoration-none">
+                    <a href="<?= BASE_PATH ?>/admin/reports.php?filter_status=pending" class="badge bg-danger text-white text-decoration-none">
                         <i class="bi bi-flag-fill me-1"></i>
                         <?= $attention['pending_reports'] ?> flag report<?= $attention['pending_reports'] === 1 ? '' : 's' ?> unreviewed
                     </a>
@@ -78,7 +78,7 @@ ob_start();
 <!-- Overall stats grid -->
 <div class="admin-stat-grid">
 
-    <a href="/rentbridge/admin/students.php" class="admin-stat-card">
+    <a href="<?= BASE_PATH ?>/admin/students.php" class="admin-stat-card">
         <div class="admin-stat-icon">
             <i class="bi bi-mortarboard-fill"></i>
         </div>
@@ -87,7 +87,7 @@ ob_start();
         <div class="admin-stat-action">View all <i class="bi bi-arrow-right"></i></div>
     </a>
 
-    <a href="/rentbridge/admin/landlords.php" class="admin-stat-card">
+    <a href="<?= BASE_PATH ?>/admin/landlords.php" class="admin-stat-card">
         <div class="admin-stat-icon" style="background: #E6ECF4; color: #0F2C52;">
             <i class="bi bi-house-heart-fill"></i>
         </div>
@@ -96,7 +96,7 @@ ob_start();
         <div class="admin-stat-action">View all <i class="bi bi-arrow-right"></i></div>
     </a>
 
-    <a href="/rentbridge/admin/agents.php" class="admin-stat-card">
+    <a href="<?= BASE_PATH ?>/admin/agents.php" class="admin-stat-card">
         <div class="admin-stat-icon" style="background: #FFF4D6; color: #7C5E0A;">
             <i class="bi bi-person-badge-fill"></i>
         </div>
@@ -105,7 +105,7 @@ ob_start();
         <div class="admin-stat-action">View all <i class="bi bi-arrow-right"></i></div>
     </a>
 
-    <a href="/rentbridge/admin/properties.php" class="admin-stat-card">
+    <a href="<?= BASE_PATH ?>/admin/properties.php" class="admin-stat-card">
         <div class="admin-stat-icon" style="background: #E4F2EA; color: #2E8B57;">
             <i class="bi bi-house-door-fill"></i>
         </div>
@@ -114,7 +114,7 @@ ob_start();
         <div class="admin-stat-action">View all <i class="bi bi-arrow-right"></i></div>
     </a>
 
-    <a href="/rentbridge/admin/tenancies.php" class="admin-stat-card">
+    <a href="<?= BASE_PATH ?>/admin/tenancies.php" class="admin-stat-card">
         <div class="admin-stat-icon" style="background: #F4F4EE; color: #6c5e3a;">
             <i class="bi bi-clipboard-data-fill"></i>
         </div>
@@ -123,7 +123,7 @@ ob_start();
         <div class="admin-stat-action">View all <i class="bi bi-arrow-right"></i></div>
     </a>
 
-    <a href="/rentbridge/admin/tenancies.php?tab=active" class="admin-stat-card">
+    <a href="<?= BASE_PATH ?>/admin/tenancies.php?tab=active" class="admin-stat-card">
         <div class="admin-stat-icon" style="background: #E4F2EA; color: #1e6b3f;">
             <i class="bi bi-check-circle-fill"></i>
         </div>

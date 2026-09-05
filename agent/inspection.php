@@ -48,7 +48,7 @@ if (!$tenancy) {
 
 if ($tenancy['status'] !== 'agent_verifying') {
     set_flash('warning', 'This tenancy is not in inspection phase. Current status: ' . $tenancy['status']);
-    header('Location: /rentbridge/agent/cases.php');
+    header('Location: ' . BASE_PATH . '/agent/cases.php');
     exit;
 }
 
@@ -58,7 +58,7 @@ if (!$tenancy['verification_id']) {
 
 if ($tenancy['v_outcome'] !== 'in_progress') {
     set_flash('info', 'Inspection already submitted.');
-    header('Location: /rentbridge/agent/inspection_view.php?id=' . $tenancy['verification_id']);
+    header('Location: ' . BASE_PATH . '/agent/inspection_view.php?id=' . $tenancy['verification_id']);
     exit;
 }
 
@@ -114,7 +114,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'Inspection could not be completed',
                     'The agent was unable to inspect "' . $tenancy['property_title']
                         . '". Reason: ' . $abortReason . '. Your tenancy has been cancelled — you may rebook.',
-                    '/rentbridge/student/tenancies.php'
+                    '' . BASE_PATH . '/student/tenancies.php'
                 );
                 notify(
                     (int)$tenancy['landlord_id'],
@@ -123,11 +123,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'The assigned agent was unable to inspect your property "'
                         . $tenancy['property_title'] . '". Reason: ' . $abortReason
                         . '. Please contact admin if this is incorrect.',
-                    '/rentbridge/landlord/tenancies.php'
+                    '' . BASE_PATH . '/landlord/tenancies.php'
                 );
 
                 set_flash('info', 'Inspection aborted. Tenancy has been cancelled and parties notified.');
-                header('Location: /rentbridge/agent/cases.php');
+                header('Location: ' . BASE_PATH . '/agent/cases.php');
                 exit;
 
             } catch (Throwable $e) {
@@ -257,7 +257,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'Property inspection passed! ✓',
                     'Your tenancy #' . $tenancyId . ' for "' . $tenancy['property_title']
                         . '" passed inspection. The contract is being prepared for signing.',
-                    '/rentbridge/student/tenancy.php?id=' . $tenancyId
+                    '' . BASE_PATH . '/student/tenancy.php?id=' . $tenancyId
                 );
 
                 // Notify landlord
@@ -267,7 +267,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'Property inspection passed ✓',
                     'The agent has verified your property "' . $tenancy['property_title']
                         . '" for tenancy #' . $tenancyId . '. Contract is being prepared.',
-                    '/rentbridge/landlord/tenancy.php?id=' . $tenancyId
+                    '' . BASE_PATH . '/landlord/tenancy.php?id=' . $tenancyId
                 );
 
                 // Auto-create the contract NOW (deferred from accept step)
@@ -290,7 +290,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     '⚠ Minor issues found — your decision needed',
                     'The agent inspection found minor issues with "' . $tenancy['property_title']
                         . '". Please review and decide whether to proceed.',
-                    '/rentbridge/student/inspection_decision.php?tenancy_id=' . $tenancyId
+                    '' . BASE_PATH . '/student/inspection_decision.php?tenancy_id=' . $tenancyId
                 );
             }
             elseif ($outcome === 'failed') {
@@ -317,7 +317,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     '❌ Inspection failed — tenancy cancelled',
                     'The agent found major issues with "' . $tenancy['property_title']
                         . '" during inspection. Your tenancy has been cancelled.',
-                    '/rentbridge/student/tenancies.php'
+                    '' . BASE_PATH . '/student/tenancies.php'
                 );
                 notify(
                     (int)$tenancy['landlord_id'],
@@ -325,7 +325,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'Major issues found during inspection',
                     'The agent inspection found major issues with "' . $tenancy['property_title']
                         . '". The tenancy has been cancelled. Please address the issues and contact admin.',
-                    '/rentbridge/landlord/properties.php'
+                    '' . BASE_PATH . '/landlord/properties.php'
                 );
 
                 // Alert admin
@@ -338,7 +338,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         '⚠ Property failed agent inspection',
                         'Tenancy #' . $tenancyId . ' — property "' . $tenancy['property_title']
                             . '" failed major-issue inspection. Review recommended.',
-                        '/rentbridge/admin/property.php?id=' . $tenancy['property_id']
+                        '' . BASE_PATH . '/admin/property.php?id=' . $tenancy['property_id']
                     );
                 }
             }
@@ -346,7 +346,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->commit();
 
             set_flash('success', 'Inspection submitted successfully.');
-            header('Location: /rentbridge/agent/inspection_view.php?id=' . $tenancy['verification_id']);
+            header('Location: ' . BASE_PATH . '/agent/inspection_view.php?id=' . $tenancy['verification_id']);
             exit;
 
         } catch (Throwable $e) {
@@ -383,7 +383,7 @@ $overdue    = $now > $deadlineTs;
         <div class="col-lg-9">
 
             <p class="small mb-3">
-                <a href="/rentbridge/agent/cases.php" class="text-secondary text-decoration-none">
+                <a href="<?= BASE_PATH ?>/agent/cases.php" class="text-secondary text-decoration-none">
                     <i class="bi bi-arrow-left"></i> All my cases
                 </a>
             </p>
@@ -466,7 +466,7 @@ $overdue    = $now > $deadlineTs;
                         $icon = strpos($d['mime_type'], 'pdf') !== false ? 'bi-file-pdf' : 'bi-file-image';
                     ?>
                         <div class="col-md-6">
-                            <a href="/rentbridge/<?= e($d['file_path']) ?>" target="_blank"
+                            <a href="<?= BASE_PATH ?>/<?= e($d['file_path']) ?>" target="_blank"
                             class="d-flex gap-2 align-items-center p-3 border rounded-3 text-decoration-none text-dark"
                             style="transition: background 0.1s;"
                             onmouseover="this.style.background='#FAF8F3'"
@@ -612,7 +612,7 @@ $overdue    = $now > $deadlineTs;
                             data-bs-toggle="modal" data-bs-target="#abortModal">
                         <i class="bi bi-x-octagon me-1"></i> Cannot inspect
                     </button>
-                    <a href="/rentbridge/agent/cases.php" class="btn btn-ghost">Cancel</a>
+                    <a href="<?= BASE_PATH ?>/agent/cases.php" class="btn btn-ghost">Cancel</a>
                     <button type="submit" class="btn btn-primary"
                             onclick="return confirm('Submit inspection report? You cannot change it after submission.');">
                         <i class="bi bi-check2-circle me-1"></i> Submit inspection

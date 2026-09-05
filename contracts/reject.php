@@ -15,7 +15,7 @@ verify_csrf();
 $contractId = (int)($_POST['contract_id'] ?? 0);
 if ($contractId <= 0) {
     set_flash('danger', 'Invalid contract.');
-    header('Location: /rentbridge/student/dashboard.php');
+    header('Location: ' . BASE_PATH . '/student/dashboard.php');
     exit;
 }
 
@@ -25,7 +25,7 @@ $contract = $stmt->fetch();
 
 if (!$contract || $contract['status'] !== 'pending_signatures') {
     set_flash('danger', 'This contract is no longer open for rejection.');
-    header('Location: /rentbridge/student/dashboard.php');
+    header('Location: ' . BASE_PATH . '/student/dashboard.php');
     exit;
 }
 
@@ -40,7 +40,7 @@ $myRow = $stmt->fetch();
 
 if (!$myRow) {
     set_flash('danger', 'You are not able to reject this contract.');
-    header('Location: /rentbridge/contracts/view.php?id=' . $contractId);
+    header('Location: ' . BASE_PATH . '/contracts/view.php?id=' . $contractId);
     exit;
 }
 
@@ -81,7 +81,7 @@ try {
             'contract_rejected',
             'Co-tenant rejected contract',
             $coTenantName . ' has rejected contract ' . $contract['contract_code'] . '. The tenancy has been cancelled.',
-            '/rentbridge/agent/dashboard.php'
+            '' . BASE_PATH . '/agent/dashboard.php'
         );
     }
 
@@ -92,17 +92,17 @@ try {
             'contract_rejected',
             'Tenancy cancelled by co-tenant',
             $coTenantName . ' has rejected contract ' . $contract['contract_code'] . '. Please contact your agent to resolve this.',
-            '/rentbridge/student/dashboard.php'
+            '' . BASE_PATH . '/student/dashboard.php'
         );
     }
 
 } catch (Throwable $e) {
     if ($pdo->inTransaction()) $pdo->rollBack();
     set_flash('danger', 'Something went wrong. Please try again.');
-    header('Location: /rentbridge/contracts/view.php?id=' . $contractId);
+    header('Location: ' . BASE_PATH . '/contracts/view.php?id=' . $contractId);
     exit;
 }
 
 set_flash('info', 'You have rejected the tenancy contract. The agent has been notified.');
-header('Location: /rentbridge/student/dashboard.php');
+header('Location: ' . BASE_PATH . '/student/dashboard.php');
 exit;

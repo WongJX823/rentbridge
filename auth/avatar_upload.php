@@ -10,13 +10,13 @@ $role = current_role();
 
 if (!in_array($role, ['student', 'landlord', 'agent'], true)) {
     set_flash('danger', 'Avatar upload not supported for your role.');
-    header('Location: /rentbridge/');
+    header('Location: ' . BASE_PATH . '/');
     exit;
 }
 
 if (empty($_FILES['avatar']) || $_FILES['avatar']['error'] === UPLOAD_ERR_NO_FILE) {
     set_flash('warning', 'No file selected.');
-    header('Location: /rentbridge/' . $role . '/profile.php');
+    header('Location: ' . BASE_PATH . '/' . $role . '/profile.php');
     exit;
 }
 
@@ -28,5 +28,5 @@ if ($result['ok']) {
     set_flash('danger', 'Upload failed: ' . $result['error']);
 }
 
-header('Location: /rentbridge/' . $role . '/profile.php');
+header('Location: ' . BASE_PATH . '/' . $role . '/profile.php');
 exit;

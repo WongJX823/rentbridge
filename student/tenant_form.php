@@ -11,7 +11,7 @@ $propertyId = (int)($_GET['property_id'] ?? 0);
 
 if ($formId <= 0 || $convId <= 0 || $propertyId <= 0) {
     set_flash('danger', 'Invalid link.');
-    header('Location: /rentbridge/student/dashboard.php');
+    header('Location: ' . BASE_PATH . '/student/dashboard.php');
     exit;
 }
 
@@ -26,7 +26,7 @@ $formMsg = $stmt->fetch();
 
 if (!$formMsg) {
     set_flash('danger', 'Form not found.');
-    header('Location: /rentbridge/student/dashboard.php');
+    header('Location: ' . BASE_PATH . '/student/dashboard.php');
     exit;
 }
 
@@ -34,13 +34,13 @@ $meta = json_decode($formMsg['metadata'], true) ?? [];
 
 if ((int)($meta['student_id'] ?? 0) !== $userId) {
     set_flash('danger', 'This form is not addressed to you.');
-    header('Location: /rentbridge/student/dashboard.php');
+    header('Location: ' . BASE_PATH . '/student/dashboard.php');
     exit;
 }
 
 if (!empty($meta['cancelled'])) {
     set_flash('warning', 'This form has been replaced by the agent. Please check the chat for the latest form.');
-    header('Location: /rentbridge/chat/conversation.php?id=' . $convId);
+    header('Location: ' . BASE_PATH . '/chat/conversation.php?id=' . $convId);
     exit;
 }
 
@@ -67,7 +67,7 @@ $prop = $stmt->fetch();
 
 if (!$prop) {
     set_flash('danger', 'Property not found.');
-    header('Location: /rentbridge/student/dashboard.php');
+    header('Location: ' . BASE_PATH . '/student/dashboard.php');
     exit;
 }
 
@@ -249,7 +249,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadySubmitted) {
                     'tenant_info_submitted',
                     'Tenant info submitted',
                     sprintf('Student submitted tenant details for "%s". Ready to generate contract.', $prop['title']),
-                    "/rentbridge/chat/conversation.php?id={$convId}"
+                    "" . BASE_PATH . "/chat/conversation.php?id={$convId}"
                 );
             }
 
@@ -286,7 +286,7 @@ ob_start();
 ?>
 
 <p class="small mb-3">
-    <a href="/rentbridge/chat/conversation.php?id=<?= $convId ?>"
+    <a href="<?= BASE_PATH ?>/chat/conversation.php?id=<?= $convId ?>"
        class="text-secondary text-decoration-none">
         <i class="bi bi-arrow-left"></i> Back to chat
     </a>
@@ -301,7 +301,7 @@ ob_start();
         Your tenant details have been sent to the agent.
         They will prepare the contract and get back to you.
     </p>
-    <a href="/rentbridge/chat/conversation.php?id=<?= $convId ?>"
+    <a href="<?= BASE_PATH ?>/chat/conversation.php?id=<?= $convId ?>"
        class="btn btn-primary mt-2">
         <i class="bi bi-chat-dots me-1"></i> Return to chat
     </a>
@@ -323,7 +323,7 @@ ob_start();
         <div class="bg-white border rounded-3 p-3 mb-4 d-flex gap-3 align-items-center">
             <?php if (!empty($prop['image_path'])): ?>
             <div style="width:64px; height:64px; border-radius:8px; overflow:hidden; flex-shrink:0;">
-                <img src="/rentbridge/<?= e($prop['image_path']) ?>"
+                <img src="<?= BASE_PATH ?>/<?= e($prop['image_path']) ?>"
                      style="width:100%; height:100%; object-fit:cover;" alt="">
             </div>
             <?php endif; ?>
@@ -535,7 +535,7 @@ ob_start();
             </div>
 
             <div class="d-flex justify-content-between align-items-center">
-                <a href="/rentbridge/chat/conversation.php?id=<?= $convId ?>"
+                <a href="<?= BASE_PATH ?>/chat/conversation.php?id=<?= $convId ?>"
                    class="btn btn-outline-secondary">
                     Cancel
                 </a>

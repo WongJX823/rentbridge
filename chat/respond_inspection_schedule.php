@@ -121,7 +121,7 @@ if ($decision === 'confirm') {
                 'inspection_confirmed',
                 'Inspection time confirmed',
                 "The landlord confirmed the inspection for \"{$propTitle}\" on {$slotPicked}.",
-                "/rentbridge/chat/conversation.php?id={$convId}"
+                "" . BASE_PATH . "/chat/conversation.php?id={$convId}"
             );
         }
 
@@ -161,7 +161,7 @@ if ($decision === 'confirm') {
                 'inspection_reschedule',
                 'Landlord requested a reschedule',
                 "The landlord requested a reschedule for \"{$propTitle}\". Please propose new inspection times.",
-                "/rentbridge/chat/conversation.php?id={$convId}"
+                "" . BASE_PATH . "/chat/conversation.php?id={$convId}"
             );
         }
 

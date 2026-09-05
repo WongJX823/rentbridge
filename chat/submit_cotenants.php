@@ -10,7 +10,7 @@ $coTenants = $_POST['cotenant'] ?? [];
 
 if ($tenancyId <= 0) {
     set_flash('danger', 'Invalid tenancy.');
-    header('Location: /rentbridge/chat.php');
+    header('Location: ' . BASE_PATH . '/chat.php');
     exit;
 }
 
@@ -31,7 +31,7 @@ if (!$stmt->fetchColumn()) {
 $res = update_primary_tenant($tenancyId, $primaryIc);
 if (!$res['ok']) {
     set_flash('danger', 'Primary tenant update failed: ' . $res['error']);
-    header('Location: /rentbridge/chat.php');
+    header('Location: ' . BASE_PATH . '/chat.php');
     exit;
 }
 
@@ -74,9 +74,9 @@ if ($agentId > 0) {
         'cotenant_submitted',
         'Co-tenant info submitted',
         'Student submitted co-tenant details for tenancy #' . $tenancyId,
-        '/rentbridge/agent/case.php?id=' . $tenancyId
+        '' . BASE_PATH . '/agent/case.php?id=' . $tenancyId
     );
 }
 
-header('Location: /rentbridge/chat.php');
+header('Location: ' . BASE_PATH . '/chat.php');
 exit;

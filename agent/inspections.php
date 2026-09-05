@@ -12,7 +12,7 @@ ob_start();
     <p class="text-secondary small">
         For now, find inspections in "My Cases" filtered by status.
     </p>
-    <a href="/rentbridge/agent/cases.php?tab=verifying" class="btn btn-primary mt-2">
+    <a href="<?= BASE_PATH ?>/agent/cases.php?tab=verifying" class="btn btn-primary mt-2">
         Go to My Cases <i class="bi bi-arrow-right ms-1"></i>
     </a>
 </div>

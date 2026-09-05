@@ -136,7 +136,7 @@ try {
             'contract_prep_request',
             'Contract preparation requested',
             'Landlord requested contract prep for "' . $prop['title'] . '"',
-            "/rentbridge/chat/conversation.php?id={$landlordAgentConvId}"
+            "" . BASE_PATH . "/chat/conversation.php?id={$landlordAgentConvId}"
         );
     }
 

@@ -806,7 +806,7 @@ let benchmarkSuggested = null;
             const params = new URLSearchParams({
                 city, type, furnishing: furn, facilities, maps_url: mapsUrl,
             });
-            const resp = await fetch('/rentbridge/landlord/pricing_check.php?' + params);
+            const resp = await fetch('<?= BASE_PATH ?>/landlord/pricing_check.php?' + params);
             const data = await resp.json();
 
             if (mapsStatusEl) {

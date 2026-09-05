@@ -1,6 +1,12 @@
 <?php
 require_once __DIR__ . '/../config/database.php';
 
+// Base URL path the app is served under. Local XAMPP serves it from a
+// /rentbridge/ subfolder; a host that serves it from the domain root
+// (e.g. InfinityFree) needs this set to '' — edit the fallback below on
+// that server's copy, or set the RB_BASE_PATH environment variable.
+define('BASE_PATH', getenv('RB_BASE_PATH') !== false ? getenv('RB_BASE_PATH') : '/rentbridge');
+
 // Start the session if not already started
 if (session_status() === PHP_SESSION_NONE) {
     // Secure is conditional on the request actually being HTTPS — forcing it
@@ -196,12 +202,12 @@ function logout_user(): void {
 }
 
 function dashboard_url_for(string $role): string {
-    return '/rentbridge/' . $role . '/dashboard.php';
+    return '' . BASE_PATH . '/' . $role . '/dashboard.php';
 }
 
 function require_login(): void {
     if (!is_logged_in()) {
-        header('Location: /rentbridge/auth/login.php');
+        header('Location: ' . BASE_PATH . '/auth/login.php');
         exit;
     }
 }

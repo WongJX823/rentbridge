@@ -20,10 +20,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $result = agent_accept_property($propertyId, $agentId);
         if ($result['ok']) {
             set_flash('success', 'Case accepted. Go to the conversation and propose an inspection time.');
-            header('Location: /rentbridge/chat/conversation.php?id=' . $result['conversation_id']);
+            header('Location: ' . BASE_PATH . '/chat/conversation.php?id=' . $result['conversation_id']);
         } else {
             set_flash('danger', 'Failed: ' . $result['error']);
-            header('Location: /rentbridge/agent/property_review.php?id=' . $propertyId);
+            header('Location: ' . BASE_PATH . '/agent/property_review.php?id=' . $propertyId);
         }
         exit;
 
@@ -32,7 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         set_flash($result['ok'] ? 'success' : 'danger',
                   $result['ok'] ? 'Inspection marked complete. You can now approve or reject the listing.'
                                 : ('Failed: ' . $result['error']));
-        header('Location: /rentbridge/agent/property_review.php?id=' . $propertyId);
+        header('Location: ' . BASE_PATH . '/agent/property_review.php?id=' . $propertyId);
         exit;
 
     } elseif ($action === 'approve_listing') {
@@ -40,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         set_flash($result['ok'] ? 'success' : 'danger',
                   $result['ok'] ? 'Property approved and is now live!'
                                 : ('Failed: ' . $result['error']));
-        header('Location: /rentbridge/agent/dashboard.php');
+        header('Location: ' . BASE_PATH . '/agent/dashboard.php');
         exit;
 
     } elseif ($action === 'pass') {
@@ -56,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 set_flash('danger', 'Failed: ' . ($result['error'] ?? 'Unknown error'));
             }
-            header('Location: /rentbridge/agent/dashboard.php');
+            header('Location: ' . BASE_PATH . '/agent/dashboard.php');
             exit;
         }
 
@@ -75,12 +75,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 finfo_close($finfo);
                 if (!in_array($mime, $allowed, true)) {
                     set_flash('warning', 'Evidence photo must be JPEG, PNG, or WebP.');
-                    header('Location: /rentbridge/agent/property_review.php?id=' . $propertyId);
+                    header('Location: ' . BASE_PATH . '/agent/property_review.php?id=' . $propertyId);
                     exit;
                 }
                 if ($file['size'] > 8 * 1024 * 1024) {
                     set_flash('warning', 'Evidence photo must be under 8 MB.');
-                    header('Location: /rentbridge/agent/property_review.php?id=' . $propertyId);
+                    header('Location: ' . BASE_PATH . '/agent/property_review.php?id=' . $propertyId);
                     exit;
                 }
                 $ext      = ['image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp'][$mime];
@@ -88,7 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $dest     = __DIR__ . '/../uploads/property_docs/' . $filename;
                 if (!move_uploaded_file($file['tmp_name'], $dest)) {
                     set_flash('danger', 'Failed to save evidence photo.');
-                    header('Location: /rentbridge/agent/property_review.php?id=' . $propertyId);
+                    header('Location: ' . BASE_PATH . '/agent/property_review.php?id=' . $propertyId);
                     exit;
                 }
                 $evidencePath = 'uploads/property_docs/' . $filename;
@@ -100,7 +100,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 set_flash('danger', 'Failed: ' . ($result['error'] ?? 'Unknown error'));
             }
-            header('Location: /rentbridge/agent/dashboard.php');
+            header('Location: ' . BASE_PATH . '/agent/dashboard.php');
             exit;
         }
     }
@@ -151,7 +151,7 @@ $showPageTitle = false;
 ob_start();
 ?>
 
-<a href="/rentbridge/agent/dashboard.php" class="small text-secondary text-decoration-none mb-3 d-inline-block">
+<a href="<?= BASE_PATH ?>/agent/dashboard.php" class="small text-secondary text-decoration-none mb-3 d-inline-block">
     <i class="bi bi-arrow-left"></i> Back to dashboard
 </a>
 
@@ -186,7 +186,7 @@ ob_start();
                 <div class="row g-2">
                     <?php foreach ($photos as $img): ?>
                         <div class="col-md-4 col-6">
-                            <img src="/rentbridge/<?= e($img['image_path']) ?>"
+                            <img src="<?= BASE_PATH ?>/<?= e($img['image_path']) ?>"
                                  class="w-100 rounded" style="aspect-ratio:1; object-fit:cover;">
                         </div>
                     <?php endforeach; ?>
@@ -243,7 +243,7 @@ ob_start();
                 <ul class="list-unstyled mb-0">
                     <?php foreach ($docs as $doc): ?>
                         <li class="mb-2">
-                            <a href="/rentbridge/documents/property_doc.php?id=<?= (int)$doc['id'] ?>" target="_blank">
+                            <a href="<?= BASE_PATH ?>/documents/property_doc.php?id=<?= (int)$doc['id'] ?>" target="_blank">
                                 <i class="bi bi-file-earmark-text"></i>
                                 <?= e($doc['document_type'] ?? 'Document') ?>
                             </a>
@@ -325,7 +325,7 @@ ob_start();
                     </p>
 
                     <?php if ($convoId): ?>
-                        <a href="/rentbridge/chat/conversation.php?id=<?= $convoId ?>"
+                        <a href="<?= BASE_PATH ?>/chat/conversation.php?id=<?= $convoId ?>"
                            class="btn btn-outline-primary w-100 mb-3">
                             <i class="bi bi-chat-dots me-1"></i> Open landlord conversation
                         </a>

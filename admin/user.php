@@ -57,9 +57,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $msg = $action === 'suspend'
                 ? 'Your account has been suspended by an administrator. Contact support for help.'
                 : 'Your account has been reactivated. Welcome back!';
-            notify($userId, 'account_status', 'Account status updated', $msg, '/rentbridge/auth/login.php');
+            notify($userId, 'account_status', 'Account status updated', $msg, '' . BASE_PATH . '/auth/login.php');
             set_flash('success', 'User ' . $action . 'd.');
-            header('Location: /rentbridge/admin/user.php?id=' . $userId);
+            header('Location: ' . BASE_PATH . '/admin/user.php?id=' . $userId);
             exit;
         } catch (Throwable $e) {
             $errors['general'] = 'Error: ' . $e->getMessage();
@@ -127,9 +127,9 @@ function status_badge_class(string $status): string {
 
 $fullName   = $profile['full_name'] ?? $user['email'];
 $backLink   = match ($role) {
-    'student'  => '/rentbridge/admin/students.php',
-    'landlord' => '/rentbridge/admin/landlords.php',
-    default    => '/rentbridge/admin/users.php',
+    'student'  => '' . BASE_PATH . '/admin/students.php',
+    'landlord' => '' . BASE_PATH . '/admin/landlords.php',
+    default    => '' . BASE_PATH . '/admin/users.php',
 };
 $backLabel  = match ($role) {
     'student'  => 'All students',
@@ -290,7 +290,7 @@ ob_start();
                             </span>
                         </td>
                         <td class="pe-4 text-end">
-                            <a href="/rentbridge/admin/tenancy.php?id=<?= (int)$t['id'] ?>"
+                            <a href="<?= BASE_PATH ?>/admin/tenancy.php?id=<?= (int)$t['id'] ?>"
                                class="btn btn-sm btn-outline-dark">View</a>
                         </td>
                     </tr>
@@ -333,7 +333,7 @@ ob_start();
                             </span>
                         </td>
                         <td class="pe-4 text-end">
-                            <a href="/rentbridge/admin/property.php?id=<?= (int)$p['id'] ?>"
+                            <a href="<?= BASE_PATH ?>/admin/property.php?id=<?= (int)$p['id'] ?>"
                                class="btn btn-sm btn-outline-dark">View</a>
                         </td>
                     </tr>

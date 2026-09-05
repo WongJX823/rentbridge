@@ -10,7 +10,7 @@ $propertyId = (int)($_GET['property_id'] ?? 0);
 
 if ($propertyId <= 0) {
     set_flash('danger', 'Invalid property.');
-    header('Location: /rentbridge/listings.php');
+    header('Location: ' . BASE_PATH . '/listings.php');
     exit;
 }
 
@@ -27,7 +27,7 @@ $property = $stmt->fetch();
 
 if (!$property) {
     set_flash('danger', 'Property not available.');
-    header('Location: /rentbridge/listings.php');
+    header('Location: ' . BASE_PATH . '/listings.php');
     exit;
 }
 
@@ -39,7 +39,7 @@ $stmt = $pdo->prepare("
 $stmt->execute([$userId, $propertyId]);
 if ($stmt->fetchColumn()) {
     set_flash('info', 'You already have an open post for this property.');
-    header('Location: /rentbridge/student/partners.php');
+    header('Location: ' . BASE_PATH . '/student/partners.php');
     exit;
 }
 
@@ -75,7 +75,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->prepare("UPDATE students SET looking_for_housing = 1 WHERE user_id = ?")->execute([$userId]);
 
         set_flash('success', 'Post created! Other students can now message you about this property.');
-        header('Location: /rentbridge/student/partners.php');
+        header('Location: ' . BASE_PATH . '/student/partners.php');
         exit;
     }
 }
@@ -89,7 +89,7 @@ ob_start();
 ?>
 
 <p class="small mb-3">
-    <a href="/rentbridge/properties/<?= (int)$propertyId ?>" class="text-secondary text-decoration-none">
+    <a href="<?= BASE_PATH ?>/properties/<?= (int)$propertyId ?>" class="text-secondary text-decoration-none">
         <i class="bi bi-arrow-left"></i> Back to property
     </a>
 </p>
@@ -190,7 +190,7 @@ ob_start();
             </div>
 
             <div class="d-flex justify-content-end gap-2">
-                <a href="/rentbridge/properties/<?= (int)$propertyId ?>" class="btn btn-outline-secondary">Cancel</a>
+                <a href="<?= BASE_PATH ?>/properties/<?= (int)$propertyId ?>" class="btn btn-outline-secondary">Cancel</a>
                 <button type="submit" class="btn btn-primary">
                     <i class="bi bi-megaphone me-1"></i> Post to Find Housemates
                 </button>
@@ -203,7 +203,7 @@ ob_start();
         <div class="bg-white border rounded-3 overflow-hidden sticky-top" style="top: 80px;">
             <div style="aspect-ratio: 16/10; background: linear-gradient(135deg,#E6ECF4,#E4F2EA);">
                 <?php if (!empty($property['image_path'])): ?>
-                    <img src="/rentbridge/<?= e($property['image_path']) ?>"
+                    <img src="<?= BASE_PATH ?>/<?= e($property['image_path']) ?>"
                          style="width:100%; height:100%; object-fit:cover;" alt="">
                 <?php endif; ?>
             </div>

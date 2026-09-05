@@ -138,11 +138,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'property_approved',
                 'Property listing approved',
                 'Your property "' . $property['title'] . '" is now live on RentBridge.',
-                '/rentbridge/landlord/properties.php'
+                '' . BASE_PATH . '/landlord/properties.php'
             );
 
             set_flash('success', 'Property approved and now visible to students.');
-            header('Location: /rentbridge/admin/property.php?id=' . $propertyId);
+            header('Location: ' . BASE_PATH . '/admin/property.php?id=' . $propertyId);
             exit;
         }
 
@@ -159,11 +159,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'property_rejected',
                     'Property listing rejected',
                     'Your property "' . $property['title'] . '" was not approved. Reason: ' . $reason,
-                    '/rentbridge/landlord/properties.php'
+                    '' . BASE_PATH . '/landlord/properties.php'
                 );
 
                 set_flash('warning', 'Property rejected. Landlord notified.');
-                header('Location: /rentbridge/admin/property.php?id=' . $propertyId);
+                header('Location: ' . BASE_PATH . '/admin/property.php?id=' . $propertyId);
                 exit;
             }
         }
@@ -172,7 +172,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $pdo->prepare("UPDATE properties SET status = 'hidden' WHERE id = ?");
             $stmt->execute([$propertyId]);
             set_flash('info', 'Property hidden from listings.');
-            header('Location: /rentbridge/admin/property.php?id=' . $propertyId);
+            header('Location: ' . BASE_PATH . '/admin/property.php?id=' . $propertyId);
             exit;
         }
 
@@ -180,7 +180,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $pdo->prepare("UPDATE properties SET status = 'available' WHERE id = ?");
             $stmt->execute([$propertyId]);
             set_flash('success', 'Property is visible again.');
-            header('Location: /rentbridge/admin/property.php?id=' . $propertyId);
+            header('Location: ' . BASE_PATH . '/admin/property.php?id=' . $propertyId);
             exit;
         }
     } catch (Throwable $e) {
@@ -225,7 +225,7 @@ ob_start();
 ?>
 
 <p class="small mb-3">
-    <a href="/rentbridge/admin/properties.php" class="text-secondary text-decoration-none">
+    <a href="<?= BASE_PATH ?>/admin/properties.php" class="text-secondary text-decoration-none">
         <i class="bi bi-arrow-left"></i> Back to properties
     </a>
 </p>
@@ -326,7 +326,7 @@ render_property_status_bar($property);
     <div class="row g-2">
         <?php foreach ($images as $i => $img): ?>
             <div class="col-md-4 col-6">
-                <img src="/rentbridge/<?= e($img['image_path']) ?>"
+                <img src="<?= BASE_PATH ?>/<?= e($img['image_path']) ?>"
                      class="w-100 rounded-3"
                      style="aspect-ratio: 4/3; object-fit: cover; cursor:pointer;"
                      data-bs-toggle="modal" data-bs-target="#img<?= (int)$img['id'] ?>"
@@ -340,7 +340,7 @@ render_property_status_bar($property);
                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                         </div>
                         <div class="modal-body p-0">
-                            <img src="/rentbridge/<?= e($img['image_path']) ?>" class="w-100" alt="">
+                            <img src="<?= BASE_PATH ?>/<?= e($img['image_path']) ?>" class="w-100" alt="">
                         </div>
                     </div>
                 </div>
@@ -375,7 +375,7 @@ $documents = get_property_documents($propertyId);
             $icon = strpos($d['mime_type'], 'pdf') !== false ? 'bi-file-pdf' : 'bi-file-image';
         ?>
             <div class="col-md-6">
-                <a href="/rentbridge/<?= e($d['file_path']) ?>" target="_blank"
+                <a href="<?= BASE_PATH ?>/<?= e($d['file_path']) ?>" target="_blank"
                    class="d-flex gap-2 align-items-center p-3 border rounded-3 text-decoration-none text-dark"
                    style="transition: background 0.1s;"
                    onmouseover="this.style.background='#FAF8F3'"
@@ -481,7 +481,7 @@ $documents = get_property_documents($propertyId);
             <div class="small text-secondary mb-3">
                 <i class="bi bi-envelope"></i> <?= e($property['landlord_email']) ?>
             </div>
-            <a href="/rentbridge/admin/user.php?id=<?= (int)$property['landlord_user_id'] ?>"
+            <a href="<?= BASE_PATH ?>/admin/user.php?id=<?= (int)$property['landlord_user_id'] ?>"
                class="btn btn-sm btn-outline-dark w-100">
                 View landlord profile <i class="bi bi-arrow-right ms-1"></i>
             </a>
@@ -523,7 +523,7 @@ $documents = get_property_documents($propertyId);
                 <?php else: ?>
                     <div class="mb-3"></div>
                 <?php endif; ?>
-                <a href="/rentbridge/admin/user.php?id=<?= (int)$assignedAgent['user_id'] ?>"
+                <a href="<?= BASE_PATH ?>/admin/user.php?id=<?= (int)$assignedAgent['user_id'] ?>"
                    class="btn btn-sm btn-outline-dark w-100">
                     View agent profile <i class="bi bi-arrow-right ms-1"></i>
                 </a>
@@ -573,7 +573,7 @@ $documents = get_property_documents($propertyId);
                         </td>
                         <td class="small">
                             <?php if (!empty($t['contract_code'])): ?>
-                                <a href="/rentbridge/contracts/view.php?id=<?= (int)$t['contract_id'] ?>"
+                                <a href="<?= BASE_PATH ?>/contracts/view.php?id=<?= (int)$t['contract_id'] ?>"
                                    class="text-decoration-none">
                                     <code><?= e($t['contract_code']) ?></code>
                                 </a>
@@ -583,7 +583,7 @@ $documents = get_property_documents($propertyId);
                         </td>
                         <td><span class="badge bg-<?= $tColor ?>"><?= e($tLabel) ?></span></td>
                         <td class="text-end">
-                            <a href="/rentbridge/admin/tenancy.php?id=<?= (int)$t['id'] ?>"
+                            <a href="<?= BASE_PATH ?>/admin/tenancy.php?id=<?= (int)$t['id'] ?>"
                                class="btn btn-sm btn-outline-dark">
                                 View <i class="bi bi-arrow-right ms-1"></i>
                             </a>

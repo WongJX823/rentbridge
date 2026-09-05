@@ -170,7 +170,7 @@ function rb_maps_link_field(string $mapsUrl): void
 function rb_map_pinpoint_assets(): void
 {
     $key        = rb_gmaps_key();
-    $resolveUrl = '/rentbridge/landlord/geocode_link.php';
+    $resolveUrl = '' . BASE_PATH . '/landlord/geocode_link.php';
 
     // No API key: no interactive drawer, but still keep a pasted Google Maps
     // link and the manual latitude/longitude inputs in sync (link overwrites).

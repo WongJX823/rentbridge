@@ -238,7 +238,7 @@ ob_start();
                         </td>
                         <td><?= e($r['department']) ?></td>
                         <td>
-                            <a href="/rentbridge/admin/property.php?id=<?= (int)$r['property_id'] ?>"
+                            <a href="<?= BASE_PATH ?>/admin/property.php?id=<?= (int)$r['property_id'] ?>"
                                class="text-decoration-none">
                                 <strong><?= e($r['property_title']) ?></strong>
                             </a>
@@ -263,7 +263,7 @@ ob_start();
                             <?php endif; ?>
                         </td>
                         <td class="text-end pe-3">
-                            <a href="/rentbridge/admin/tenancy.php?id=<?= (int)$r['tenancy_id'] ?>"
+                            <a href="<?= BASE_PATH ?>/admin/tenancy.php?id=<?= (int)$r['tenancy_id'] ?>"
                                class="btn btn-sm btn-outline-dark">
                                 View case <i class="bi bi-arrow-right ms-1"></i>
                             </a>
@@ -313,7 +313,7 @@ ob_start();
                         </td>
                         <td><span class="badge bg-<?= $color ?>"><?= e($label) ?></span></td>
                         <td class="text-end pe-3">
-                            <a href="/rentbridge/admin/agent.php?id=<?= (int)$r['id'] ?>"
+                            <a href="<?= BASE_PATH ?>/admin/agent.php?id=<?= (int)$r['id'] ?>"
                                class="btn btn-sm btn-outline-dark">
                                 Review <i class="bi bi-arrow-right ms-1"></i>
                             </a>

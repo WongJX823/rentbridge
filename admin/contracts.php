@@ -95,7 +95,7 @@ function pretty_filter(string $s): string {
             <h1 class="mb-1">All contracts</h1>
             <p class="text-secondary mb-0"><?= count($contracts) ?> contract<?= count($contracts) === 1 ? '' : 's' ?> shown</p>
         </div>
-        <a href="/rentbridge/admin/dashboard.php" class="btn btn-ghost">
+        <a href="<?= BASE_PATH ?>/admin/dashboard.php" class="btn btn-ghost">
             <i class="bi bi-arrow-left me-1"></i> Back to dashboard
         </a>
     </div>
@@ -190,12 +190,12 @@ function pretty_filter(string $s): string {
                                 </div>
                                 <div class="d-flex gap-1 justify-content-md-end">
                                     <?php if (!empty($c['contract_pdf_path']) && $pdfFullPath && file_exists($pdfFullPath)): ?>
-                                        <a href="/rentbridge/contracts/pdf.php?id=<?= (int)$c['id'] ?>"
+                                        <a href="<?= BASE_PATH ?>/contracts/pdf.php?id=<?= (int)$c['id'] ?>"
                                            target="_blank" class="btn btn-sm btn-success" title="Download PDF">
                                             <i class="bi bi-download"></i>
                                         </a>
                                     <?php endif; ?>
-                                    <a href="/rentbridge/contracts/view.php?id=<?= (int)$c['id'] ?>"
+                                    <a href="<?= BASE_PATH ?>/contracts/view.php?id=<?= (int)$c['id'] ?>"
                                        class="btn btn-sm btn-outline-dark">
                                         Open <i class="bi bi-arrow-right ms-1"></i>
                                     </a>

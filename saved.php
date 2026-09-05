@@ -22,7 +22,7 @@ ob_start();
             <?= count($saved) ?> saved propert<?= count($saved) === 1 ? 'y' : 'ies' ?>
         </p>
     </div>
-    <a href="/rentbridge/listings.php" class="btn btn-outline-primary">
+    <a href="<?= BASE_PATH ?>/listings.php" class="btn btn-outline-primary">
         <i class="bi bi-search me-1"></i> Browse more
     </a>
 </div>
@@ -34,7 +34,7 @@ ob_start();
         <p class="text-secondary mb-3">
             Tap the heart icon on any property to save it for later comparison.
         </p>
-        <a href="/rentbridge/listings.php" class="btn btn-primary">
+        <a href="<?= BASE_PATH ?>/listings.php" class="btn btn-primary">
             Start browsing
         </a>
     </div>
@@ -48,9 +48,9 @@ ob_start();
                      onmouseout="this.style.transform='';this.style.boxShadow='';">
 
                     <div style="position: relative;">
-                        <a href="/rentbridge/property.php?id=<?= (int)$prop['id'] ?>">
+                        <a href="<?= BASE_PATH ?>/property.php?id=<?= (int)$prop['id'] ?>">
                         <?php if (!empty($prop['image_path'])): ?>
-                                <img src="/rentbridge/<?= e($prop['image_path']) ?>"
+                                <img src="<?= BASE_PATH ?>/<?= e($prop['image_path']) ?>"
                                      style="width:100%; height:180px; object-fit:cover;" alt="">
                             </a>
                         <?php else: ?>
@@ -71,7 +71,7 @@ ob_start();
                     </div>
 
                     <div class="p-3">
-                        <a href="/rentbridge/property.php?id=<?= (int)$prop['id'] ?>"
+                        <a href="<?= BASE_PATH ?>/property.php?id=<?= (int)$prop['id'] ?>"
                            class="text-decoration-none text-dark">
                             <h6 class="mb-1"><?= e($prop['title']) ?></h6>
                             <p class="small text-secondary mb-2">

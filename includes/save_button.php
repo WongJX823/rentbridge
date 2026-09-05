@@ -63,7 +63,7 @@ function render_save_button_script(): void {
                 if (window.bootstrap && document.getElementById('loginPromptModal')) {
                     new bootstrap.Modal(document.getElementById('loginPromptModal')).show();
                 } else {
-                    window.location.href = '/rentbridge/auth/login.php?next=' + encodeURIComponent(window.location.pathname + window.location.search);
+                    window.location.href = '<?= BASE_PATH ?>/auth/login.php?next=' + encodeURIComponent(window.location.pathname + window.location.search);
                 }
                 return;
             }
@@ -87,7 +87,7 @@ function render_save_button_script(): void {
             }
 
             try {
-                const response = await fetch('/rentbridge/toggle_saved.php', {
+                const response = await fetch('<?= BASE_PATH ?>/toggle_saved.php', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/x-www-form-urlencoded'},
                     body: new URLSearchParams({

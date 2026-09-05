@@ -7,5 +7,5 @@ logout_user();
 session_start();
 set_flash('info', 'You have been signed out.');
 
-header('Location: /rentbridge/index.php');
+header('Location: ' . BASE_PATH . '/index.php');
 exit;

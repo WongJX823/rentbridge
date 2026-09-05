@@ -13,7 +13,7 @@ if (isset($_GET['mark_read'])) {
         db()->prepare("UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?")
            ->execute([$nid, $userId]);
     }
-    $dest = $_GET['redirect'] ?? '/rentbridge/chat.php?tab=notifications';
+    $dest = $_GET['redirect'] ?? '' . BASE_PATH . '/chat.php?tab=notifications';
     header('Location: ' . $dest);
     exit;
 }
@@ -61,7 +61,7 @@ ob_start();
 <ul class="nav nav-tabs mb-4">
     <li class="nav-item">
         <a class="nav-link <?= $tab === 'messages' ? 'active' : '' ?>"
-           href="/rentbridge/chat.php?tab=messages">
+           href="<?= BASE_PATH ?>/chat.php?tab=messages">
             <i class="bi bi-chat-dots me-1"></i> Messages
             <?php if ($unreadChat > 0): ?>
                 <span class="badge bg-danger ms-1"><?= $unreadChat > 99 ? '99+' : $unreadChat ?></span>
@@ -70,7 +70,7 @@ ob_start();
     </li>
     <li class="nav-item">
         <a class="nav-link <?= $tab === 'notifications' ? 'active' : '' ?>"
-           href="/rentbridge/chat.php?tab=notifications">
+           href="<?= BASE_PATH ?>/chat.php?tab=notifications">
             <i class="bi bi-bell me-1"></i> Notifications
             <?php if ($unreadNotif > 0): ?>
                 <span class="badge bg-danger ms-1"><?= $unreadNotif > 99 ? '99+' : $unreadNotif ?></span>
@@ -97,7 +97,7 @@ ob_start();
                 $unread   = (int)$c['unread_count'];
                 $isLocked = (int)($c['is_locked'] ?? 0) === 1;
             ?>
-                <a href="/rentbridge/chat/conversation.php?id=<?= (int)$c['id'] ?>"
+                <a href="<?= BASE_PATH ?>/chat/conversation.php?id=<?= (int)$c['id'] ?>"
                    class="d-block text-decoration-none text-dark <?= $i > 0 ? 'border-top' : '' ?>"
                    style="transition: background 0.1s;"
                    onmouseover="this.style.background='#FAF8F3'"
@@ -188,8 +188,8 @@ ob_start();
         <div class="d-flex justify-content-between align-items-center mb-3">
             <span class="text-secondary small"><?= count($allNotifs) ?> notification<?= count($allNotifs) !== 1 ? 's' : '' ?></span>
             <?php if ($unreadNotif > 0): ?>
-            <form method="POST" action="/rentbridge/api/mark_notifications_read.php" class="m-0">
-                <input type="hidden" name="redirect" value="/rentbridge/chat.php?tab=notifications">
+            <form method="POST" action="<?= BASE_PATH ?>/api/mark_notifications_read.php" class="m-0">
+                <input type="hidden" name="redirect" value="<?= BASE_PATH ?>/chat.php?tab=notifications">
                 <button type="submit" class="btn btn-sm btn-outline-secondary">
                     <i class="bi bi-check2-all me-1"></i> Mark all read
                 </button>
@@ -201,8 +201,8 @@ ob_start();
             <?php foreach ($allNotifs as $i => $n):
                 $isUnread = !(int)$n['is_read'];
                 $href = $n['link_url']
-                    ? '/rentbridge/chat.php?mark_read=' . (int)$n['id'] . '&redirect=' . urlencode($n['link_url'])
-                    : '/rentbridge/chat.php?mark_read=' . (int)$n['id'] . '&tab=notifications';
+                    ? '' . BASE_PATH . '/chat.php?mark_read=' . (int)$n['id'] . '&redirect=' . urlencode($n['link_url'])
+                    : '' . BASE_PATH . '/chat.php?mark_read=' . (int)$n['id'] . '&tab=notifications';
             ?>
             <a href="<?= e($href) ?>"
                class="d-flex align-items-start gap-3 p-3 text-decoration-none text-dark <?= $i > 0 ? 'border-top' : '' ?>"

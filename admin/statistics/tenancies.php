@@ -134,11 +134,11 @@ $pageTitle = 'Statistics — Tenancies';
 $activeNav = 'statistics';
 
 $pageTabs = [
-    ['label' => 'Summary',     'href' => '/rentbridge/admin/statistics/summary.php',    'active' => false],
-    ['label' => 'Users',       'href' => '/rentbridge/admin/statistics/users.php',     'active' => false],
-    ['label' => 'Properties',  'href' => '/rentbridge/admin/statistics/properties.php','active' => false],
-    ['label' => 'Tenancies',   'href' => '/rentbridge/admin/statistics/tenancies.php', 'active' => true],
-    ['label' => 'Financial',   'href' => '/rentbridge/admin/statistics/financial.php', 'active' => false],
+    ['label' => 'Summary',     'href' => '' . BASE_PATH . '/admin/statistics/summary.php',    'active' => false],
+    ['label' => 'Users',       'href' => '' . BASE_PATH . '/admin/statistics/users.php',     'active' => false],
+    ['label' => 'Properties',  'href' => '' . BASE_PATH . '/admin/statistics/properties.php','active' => false],
+    ['label' => 'Tenancies',   'href' => '' . BASE_PATH . '/admin/statistics/tenancies.php', 'active' => true],
+    ['label' => 'Financial',   'href' => '' . BASE_PATH . '/admin/statistics/financial.php', 'active' => false],
 ];
 
 ob_start();

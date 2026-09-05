@@ -36,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'cance
         }
     }
 
-    header('Location: /rentbridge/student/tenancies.php');
+    header('Location: ' . BASE_PATH . '/student/tenancies.php');
     exit;
 }
 $stmt = $pdo->prepare("
@@ -98,7 +98,7 @@ function status_label(string $status): array {
             <h1 class="mb-1">My tenancies</h1>
             <p class="text-secondary mb-0"><?= count($tenancies) ?> tenancy<?= count($tenancies) === 1 ? '' : 's' ?></p>
         </div>
-        <a href="/rentbridge/listings.php" class="btn btn-ghost">
+        <a href="<?= BASE_PATH ?>/listings.php" class="btn btn-ghost">
             <i class="bi bi-search me-1"></i> Browse more
         </a>
     </div>
@@ -108,7 +108,7 @@ function status_label(string $status): array {
             <i class="bi bi-calendar-x" style="font-size: 3rem; color: var(--rb-line);"></i>
             <h4 class="mt-3">No tenancies yet</h4>
             <p class="text-secondary">Find a place that feels right.</p>
-            <a href="/rentbridge/listings.php" class="btn btn-primary">Browse listings</a>
+            <a href="<?= BASE_PATH ?>/listings.php" class="btn btn-primary">Browse listings</a>
         </div>
     <?php else: ?>
         <div class="row g-4">
@@ -116,13 +116,13 @@ function status_label(string $status): array {
                 [$label, $color] = status_label($b['status']);
             ?>
                 <div class="col-12">
-                    <a href="/rentbridge/student/tenancy.php?id=<?= (int)$b['id'] ?>"
+                    <a href="<?= BASE_PATH ?>/student/tenancy.php?id=<?= (int)$b['id'] ?>"
                         class="text-decoration-none text-dark d-block">
                             <div class="bg-white border rounded-3 overflow-hidden tenancy-row">
                                 <div class="row g-0">
                             <div class="col-md-3" style="background:linear-gradient(135deg,#E6ECF4,#E4F2EA); min-height: 160px;">
                                 <?php if (!empty($b['image_path'])): ?>
-                                    <img src="/rentbridge/<?= e($b['image_path']) ?>"
+                                    <img src="<?= BASE_PATH ?>/<?= e($b['image_path']) ?>"
                                          style="width:100%; height:100%; object-fit:cover;"
                                          alt="">
                                 <?php endif; ?>

@@ -57,7 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute([$full_name, $phone, $allow_whatsapp, $userId]);
 
             set_flash('success', 'Profile updated successfully.');
-            header('Location: /rentbridge/agent/profile.php');
+            header('Location: ' . BASE_PATH . '/agent/profile.php');
             exit;
         } catch (Throwable $e) {
             $errors['general'] = 'Failed to save: ' . $e->getMessage();
@@ -134,7 +134,7 @@ ob_start();
     <div class="d-flex align-items-center gap-4">
         <?php render_avatar($agent['avatar_path'] ?? null, $agent['full_name'], 96); ?>
         <div class="flex-grow-1">
-            <form method="POST" action="/rentbridge/auth/avatar_upload.php"
+            <form method="POST" action="<?= BASE_PATH ?>/auth/avatar_upload.php"
                   enctype="multipart/form-data" class="d-flex gap-2 align-items-center">
                 <?= csrf_field() ?>
                 <input type="file" name="avatar" class="form-control form-control-sm"
@@ -198,7 +198,7 @@ ob_start();
         </div>
 
         <div class="d-flex justify-content-end gap-2">
-            <a href="/rentbridge/agent/profile.php" class="btn btn-outline-secondary">Cancel</a>
+            <a href="<?= BASE_PATH ?>/agent/profile.php" class="btn btn-outline-secondary">Cancel</a>
             <button type="submit" class="btn btn-primary">
                 <i class="bi bi-check-circle me-1"></i> Save changes
             </button>

@@ -190,7 +190,7 @@ ob_start();
                             <?= e(date('d M Y', strtotime($s['created_at']))) ?>
                         </td>
                         <td class="text-end pe-3">
-                            <a href="/rentbridge/admin/user.php?id=<?= (int)$s['id'] ?>"
+                            <a href="<?= BASE_PATH ?>/admin/user.php?id=<?= (int)$s['id'] ?>"
                                class="btn btn-sm btn-outline-dark">
                                 View <i class="bi bi-arrow-right ms-1"></i>
                             </a>

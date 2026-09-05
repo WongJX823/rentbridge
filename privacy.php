@@ -125,7 +125,7 @@ ob_start();
         For data protection purposes, RentBridge is the <strong>data processor</strong>
         and UTeM is the <strong>data controller</strong> under the PDPA 2010.
         Queries about your personal data may be directed via the
-        <a href="/rentbridge/contact.php">Feedback &amp; Contact</a> page.
+        <a href="<?= BASE_PATH ?>/contact.php">Feedback &amp; Contact</a> page.
     </p>
 
     <!-- 2 -->
@@ -296,7 +296,7 @@ ob_start();
     </ul>
     <p>
         To exercise any of these rights, contact us via the
-        <a href="/rentbridge/contact.php">Feedback &amp; Contact</a> page with the subject line
+        <a href="<?= BASE_PATH ?>/contact.php">Feedback &amp; Contact</a> page with the subject line
         "PDPA Data Request". We will respond within <strong>14 working days</strong>.
     </p>
 
@@ -314,7 +314,7 @@ ob_start();
         RentBridge is intended for use by university students (age 18 and above) and adult
         landlords. We do not knowingly collect personal data from individuals under 18 years
         of age. If you believe a minor has created an account, please contact us immediately
-        via the <a href="/rentbridge/contact.php">Feedback &amp; Contact</a> page and we will
+        via the <a href="<?= BASE_PATH ?>/contact.php">Feedback &amp; Contact</a> page and we will
         delete the account promptly.
     </p>
 
@@ -328,7 +328,7 @@ ob_start();
     </p>
     <p>
         For any privacy-related queries or data access requests, contact us through the
-        <a href="/rentbridge/contact.php">Feedback &amp; Contact</a> page.
+        <a href="<?= BASE_PATH ?>/contact.php">Feedback &amp; Contact</a> page.
         For matters specifically related to Malaysian data protection law, you may also
         contact the <strong>Department of Personal Data Protection</strong>
         (Jabatan Perlindungan Data Peribadi) at
@@ -338,8 +338,8 @@ ob_start();
     <div class="mt-4 pt-4 border-top small text-secondary">
         <p class="mb-1">© <?= date('Y') ?> RentBridge · Universiti Teknikal Malaysia Melaka</p>
         <p class="mb-0">
-            <a href="/rentbridge/legal.php" class="text-secondary me-3">Terms &amp; Conditions</a>
-            <a href="/rentbridge/how_it_works.php#safety" class="text-secondary">Policy &amp; Safety</a>
+            <a href="<?= BASE_PATH ?>/legal.php" class="text-secondary me-3">Terms &amp; Conditions</a>
+            <a href="<?= BASE_PATH ?>/how_it_works.php#safety" class="text-secondary">Policy &amp; Safety</a>
         </p>
     </div>
 

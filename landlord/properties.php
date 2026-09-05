@@ -120,7 +120,7 @@ ob_start();
 
 <!-- ADD PROPERTY BUTTON -->
 <div class="d-flex justify-content-end mb-3">
-    <a href="/rentbridge/landlord/add_property.php" class="btn btn-primary">
+    <a href="<?= BASE_PATH ?>/landlord/add_property.php" class="btn btn-primary">
         <i class="bi bi-plus-lg me-1"></i> List a new property
     </a>
 </div>
@@ -147,7 +147,7 @@ ob_start();
             [$statusLabel, $statusColor] = landlord_status_badge($p['status']);
         ?>
             <div class="col-md-6 col-lg-3">
-                <a href="/rentbridge/landlord/property.php?id=<?= (int)$p['id'] ?>"
+                <a href="<?= BASE_PATH ?>/landlord/property.php?id=<?= (int)$p['id'] ?>"
                    class="d-block text-decoration-none text-dark">
                     <div class="bg-white border rounded-3 overflow-hidden h-100"
                          style="transition: transform 0.15s, box-shadow 0.15s;"
@@ -157,7 +157,7 @@ ob_start();
                         <!-- IMAGE -->
                         <div style="aspect-ratio: 16/10; background: linear-gradient(135deg,#E6ECF4,#E4F2EA); position:relative;">
                             <?php if (!empty($p['image_path'])): ?>
-                                <img src="/rentbridge/<?= e($p['image_path']) ?>"
+                                <img src="<?= BASE_PATH ?>/<?= e($p['image_path']) ?>"
                                      style="width:100%; height:100%; object-fit:cover;" alt="">
                             <?php else: ?>
                                 <div style="display:flex; align-items:center; justify-content:center;

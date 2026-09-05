@@ -38,8 +38,8 @@ $pageContent   = $pageContent   ?? '';
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-    <link href="/rentbridge/assets/css/style.css" rel="stylesheet">
-    <link href="/rentbridge/assets/css/admin.css" rel="stylesheet">
+    <link href="<?= BASE_PATH ?>/assets/css/style.css" rel="stylesheet">
+    <link href="<?= BASE_PATH ?>/assets/css/admin.css" rel="stylesheet">
 </head>
 <body class="admin-body">
 
@@ -52,7 +52,7 @@ $pageContent   = $pageContent   ?? '';
             aria-label="Toggle sidebar">
         <i class="bi bi-list"></i>
     </button>
-    <a href="/rentbridge/admin/dashboard.php" class="topbar-brand">
+    <a href="<?= BASE_PATH ?>/admin/dashboard.php" class="topbar-brand">
         <span class="topbar-logo">R</span>
         <span class="topbar-name">RentBridge</span>
         <span class="topbar-divider">·</span>
@@ -70,43 +70,43 @@ $pageContent   = $pageContent   ?? '';
     <!-- SIDEBAR -->
     <aside class="admin-sidebar" id="adminSidebar">
         <nav class="sidebar-nav">
-            <a href="/rentbridge/admin/dashboard.php"
+            <a href="<?= BASE_PATH ?>/admin/dashboard.php"
                class="sidebar-link <?= $activeNav === 'dashboard' ? 'active' : '' ?>">
                 <i class="bi bi-grid-1x2-fill"></i>
                 <span class="sidebar-label">Dashboard</span>
             </a>
-            <a href="/rentbridge/admin/students.php"
+            <a href="<?= BASE_PATH ?>/admin/students.php"
             class="sidebar-link <?= $activeNav === 'students' ? 'active' : '' ?>">
                 <i class="bi bi-mortarboard-fill"></i>
                 <span class="sidebar-label">Students</span>
             </a>
-            <a href="/rentbridge/admin/landlords.php"
+            <a href="<?= BASE_PATH ?>/admin/landlords.php"
             class="sidebar-link <?= $activeNav === 'landlords' ? 'active' : '' ?>">
                 <i class="bi bi-house-heart-fill"></i>
                 <span class="sidebar-label">Landlords</span>
             </a>
-            <a href="/rentbridge/admin/agents.php"
+            <a href="<?= BASE_PATH ?>/admin/agents.php"
                class="sidebar-link <?= $activeNav === 'agents' ? 'active' : '' ?>">
                 <i class="bi bi-person-badge-fill"></i>
                 <span class="sidebar-label">Agents</span>
             </a>
-            <a href="/rentbridge/admin/properties.php"
+            <a href="<?= BASE_PATH ?>/admin/properties.php"
                class="sidebar-link <?= $activeNav === 'properties' ? 'active' : '' ?>">
                 <i class="bi bi-house-door-fill"></i>
                 <span class="sidebar-label">Properties</span>
             </a>
-            <a href="/rentbridge/admin/tenancies.php"
+            <a href="<?= BASE_PATH ?>/admin/tenancies.php"
                class="sidebar-link <?= $activeNav === 'tenancies' ? 'active' : '' ?>">
                 <i class="bi bi-clipboard-data-fill"></i>
                 <span class="sidebar-label">Tenancies</span>
             </a>
-            <a href="/rentbridge/admin/academic_calendar.php"
+            <a href="<?= BASE_PATH ?>/admin/academic_calendar.php"
                class="sidebar-link <?= $activeNav === 'academic_calendar' ? 'active' : '' ?>">
                 <i class="bi bi-calendar-event-fill"></i>
                 <span class="sidebar-label">Academic Calendar</span>
             </a>
 
-            <a href="/rentbridge/admin/reports.php"
+            <a href="<?= BASE_PATH ?>/admin/reports.php"
                class="sidebar-link <?= $activeNav === 'flagreports' ? 'active' : '' ?>">
                 <i class="bi bi-flag-fill"></i>
                 <span class="sidebar-label">Flag Reports</span>
@@ -117,12 +117,12 @@ $pageContent   = $pageContent   ?? '';
                 <?php endif; ?>
             </a>
 
-            <a href="/rentbridge/admin/statistics/summary.php"
+            <a href="<?= BASE_PATH ?>/admin/statistics/summary.php"
                class="sidebar-link <?= $activeNav === 'reports' ? 'active' : '' ?>">
                 <i class="bi bi-bar-chart-fill"></i>
                 <span class="sidebar-label">Statistics</span>
             </a>
-            <a href="/rentbridge/admin/transfers.php"
+            <a href="<?= BASE_PATH ?>/admin/transfers.php"
                class="sidebar-link <?= $activeNav === 'transfers' ? 'active' : '' ?>">
                 <i class="bi bi-arrow-left-right"></i>
                 <span class="sidebar-label">Transfers</span>
@@ -132,7 +132,7 @@ $pageContent   = $pageContent   ?? '';
                     <span class="sidebar-badge"><?= $xferCount > 9 ? '9+' : $xferCount ?></span>
                 <?php endif; ?>
             </a>
-            <a href="/rentbridge/admin/messages.php"
+            <a href="<?= BASE_PATH ?>/admin/messages.php"
             class="sidebar-link <?= $activeNav === 'messages' ? 'active' : '' ?>">
                 <i class="bi bi-envelope-fill"></i>
                 <span class="sidebar-label">Messages</span>
@@ -146,12 +146,12 @@ $pageContent   = $pageContent   ?? '';
                     <i class="bi bi-chevron-down sidebar-chevron"></i>
                 </button>
                 <div class="sidebar-submenu" style="display:none;">
-                    <a href="/rentbridge/about.php"        class="sidebar-link sidebar-sublink <?= $activeNav === 'about'        ? 'active' : '' ?>">About RentBridge</a>
-                    <a href="/rentbridge/how_it_works.php" class="sidebar-link sidebar-sublink <?= $activeNav === 'how_it_works' ? 'active' : '' ?>">How it works</a>
-                    <a href="/rentbridge/faq.php"          class="sidebar-link sidebar-sublink <?= $activeNav === 'faq'          ? 'active' : '' ?>">FAQ</a>
-                    <a href="/rentbridge/contact.php"      class="sidebar-link sidebar-sublink <?= $activeNav === 'contact'      ? 'active' : '' ?>">Feedback &amp; Contact</a>
-                    <a href="/rentbridge/legal.php"        class="sidebar-link sidebar-sublink <?= $activeNav === 'legal'        ? 'active' : '' ?>">Terms &amp; Conditions</a>
-                    <a href="/rentbridge/privacy.php"      class="sidebar-link sidebar-sublink <?= $activeNav === 'privacy'      ? 'active' : '' ?>">Privacy &amp; Security</a>
+                    <a href="<?= BASE_PATH ?>/about.php"        class="sidebar-link sidebar-sublink <?= $activeNav === 'about'        ? 'active' : '' ?>">About RentBridge</a>
+                    <a href="<?= BASE_PATH ?>/how_it_works.php" class="sidebar-link sidebar-sublink <?= $activeNav === 'how_it_works' ? 'active' : '' ?>">How it works</a>
+                    <a href="<?= BASE_PATH ?>/faq.php"          class="sidebar-link sidebar-sublink <?= $activeNav === 'faq'          ? 'active' : '' ?>">FAQ</a>
+                    <a href="<?= BASE_PATH ?>/contact.php"      class="sidebar-link sidebar-sublink <?= $activeNav === 'contact'      ? 'active' : '' ?>">Feedback &amp; Contact</a>
+                    <a href="<?= BASE_PATH ?>/legal.php"        class="sidebar-link sidebar-sublink <?= $activeNav === 'legal'        ? 'active' : '' ?>">Terms &amp; Conditions</a>
+                    <a href="<?= BASE_PATH ?>/privacy.php"      class="sidebar-link sidebar-sublink <?= $activeNav === 'privacy'      ? 'active' : '' ?>">Privacy &amp; Security</a>
                 </div>
             </div>
         </nav>
@@ -162,11 +162,11 @@ $pageContent   = $pageContent   ?? '';
                     <span class="sidebar-label">Switch to <?= e(ucfirst($r)) ?></span>
                 </a>
             <?php endforeach; ?>
-            <a href="/rentbridge/auth/add_role.php" class="sidebar-link">
+            <a href="<?= BASE_PATH ?>/auth/add_role.php" class="sidebar-link">
                 <i class="bi bi-plus-circle"></i>
                 <span class="sidebar-label">Add another role</span>
             </a>
-            <a href="/rentbridge/auth/logout.php" class="sidebar-link sidebar-logout">
+            <a href="<?= BASE_PATH ?>/auth/logout.php" class="sidebar-link sidebar-logout">
                 <i class="bi bi-box-arrow-right"></i>
                 <span class="sidebar-label">Sign out</span>
             </a>

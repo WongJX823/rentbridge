@@ -84,12 +84,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             notify((int)$adminId, 'transfer_request',
                 'Agent requested property case transfer',
                 current_user_display_name() . ' has requested to transfer a property case. Review and approve/reject.',
-                '/rentbridge/admin/transfers.php?id=' . $requestId
+                '' . BASE_PATH . '/admin/transfers.php?id=' . $requestId
             );
         }
 
         set_flash('success', 'Transfer request submitted. Admin will review shortly.');
-        header('Location: /rentbridge/agent/request_transfer.php');
+        header('Location: ' . BASE_PATH . '/agent/request_transfer.php');
         exit;
     }
 }

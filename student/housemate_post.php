@@ -9,20 +9,20 @@ $postId = (int)($_GET['id'] ?? 0);
 
 if ($postId <= 0) {
     set_flash('danger', 'Invalid post.');
-    header('Location: /rentbridge/student/partners.php');
+    header('Location: ' . BASE_PATH . '/student/partners.php');
     exit;
 }
 
 $post = get_co_tenancy_post($postId);
 if (!$post) {
     set_flash('danger', 'Post not found.');
-    header('Location: /rentbridge/student/partners.php');
+    header('Location: ' . BASE_PATH . '/student/partners.php');
     exit;
 }
 
 // Redirect poster to manage view
 if ((int)$post['poster_id'] === $userId) {
-    header('Location: /rentbridge/student/manage_post.php?id=' . $postId);
+    header('Location: ' . BASE_PATH . '/student/manage_post.php?id=' . $postId);
     exit;
 }
 
@@ -42,7 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             [$ok, $err] = apply_to_co_tenancy_post($postId, $userId, $message);
             if ($ok) {
                 set_flash('success', 'Application sent! The poster will review and get back to you.');
-                header('Location: /rentbridge/student/housemate_post.php?id=' . $postId);
+                header('Location: ' . BASE_PATH . '/student/housemate_post.php?id=' . $postId);
                 exit;
             } else {
                 $errors['general'] = $err;
@@ -70,7 +70,7 @@ ob_start();
 ?>
 
 <p class="small mb-3">
-    <a href="/rentbridge/student/partners.php" class="text-secondary text-decoration-none">
+    <a href="<?= BASE_PATH ?>/student/partners.php" class="text-secondary text-decoration-none">
         <i class="bi bi-arrow-left"></i> Back to Find Housemates
     </a>
 </p>
@@ -88,7 +88,7 @@ ob_start();
         <strong>You're in the group!</strong>
         <div class="small">Your housemate group is ready. Chat with everyone in the group conversation.</div>
     </div>
-    <a href="/rentbridge/chat/conversation.php?id=<?= $groupConvId ?>"
+    <a href="<?= BASE_PATH ?>/chat/conversation.php?id=<?= $groupConvId ?>"
        class="btn btn-sm btn-success">
         <i class="bi bi-chat-dots me-1"></i> Open group chat
     </a>
@@ -179,7 +179,7 @@ ob_start();
                         <i class="bi bi-check-circle-fill me-1"></i>
                         <strong>Accepted!</strong>
                         <?php if ($hasGroupChat): ?>
-                            <a href="/rentbridge/chat/conversation.php?id=<?= $groupConvId ?>" class="ms-2">
+                            <a href="<?= BASE_PATH ?>/chat/conversation.php?id=<?= $groupConvId ?>" class="ms-2">
                                 Open group chat →
                             </a>
                         <?php else: ?>
@@ -240,7 +240,7 @@ ob_start();
         <div class="bg-white border rounded-3 overflow-hidden sticky-top" style="top: 80px;">
             <div style="aspect-ratio: 16/9; background: linear-gradient(135deg,#E6ECF4,#E4F2EA);">
                 <?php if (!empty($post['property_image'])): ?>
-                    <img src="/rentbridge/<?= e($post['property_image']) ?>"
+                    <img src="<?= BASE_PATH ?>/<?= e($post['property_image']) ?>"
                          style="width:100%; height:100%; object-fit:cover;" alt="">
                 <?php endif; ?>
             </div>
@@ -277,7 +277,7 @@ ob_start();
                 </div>
                 <?php endif; ?>
 
-                <a href="/rentbridge/property.php?id=<?= (int)$post['property_id'] ?>"
+                <a href="<?= BASE_PATH ?>/property.php?id=<?= (int)$post['property_id'] ?>"
                    class="btn btn-outline-primary btn-sm w-100 mt-2" target="_blank">
                     <i class="bi bi-house me-1"></i> View property listing
                 </a>

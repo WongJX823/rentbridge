@@ -73,7 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'send_
         if ($r['sent'] === 0 && $r['skipped'] === 0 && empty($r['errors']))
             set_flash('info', 'No account-less co-tenants need a link.');
     }
-    header('Location: /rentbridge/contracts/view.php?id=' . (int)$contract['id']);
+    header('Location: ' . BASE_PATH . '/contracts/view.php?id=' . (int)$contract['id']);
     exit;
 }
 
@@ -152,7 +152,7 @@ $statusBadge = match ($contract['status']) {
                 <div class="d-flex gap-2">
                     <span class="badge bg-<?= $statusBadge[1] ?> fs-6"><?= e($statusBadge[0]) ?></span>
                     <?php if (!empty($contract['contract_pdf_path'])): ?>
-    <a href="/rentbridge/contracts/pdf.php?id=<?= (int)$contract['id'] ?>"
+    <a href="<?= BASE_PATH ?>/contracts/pdf.php?id=<?= (int)$contract['id'] ?>"
        class="btn btn-success btn-sm" target="_blank">
         <i class="bi bi-download me-1"></i> Download PDF
     </a>
@@ -282,7 +282,7 @@ $statusBadge = match ($contract['status']) {
                             <div class="signature-slot mb-2 d-flex align-items-center justify-content-center"
                                  style="height:90px; background:#FAFAFA; border:1px dashed var(--rb-line); border-radius:6px;">
                                 <?php if (!empty($contract['landlord_signature'])): ?>
-                                    <img src="/rentbridge/contracts/signature.php?contract_id=<?= (int)$contract['id'] ?>&field=landlord" alt="signature"
+                                    <img src="<?= BASE_PATH ?>/contracts/signature.php?contract_id=<?= (int)$contract['id'] ?>&field=landlord" alt="signature"
                                          style="max-height:80px; max-width:90%;">
                                 <?php elseif (($contract['landlord_sign_method'] ?? 'esign') === 'manual'): ?>
                                     <span class="text-secondary small"><i class="bi bi-file-earmark-person"></i> Signing a physical copy</span>
@@ -311,7 +311,7 @@ $statusBadge = match ($contract['status']) {
                             <div class="signature-slot mb-2 d-flex align-items-center justify-content-center"
                                  style="height:90px; background:#FAFAFA; border:1px dashed var(--rb-line); border-radius:6px;">
                                 <?php if (!empty($ct['signature_data'])): ?>
-                                    <img src="/rentbridge/contracts/signature.php?contract_id=<?= (int)$contract['id'] ?>&co_tenant_id=<?= (int)$ct['id'] ?>" alt="signature"
+                                    <img src="<?= BASE_PATH ?>/contracts/signature.php?contract_id=<?= (int)$contract['id'] ?>&co_tenant_id=<?= (int)$ct['id'] ?>" alt="signature"
                                          style="max-height:80px; max-width:90%;">
                                 <?php elseif (($ct['sign_method'] ?? 'esign') === 'manual'): ?>
                                     <span class="text-secondary small"><i class="bi bi-file-earmark-person"></i> Signing a physical copy</span>
@@ -371,7 +371,7 @@ $statusBadge = match ($contract['status']) {
                                 <strong>It's your turn to sign.</strong>
                                 <div class="small">Click below to open the signature pad.</div>
                             </div>
-                            <a href="/rentbridge/contracts/sign.php?id=<?= (int)$contract['id'] ?>"
+                            <a href="<?= BASE_PATH ?>/contracts/sign.php?id=<?= (int)$contract['id'] ?>"
                                class="btn btn-success">
                                 Sign now <i class="bi bi-arrow-right ms-1"></i>
                             </a>
@@ -420,7 +420,7 @@ $statusBadge = match ($contract['status']) {
                                     </div>
                                     <div class="modal-footer border-0">
                                         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                                        <form method="POST" action="/rentbridge/contracts/reject.php">
+                                        <form method="POST" action="<?= BASE_PATH ?>/contracts/reject.php">
                                             <?= csrf_field() ?>
                                             <input type="hidden" name="contract_id" value="<?= (int)$contract['id'] ?>">
                                             <button type="submit" class="btn btn-danger">
@@ -445,7 +445,7 @@ $statusBadge = match ($contract['status']) {
             <!-- Footer note -->
             <p class="text-center text-secondary small mb-0">
                 Verify authenticity at
-                <a href="/rentbridge/verify.php?ref=<?= urlencode($contract['contract_code']) ?>">
+                <a href="<?= BASE_PATH ?>/verify.php?ref=<?= urlencode($contract['contract_code']) ?>">
                     rentbridge.com/verify.php?ref=<?= e($contract['contract_code']) ?>
                 </a>
             </p>

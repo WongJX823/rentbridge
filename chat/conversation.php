@@ -100,7 +100,7 @@ $activeNav = 'chat';
 ob_start();
 ?>
 
-<a href="/rentbridge/chat.php" class="small text-secondary text-decoration-none mb-2 d-inline-block">
+<a href="<?= BASE_PATH ?>/chat.php" class="small text-secondary text-decoration-none mb-2 d-inline-block">
     <i class="bi bi-arrow-left"></i> Back to messages
 </a>
 
@@ -133,12 +133,12 @@ ob_start();
                 </div>
             </div>
         <?php elseif ($property): ?>
-            <a href="/rentbridge/property.php?id=<?= (int)$property['id'] ?>"
+            <a href="<?= BASE_PATH ?>/property.php?id=<?= (int)$property['id'] ?>"
                class="d-flex gap-3 align-items-start text-decoration-none text-dark">
                 <div style="width:60px; height:60px; border-radius:8px; overflow:hidden; flex-shrink:0;
                             background: linear-gradient(135deg,#E6ECF4,#E4F2EA);">
                     <?php if (!empty($property['image_path'])): ?>
-                        <img src="/rentbridge/<?= e($property['image_path']) ?>"
+                        <img src="<?= BASE_PATH ?>/<?= e($property['image_path']) ?>"
                              style="width:100%; height:100%; object-fit:cover;" alt="">
                     <?php endif; ?>
                 </div>
@@ -175,7 +175,7 @@ ob_start();
                     </button>
                     <?php endif; ?>
                     <?php if ($currentRole === 'agent' && !empty($property['landlord_id']) && (int)$property['landlord_id'] !== $otherUserId): ?>
-                    <a href="/rentbridge/chat/open_with_landlord.php?property_id=<?= (int)$property['id'] ?>"
+                    <a href="<?= BASE_PATH ?>/chat/open_with_landlord.php?property_id=<?= (int)$property['id'] ?>"
                        class="btn btn-sm btn-outline-primary"
                        style="font-size:.75rem; padding:2px 8px;"
                        onclick="event.stopPropagation();">
@@ -518,7 +518,7 @@ if (
                             </div>
                             <?php if ($currentRole === 'agent'): ?>
                                 <div class="mt-2">
-                                    <a href="/rentbridge/agent/property_review.php?id=<?= (int)($meta['property_id'] ?? 0) ?>"
+                                    <a href="<?= BASE_PATH ?>/agent/property_review.php?id=<?= (int)($meta['property_id'] ?? 0) ?>"
                                        class="btn btn-sm btn-outline-success">
                                         <i class="bi bi-house-check me-1"></i> Go to property review
                                     </a>
@@ -684,7 +684,7 @@ if (
                                         <i class="bi bi-check2-circle"></i> Form submitted
                                     </span>
                                 <?php elseif ($isReceiver && current_role() === 'student'): ?>
-                                    <a href="/rentbridge/student/tenant_form.php?form_id=<?= (int)$msg['id'] ?>&conv_id=<?= (int)$msg['conversation_id'] ?>&property_id=<?= (int)($meta['property_id'] ?? 0) ?>"
+                                    <a href="<?= BASE_PATH ?>/student/tenant_form.php?form_id=<?= (int)$msg['id'] ?>&conv_id=<?= (int)$msg['conversation_id'] ?>&property_id=<?= (int)($meta['property_id'] ?? 0) ?>"
                                        class="btn btn-warning btn-sm">
                                         <i class="bi bi-pencil-square me-1"></i> Fill in tenant details
                                     </a>
@@ -721,7 +721,7 @@ if (
                             $tRow = $stmt->fetch();
                             $tenancyStatus  = $tRow['status'] ?? null;
                             $contractPdfUrl = !empty($tRow['pdf_path'])
-                                ? '/rentbridge/contracts/pdf.php?id=' . (int)$tRow['contract_id']
+                                ? '' . BASE_PATH . '/contracts/pdf.php?id=' . (int)$tRow['contract_id']
                                 : null;
                         }
                         // Hide action buttons if agent has sent a newer active form after this response
@@ -769,23 +769,23 @@ if (
                                                        class="btn btn-primary btn-sm">
                                                         <i class="bi bi-download me-1"></i> Download PDF
                                                     </a>
-                                                    <a href="/rentbridge/agent/generate_contract.php?tenancy_id=<?= (int)$meta['tenancy_id'] ?>"
+                                                    <a href="<?= BASE_PATH ?>/agent/generate_contract.php?tenancy_id=<?= (int)$meta['tenancy_id'] ?>"
                                                        class="btn btn-outline-secondary btn-sm">
                                                         <i class="bi bi-arrow-clockwise me-1"></i> Regenerate
                                                     </a>
                                                 <?php else: ?>
-                                                    <a href="/rentbridge/agent/generate_contract.php?tenancy_id=<?= (int)$meta['tenancy_id'] ?>"
+                                                    <a href="<?= BASE_PATH ?>/agent/generate_contract.php?tenancy_id=<?= (int)$meta['tenancy_id'] ?>"
                                                        class="btn btn-outline-success btn-sm">
                                                         <i class="bi bi-file-earmark-pdf me-1"></i> Generate contract
                                                     </a>
                                                 <?php endif; ?>
-                                                <a href="/rentbridge/agent/upload_signed_contract.php?tenancy_id=<?= (int)$meta['tenancy_id'] ?>"
+                                                <a href="<?= BASE_PATH ?>/agent/upload_signed_contract.php?tenancy_id=<?= (int)$meta['tenancy_id'] ?>"
                                                    class="btn btn-success btn-sm">
                                                     <i class="bi bi-upload me-1"></i> Upload signed contract
                                                 </a>
                                             </div>
                                         <?php else: ?>
-                                            <a href="/rentbridge/agent/generate_contract.php?tenancy_id=<?= (int)$meta['tenancy_id'] ?>"
+                                            <a href="<?= BASE_PATH ?>/agent/generate_contract.php?tenancy_id=<?= (int)$meta['tenancy_id'] ?>"
                                                class="btn btn-success btn-sm">
                                                 <i class="bi bi-file-earmark-pdf me-1"></i> Generate contract
                                             </a>
@@ -1080,7 +1080,7 @@ if (
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form id="coTenantForm" method="POST"
-                  action="/rentbridge/chat/submit_cotenants.php">
+                  action="<?= BASE_PATH ?>/chat/submit_cotenants.php">
                 <?= csrf_field() ?>
                 <input type="hidden" name="tenancy_id" id="coTenantTenancyId">
 
@@ -1418,7 +1418,7 @@ if (
 
             try {
                 const formData = new FormData(this);
-                const resp = await fetch('/rentbridge/chat/submit_tenant_form.php', {
+                const resp = await fetch('<?= BASE_PATH ?>/chat/submit_tenant_form.php', {
                     method: 'POST',
                     body: formData,
                 });
@@ -1526,7 +1526,7 @@ if (
             btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Sending...';
 
             try {
-                const resp = await fetch('/rentbridge/chat/send_inspection_schedule.php', {
+                const resp = await fetch('<?= BASE_PATH ?>/chat/send_inspection_schedule.php', {
                     method: 'POST', body: new FormData(this)
                 });
                 const data = await resp.json();
@@ -1628,7 +1628,7 @@ if (
             submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Submitting...';
 
             try {
-                const resp = await fetch('/rentbridge/chat/respond_inspection_schedule.php', {
+                const resp = await fetch('<?= BASE_PATH ?>/chat/respond_inspection_schedule.php', {
                     method: 'POST', body: formData
                 });
                 const data = await resp.json();
@@ -1670,7 +1670,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 formData.append('property_id', this.dataset.propertyId);
                 formData.append('student_id', this.dataset.studentId);
 
-                const resp = await fetch('/rentbridge/chat/send_tenant_form.php', {
+                const resp = await fetch('<?= BASE_PATH ?>/chat/send_tenant_form.php', {
                     method: 'POST',
                     body: formData,
                 });
@@ -1731,7 +1731,7 @@ document.addEventListener('DOMContentLoaded', function() {
         submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Sending...';
 
         try {
-            const resp = await fetch('/rentbridge/chat/send_tenant_form.php', {
+            const resp = await fetch('<?= BASE_PATH ?>/chat/send_tenant_form.php', {
                 method: 'POST', body: new FormData(this)
             });
             const data = await resp.json();
@@ -1798,7 +1798,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         try {
             const fd = new FormData(this);
-            const resp = await fetch('/rentbridge/chat/send.php', { method: 'POST', body: fd });
+            const resp = await fetch('<?= BASE_PATH ?>/chat/send.php', { method: 'POST', body: fd });
             const data = await resp.json();
 
             if (data.ok && data.message) {

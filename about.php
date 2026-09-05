@@ -42,10 +42,10 @@ ob_start();
     <?php if (!is_logged_in()): ?>
         <div class="mt-4 pt-3 border-top">
             <p class="mb-3">Ready to get started?</p>
-            <a href="/rentbridge/auth/register.php" class="btn btn-primary me-2">
+            <a href="<?= BASE_PATH ?>/auth/register.php" class="btn btn-primary me-2">
                 <i class="bi bi-person-plus me-1"></i> Register
             </a>
-            <a href="/rentbridge/auth/login.php" class="btn btn-outline-primary">
+            <a href="<?= BASE_PATH ?>/auth/login.php" class="btn btn-outline-primary">
                 <i class="bi bi-box-arrow-in-right me-1"></i> Sign in
             </a>
         </div>
