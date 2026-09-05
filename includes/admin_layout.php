@@ -162,10 +162,6 @@ $pageContent   = $pageContent   ?? '';
                     <span class="sidebar-label">Switch to <?= e(ucfirst($r)) ?></span>
                 </a>
             <?php endforeach; ?>
-            <a href="<?= BASE_PATH ?>/auth/add_role.php" class="sidebar-link">
-                <i class="bi bi-plus-circle"></i>
-                <span class="sidebar-label">Add another role</span>
-            </a>
             <a href="<?= BASE_PATH ?>/auth/logout.php" class="sidebar-link sidebar-logout">
                 <i class="bi bi-box-arrow-right"></i>
                 <span class="sidebar-label">Sign out</span>
