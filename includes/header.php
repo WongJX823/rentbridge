@@ -37,7 +37,7 @@ require_once __DIR__ . '/auth.php';
                 require_once __DIR__ . '/chat.php';
                 $unreadCount = unread_message_count(current_user_id());
             ?>
-                <a href="<?= BASE_PATH ?>/chat.php"
+                <a href="<?= BASE_PATH ?>/message.php"
                     class="position-relative me-3 d-inline-flex align-items-center justify-content-center"
                     style="width: 40px; height: 40px; color: white; border-radius: 50%;
                             text-decoration: none; transition: background 0.15s;"

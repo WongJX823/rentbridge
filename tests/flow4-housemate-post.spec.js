@@ -120,7 +120,7 @@ test.describe('Flow 4D — Student 1 starts the formal tenancy chat with the age
 
   test('UC-13a2: agent sends the tenant info form', async ({ page }) => {
     await login(page, 'agent');
-    await page.goto('chat.php');
+    await page.goto('message.php');
     await page.waitForLoadState('networkidle');
 
     const convs = page.locator('a[href*="conversation"]:visible');
@@ -156,7 +156,7 @@ test.describe('Flow 4E — Student 1 fills the tenant form with 3 co-tenants', (
   test('UC-13b: student submits form with primary + 3 co-tenants', async ({ page }) => {
     await login(page, 'student1');
 
-    await page.goto('chat.php');
+    await page.goto('message.php');
     await page.waitForLoadState('networkidle');
 
     const conv = page.locator('a[href*="conversation"]:visible').first();

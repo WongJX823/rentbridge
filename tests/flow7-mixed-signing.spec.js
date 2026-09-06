@@ -74,7 +74,7 @@ test.describe('Flow 7B — Agent sends the tenant info form', () => {
   test('UC-27b: agent sets terms and sends the tenant info form', async ({ page }) => {
     await login(page, 'agent');
 
-    await page.goto('chat.php');
+    await page.goto('message.php');
     await page.waitForLoadState('networkidle');
 
     const convs = page.locator('a[href*="conversation"]:visible');
@@ -111,7 +111,7 @@ test.describe('Flow 7C — Student fills the Tenant Info Form with 3 co-tenants 
   test('UC-27c: student submits form with primary + 3 co-tenants', async ({ page }) => {
     await login(page, 'student1');
 
-    await page.goto('chat.php');
+    await page.goto('message.php');
     await page.waitForLoadState('networkidle');
 
     const conv = page.locator('a[href*="conversation"]:visible').first();

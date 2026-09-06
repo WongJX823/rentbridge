@@ -151,7 +151,7 @@ $pendingRequests = (int)$stmt->fetchColumn();
                     <span class="sidebar-badge"><?= $pendingRequests ?></span>
                 <?php endif; ?>
             </a>
-            <a href="<?= BASE_PATH ?>/chat.php"
+            <a href="<?= BASE_PATH ?>/message.php"
                class="sidebar-link <?= $activeNav === 'chat' ? 'active' : '' ?>">
                 <i class="bi bi-chat-dots-fill"></i>
                 <span class="sidebar-label">Chat &amp; Notif</span>

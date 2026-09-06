@@ -60,7 +60,7 @@ notify(
     'cotenant_form_request',
     'Agent requested co-tenant details',
     'Please open the chat to fill in co-tenant info for "' . $tenancy['property_title'] . '".',
-    '' . BASE_PATH . '/chat.php?id=' . $convoId
+    '' . BASE_PATH . '/message.php?id=' . $convoId
 );
 
 set_flash('success', 'Co-tenant form sent to student via chat.');

@@ -1,0 +1,13 @@
+.git
+.gitignore
+.phpunit.cache
+.playwright-mcp
+playwright-report
+test-results
+node_modules
+tests/LIVE_VERIFICATION_PROGRESS.md
+*.pem
+docs/
+live-flow7-*.png
+live_landlord_dashboard.png
+_diag.php

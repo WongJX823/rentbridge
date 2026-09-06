@@ -860,8 +860,16 @@ HTML;
 function rb_render_agreement_pdf(string $html, string $contractCode, string $subDir = 'generated_contracts'): ?string {
     require_once __DIR__ . '/../vendor/autoload.php';
     try {
+        // Some shared hosts (e.g. InfinityFree) return a system temp dir from
+        // sys_get_temp_dir() that PHP cannot actually write to, which makes
+        // mPDF's font/temp cache fail silently. Use a directory inside our
+        // own writable uploads tree instead.
+        $mpdfTempDir = __DIR__ . '/../uploads/mpdf_tmp';
+        if (!is_dir($mpdfTempDir)) {
+            mkdir($mpdfTempDir, 0755, true);
+        }
         $mpdf = new \Mpdf\Mpdf([
-            'tempDir' => sys_get_temp_dir(),
+            'tempDir' => $mpdfTempDir,
             'format' => 'A4',
             'margin_left' => 20, 'margin_right' => 20,
             'margin_top' => 25, 'margin_bottom' => 25,
@@ -877,14 +885,16 @@ function rb_render_agreement_pdf(string $html, string $contractCode, string $sub
         $mpdf->WriteHTML($html);
 
         $absDir = __DIR__ . '/../uploads/' . $subDir;
-        if (!is_dir($absDir) && !mkdir($absDir, 0755, true) && !is_dir($absDir)) return null;
+        if (!is_dir($absDir) && !mkdir($absDir, 0755, true) && !is_dir($absDir)) {
+            throw new RuntimeException('Could not create output directory: ' . $absDir);
+        }
         $filename = $contractCode . '_' . time() . '.pdf';
         $relPath  = 'uploads/' . $subDir . '/' . $filename;
         $mpdf->Output(__DIR__ . '/../' . $relPath, \Mpdf\Output\Destination::FILE);
         return $relPath;
     } catch (Throwable $e) {
         error_log('Agreement PDF render failed: ' . $e->getMessage());
-        return null;
+        throw new RuntimeException('Failed to render the contract PDF: ' . $e->getMessage(), 0, $e);
     }
 }
 

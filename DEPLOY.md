@@ -3,6 +3,10 @@
 Target: shared/VPS hosting (Apache + PHP 8.1+ + MySQL/MariaDB), production.
 This is the checklist for taking the current dev setup live for the first time.
 
+Deploying to Render (Docker) + Aiven MySQL instead of traditional shared
+hosting? See `docker/README.md` — same underlying config (env vars below
+still apply), plus Docker/TLS/port specifics for that combination.
+
 ## 1. Environment variables
 
 Nothing below is hardcoded as a required secret in code — nothing after this

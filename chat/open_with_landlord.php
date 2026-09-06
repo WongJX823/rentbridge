@@ -6,7 +6,7 @@ require_role('agent');
 $propertyId = (int)($_GET['property_id'] ?? 0);
 if ($propertyId <= 0) {
     set_flash('danger', 'Invalid property.');
-    header('Location: ' . BASE_PATH . '/chat.php');
+    header('Location: ' . BASE_PATH . '/message.php');
     exit;
 }
 
@@ -17,7 +17,7 @@ $prop = $stmt->fetch();
 
 if (!$prop || empty($prop['landlord_id'])) {
     set_flash('danger', 'Property or landlord not found.');
-    header('Location: ' . BASE_PATH . '/chat.php');
+    header('Location: ' . BASE_PATH . '/message.php');
     exit;
 }
 
@@ -26,7 +26,7 @@ $agentId    = current_user_id();
 
 if ($landlordId === $agentId) {
     set_flash('danger', 'You cannot chat with yourself.');
-    header('Location: ' . BASE_PATH . '/chat.php');
+    header('Location: ' . BASE_PATH . '/message.php');
     exit;
 }
 

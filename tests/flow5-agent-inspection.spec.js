@@ -75,7 +75,7 @@ test.describe('Flow 5B — Inspection scheduling', () => {
   test('UC-18b: landlord confirms an inspection slot with consent', async ({ page }) => {
     await login(page, 'landlord');
 
-    await page.goto('chat.php');
+    await page.goto('message.php');
     await page.waitForLoadState('networkidle');
 
     const conv = page.locator('a[href*="conversation"]:visible').first();

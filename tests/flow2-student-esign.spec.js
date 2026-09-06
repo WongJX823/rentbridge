@@ -70,7 +70,7 @@ test.describe('Flow 2B — Agent replies in the inquiry chat', () => {
   test('UC-03: agent replies to the student', async ({ page }) => {
     await login(page, 'agent');
 
-    await page.goto('chat.php');
+    await page.goto('message.php');
     await page.waitForLoadState('networkidle');
 
     const conv = page.locator('a[href*="conversation"]:visible').first();
@@ -93,7 +93,7 @@ test.describe('Flow 2C — Agent sends Tenant Info Form to the student', () => {
   test('UC-04: agent sets terms and sends the tenant info form', async ({ page }) => {
     await login(page, 'agent');
 
-    await page.goto('chat.php');
+    await page.goto('message.php');
     await page.waitForLoadState('networkidle');
 
     const convs = page.locator('a[href*="conversation"]:visible');
@@ -131,7 +131,7 @@ test.describe('Flow 2D — Student fills the Tenant Info Form', () => {
   test('UC-05: student fills their own tenant details and a tenancy is created', async ({ page }) => {
     await login(page, 'student1');
 
-    await page.goto('chat.php');
+    await page.goto('message.php');
     await page.waitForLoadState('networkidle');
 
     const conv = page.locator('a[href*="conversation"]:visible').first();

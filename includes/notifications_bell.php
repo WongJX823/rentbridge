@@ -120,7 +120,7 @@ if (!function_exists('_nb_time_ago')) {
             <?php else: ?>
 
                 <?php if ($_nb_chatCount > 0): ?>
-                <a href="<?= BASE_PATH ?>/chat.php" class="notif-item notif-item--chat text-decoration-none">
+                <a href="<?= BASE_PATH ?>/message.php" class="notif-item notif-item--chat text-decoration-none">
                     <div class="notif-icon notif-icon--chat"><i class="bi bi-chat-dots"></i></div>
                     <div class="notif-content">
                         <div class="notif-title"><?= e($_nb_chatText) ?></div>

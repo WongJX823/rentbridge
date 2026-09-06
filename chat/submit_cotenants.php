@@ -10,7 +10,7 @@ $coTenants = $_POST['cotenant'] ?? [];
 
 if ($tenancyId <= 0) {
     set_flash('danger', 'Invalid tenancy.');
-    header('Location: ' . BASE_PATH . '/chat.php');
+    header('Location: ' . BASE_PATH . '/message.php');
     exit;
 }
 
@@ -31,7 +31,7 @@ if (!$stmt->fetchColumn()) {
 $res = update_primary_tenant($tenancyId, $primaryIc);
 if (!$res['ok']) {
     set_flash('danger', 'Primary tenant update failed: ' . $res['error']);
-    header('Location: ' . BASE_PATH . '/chat.php');
+    header('Location: ' . BASE_PATH . '/message.php');
     exit;
 }
 
@@ -78,5 +78,5 @@ if ($agentId > 0) {
     );
 }
 
-header('Location: ' . BASE_PATH . '/chat.php');
+header('Location: ' . BASE_PATH . '/message.php');
 exit;

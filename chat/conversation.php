@@ -100,7 +100,7 @@ $activeNav = 'chat';
 ob_start();
 ?>
 
-<a href="<?= BASE_PATH ?>/chat.php" class="small text-secondary text-decoration-none mb-2 d-inline-block">
+<a href="<?= BASE_PATH ?>/message.php" class="small text-secondary text-decoration-none mb-2 d-inline-block">
     <i class="bi bi-arrow-left"></i> Back to messages
 </a>
 

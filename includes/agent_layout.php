@@ -170,7 +170,7 @@ $urgentCases = (int)$stmt->fetchColumn();
                 <i class="bi bi-person-circle"></i>
                 <span class="sidebar-label">Profile</span>
             </a>
-            <a href="<?= BASE_PATH ?>/chat.php"
+            <a href="<?= BASE_PATH ?>/message.php"
                class="sidebar-link <?= $activeNav === 'chat' ? 'active' : '' ?>">
                 <i class="bi bi-chat-dots-fill"></i>
                 <span class="sidebar-label">Chat &amp; Notif</span>
