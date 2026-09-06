@@ -52,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $role !== '') {
                 if ($role === 'student') {
                     $pdo->prepare('
                         INSERT INTO students (user_id, full_name, matric_no, ic_no, university, phone)
-                        VALUES (?, ?, ?, ?, "UTeM", ?)
+                        VALUES (?, ?, ?, ?, \'UTeM\', ?)
                     ')->execute([$userId, $old['full_name'], $old['matric_no'], $old['ic_no'], $old['phone']]);
                 } else { // landlord
                     $pdo->prepare('

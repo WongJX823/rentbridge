@@ -77,7 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $stmt = $pdo->prepare(
                     'INSERT INTO students (user_id, full_name, preferred_name, matric_no, ic_no, university, phone, gender, race)
-                     VALUES (?, ?, ?, ?, ?, "UTeM", ?, ?, ?)'
+                     VALUES (?, ?, ?, ?, ?, \'UTeM\', ?, ?, ?)'
                 );
                 $stmt->execute([
                     $userId,
