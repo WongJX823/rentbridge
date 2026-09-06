@@ -24,11 +24,16 @@ services:
         sync: false
       - key: RB_DB_PASS
         sync: false
-      - key: RB_DB_SSL_CA
-        # Points at a Render "Secret File" (dashboard -> service -> Environment
-        # -> Secret Files), not a file in the repo — see docker/README.md for
-        # how to get Aiven's CA cert there without committing it to git.
-        value: /etc/secrets/aiven-ca.pem
+      - key: RB_DB_SSL_CA_B64
+        # Base64 of Aiven's CA cert (a public cert, not a secret in the usual
+        # sense — safe to paste as a plain value). docker/entrypoint.sh
+        # decodes this to /tmp/certs/aiven-ca.pem at container start and sets
+        # RB_DB_SSL_CA to that path itself — do NOT also set RB_DB_SSL_CA
+        # here. We deliberately do NOT use Render's "Secret Files" for this:
+        # on the free tier, secret files are mounted with permissions that
+        # even a root-uid process inside the container can't read (see
+        # docker/README.md).
+        sync: false
       - key: RB_BASE_PATH
         value: ""
       - key: RB_SMTP_HOST

@@ -37,6 +37,18 @@ storage (S3-compatible, e.g. Cloudflare R2).
    `migrations/add_audit_log_users_properties.sql` and swap in the original
    `migrations/add_soft_delete_and_restrict_cascade.sql` instead of the
    rewritten block in `deploy_combined_infinityfree.sql` — optional.)
+
+   Two gotchas hit while first running this against real Aiven MySQL (as
+   opposed to the MariaDB this schema was developed against):
+   - An older/bundled `mysql` client may fail to authenticate at all with
+     `Plugin caching_sha2_password could not be loaded` — that's the client
+     missing the plugin, not a real auth failure. A PHP script using PDO/
+     mysqli (mysqlnd) doesn't have this problem, so import that way instead
+     if you hit it.
+   - Aiven's default `sql_mode` includes `ANSI_QUOTES` — double-quoted
+     strings are identifiers there, not string literals, unlike a typical
+     MariaDB default. Only matters for your own ad-hoc queries against this
+     DB; nothing in this repo's SQL files uses double-quoted strings.
 5. Do **not** import `db/seed_data.sql` or `tests/e2e_fixtures_seed.sql`.
 
 ## 2. Render web service
@@ -46,19 +58,36 @@ Apache, `gd`/`mysqli`/`pdo_mysql`/`zip` extensions, `.htaccess` overrides
 enabled for `uploads/*/.htaccess` access control) handles that.
 
 1. New Web Service on Render, connect this repo, runtime = **Docker**
-   (picks up the root `Dockerfile` automatically). Free plan is fine.
-2. **Environment -> Secret Files**: add a secret file with path
-   `/etc/secrets/aiven-ca.pem` and paste the contents of the `aiven-ca.pem`
-   you downloaded from Aiven. This keeps the cert out of git.
+   (picks up the root `Dockerfile` automatically). Free plan is fine. When
+   creating the service, **explicitly select "Docker"** as the runtime —
+   don't let it auto-detect, since this repo also has a `package.json` (for
+   the Playwright test suite only) that Render's auto-detection will pick
+   over the Dockerfile, trying to run the app as a Node project instead.
+2. **Do NOT use Render's "Secret Files"** for the CA cert. On the free tier
+   they're mounted with permissions that even a root-uid process inside the
+   container can't read (`is_readable()` returns false, `PDO` fails with a
+   generic `Cannot connect to MySQL using SSL` — confirmed via a temporary
+   diagnostic endpoint during initial setup). Instead: base64-encode the CA
+   cert and pass it as a plain environment variable — `docker/entrypoint.sh`
+   decodes it to a file the container creates itself at startup, which it
+   can always read regardless of that platform quirk.
+   ```
+   base64 -w0 aiven-ca.pem
+   ```
+   (a CA cert is a public value, not a secret in the usual sense — safe to
+   paste as a plain env var value.)
 3. **Environment -> Environment Variables**: set the vars listed in
    `render.yaml` — at minimum `RB_DB_HOST`, `RB_DB_PORT`, `RB_DB_NAME`,
-   `RB_DB_USER`, `RB_DB_PASS` (from Aiven), plus `RB_BASE_PATH=` (empty —
-   Render serves from the domain root, same as InfinityFree) and
-   `RB_DB_SSL_CA=/etc/secrets/aiven-ca.pem`. Add the SMTP/Maps/OpenAI vars
-   from `DEPLOY.md` §1 as needed.
+   `RB_DB_USER`, `RB_DB_PASS` (from Aiven), `RB_BASE_PATH=` (empty — Render
+   serves from the domain root, same as InfinityFree), and
+   `RB_DB_SSL_CA_B64=<output of the base64 command above>`. Do **not** also
+   set `RB_DB_SSL_CA` directly — the entrypoint script sets that itself
+   after decoding. Add the SMTP/Maps/OpenAI vars from `DEPLOY.md` §1 as
+   needed.
 4. Deploy. Render assigns the container a `PORT` env var at runtime;
-   `docker/entrypoint.sh` rewrites Apache's config to listen on it before
-   starting — no manual port config needed.
+   `docker/entrypoint.sh` rewrites Apache's config to listen on it, and
+   decodes `RB_DB_SSL_CA_B64` to `/tmp/certs/aiven-ca.pem`, before Apache
+   starts — no manual port or cert-file config needed on the host.
 
 ## 3. Post-deploy
 
