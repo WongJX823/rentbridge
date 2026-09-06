@@ -65,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Note: status='pending' — admin must approve before they can log in
                 $stmt = $pdo->prepare(
                     'INSERT INTO users (email, password_hash, primary_role, status)
-                     VALUES (?, ?, "agent", "pending")'
+                     VALUES (?, ?, \'agent\', \'pending\')'
                 );
                 $stmt->execute([
                     $old['email'],

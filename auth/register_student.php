@@ -66,7 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $stmt = $pdo->prepare(
                     'INSERT INTO users (email, password_hash, primary_role, status)
-                     VALUES (?, ?, "student", "active")'
+                     VALUES (?, ?, \'student\', \'active\')'
                 );
                 $stmt->execute([
                     $old['email'],

@@ -149,7 +149,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'INSERT INTO tenancies
                     (student_id, property_id, landlord_id, start_date, end_date,
                      duration_type, monthly_rent, deposit, student_note, status)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, "pending_landlord")'
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, \'pending_landlord\')'
             );
             $stmt->execute([
                 current_user_id(),

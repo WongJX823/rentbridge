@@ -47,7 +47,7 @@ function create_contract_from_tenancy(int $tenancyId): ?int {
 
     // Fetch tenancy + verify it's at agent_assigned status
     $stmt = $pdo->prepare(
-        'SELECT * FROM tenancies WHERE id = ? AND status = "agent_assigned" LIMIT 1'
+        'SELECT * FROM tenancies WHERE id = ? AND status = \'agent_assigned\' LIMIT 1'
     );
     $stmt->execute([$tenancyId]);
     $tenancy = $stmt->fetch();
@@ -67,7 +67,7 @@ function create_contract_from_tenancy(int $tenancyId): ?int {
             'INSERT INTO contracts
                 (contract_code, tenancy_id, student_id, landlord_id, agent_id, property_id,
                  start_date, end_date, monthly_rent, deposit, terms, status)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "pending_signatures")'
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, \'pending_signatures\')'
         );
         // Placeholder contract_code, we'll update with real code after we have the ID
         $stmt->execute([
@@ -91,7 +91,7 @@ function create_contract_from_tenancy(int $tenancyId): ?int {
         $stmt->execute([$code, $contractId]);
 
         // Bump tenancy status
-        $stmt = $pdo->prepare('UPDATE tenancies SET status = "contract_pending" WHERE id = ?');
+        $stmt = $pdo->prepare('UPDATE tenancies SET status = \'contract_pending\' WHERE id = ?');
         $stmt->execute([$tenancyId]);
 
         $pdo->commit();
@@ -441,9 +441,9 @@ function apply_signature(int $contractId, int $userId, string $dataUrl): array {
         $allSigned = ($unsignedTenants === 0) && !empty($contract['landlord_signed_at']);
 
         if ($allSigned) {
-            $pdo->prepare('UPDATE contracts SET status = "active", activated_at = NOW() WHERE id = ?')
+            $pdo->prepare('UPDATE contracts SET status = \'active\', activated_at = NOW() WHERE id = ?')
                 ->execute([$contractId]);
-            $pdo->prepare('UPDATE tenancies SET status = "active" WHERE id = ?')
+            $pdo->prepare('UPDATE tenancies SET status = \'active\' WHERE id = ?')
                 ->execute([(int)$contract['tenancy_id']]);
             ensure_agent_commission_for_contract($contractId, 'earned');
         }
@@ -641,8 +641,8 @@ function apply_signature_by_token(string $token, string $dataUrl): array {
         $allSigned = ((int)$u->fetchColumn() === 0) && !empty($contract['landlord_signed_at']);
 
         if ($allSigned) {
-            $pdo->prepare('UPDATE contracts SET status="active", activated_at=NOW() WHERE id=?')->execute([$contractId]);
-            $pdo->prepare('UPDATE tenancies SET status="active" WHERE id=?')->execute([(int)$contract['tenancy_id']]);
+            $pdo->prepare('UPDATE contracts SET status=\'active\', activated_at=NOW() WHERE id=?')->execute([$contractId]);
+            $pdo->prepare('UPDATE tenancies SET status=\'active\' WHERE id=?')->execute([(int)$contract['tenancy_id']]);
             ensure_agent_commission_for_contract($contractId, 'earned');
         }
         $pdo->commit();

@@ -67,13 +67,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 // Status → agent_verifying (NEW: inspection step before contract)
                 $stmt = $pdo->prepare(
-                    'UPDATE tenancies SET status = "agent_verifying" WHERE id = ?'
+                    'UPDATE tenancies SET status = \'agent_verifying\' WHERE id = ?'
                 );
                 $stmt->execute([$caseId]);
 
                 // Mark property as reserved (off public listings)
                 $stmt = $pdo->prepare(
-                    'UPDATE properties SET status = "reserved" WHERE id = ?'
+                    'UPDATE properties SET status = \'reserved\' WHERE id = ?'
                 );
                 $stmt->execute([(int)$case['property_id']]);
 

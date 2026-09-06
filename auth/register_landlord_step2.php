@@ -127,7 +127,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // 1. Insert into users
             $stmt = $pdo->prepare(
                 'INSERT INTO users (email, password_hash, primary_role, status)
-                 VALUES (?, ?, "landlord", "active")'
+                 VALUES (?, ?, \'landlord\', \'active\')'
             );
             $stmt->execute([$step1['email'], $step1['password_hash']]);
             $userId = (int)$pdo->lastInsertId();
@@ -153,7 +153,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                      latitude, longitude, maps_url,
                      monthly_rent, deposit, description, facilities, furnishing,
                      viewing_mode, gender_preference, race_preference, status)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "pending_approval")'
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, \'pending_approval\')'
             );
             $stmt->execute([
                 $userId,
