@@ -3,6 +3,12 @@
 --
 -- Run this AFTER importing db/dbrb_2026.sql and add_academic_terms.sql.
 --
+-- Uses plain `ADD COLUMN`/`ADD INDEX` (no `IF NOT EXISTS`) — that clause is
+-- a MariaDB-only extension on ALTER TABLE and is a syntax error on real
+-- MySQL (confirmed against Aiven's managed MySQL 8.4). Safe here since this
+-- file is meant for a fresh import, never a repeat run against a database
+-- that already has these columns.
+--
 -- Deliberately NOT included here (already baked into db/dbrb_2026.sql as of
 -- the June 25 dump — re-running them would error, e.g. "Duplicate column"
 -- or "Table 'bookings' doesn't exist"):
@@ -80,11 +86,11 @@ CREATE TABLE IF NOT EXISTS audit_log (
 -- 3. add_cotenant_sign_token.sql
 -- ========================================================================
 ALTER TABLE co_tenants
-    ADD COLUMN IF NOT EXISTS sign_token VARCHAR(64) DEFAULT NULL
+    ADD COLUMN sign_token VARCHAR(64) DEFAULT NULL
         COMMENT 'secure token for link-based signing (account-less co-tenants)';
 
 ALTER TABLE co_tenants
-    ADD INDEX IF NOT EXISTS idx_sign_token (sign_token);
+    ADD INDEX idx_sign_token (sign_token);
 
 
 -- ========================================================================
@@ -135,15 +141,15 @@ ALTER TABLE `students`
 
 -- 7a. Soft-delete columns
 ALTER TABLE contracts
-    ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP NULL DEFAULT NULL
+    ADD COLUMN deleted_at TIMESTAMP NULL DEFAULT NULL
         COMMENT 'soft delete — filter WHERE deleted_at IS NULL; never hard DELETE';
 
 ALTER TABLE tenancies
-    ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP NULL DEFAULT NULL
+    ADD COLUMN deleted_at TIMESTAMP NULL DEFAULT NULL
         COMMENT 'soft delete — filter WHERE deleted_at IS NULL; never hard DELETE';
 
 ALTER TABLE agent_commissions
-    ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP NULL DEFAULT NULL
+    ADD COLUMN deleted_at TIMESTAMP NULL DEFAULT NULL
         COMMENT 'soft delete — filter WHERE deleted_at IS NULL; never hard DELETE';
 
 -- 7b. CASCADE -> RESTRICT, one FK at a time. Each block looks up the FK's
@@ -238,12 +244,12 @@ CREATE TABLE IF NOT EXISTS login_attempts (
 -- 9. add_mixed_signing_method.sql
 -- ========================================================================
 ALTER TABLE co_tenants
-    ADD COLUMN IF NOT EXISTS sign_method ENUM('esign','manual') NOT NULL DEFAULT 'esign'
+    ADD COLUMN sign_method ENUM('esign','manual') NOT NULL DEFAULT 'esign'
         COMMENT 'per-tenant choice, set when it is their turn to sign'
         AFTER sign_order;
 
 ALTER TABLE contracts
-    ADD COLUMN IF NOT EXISTS landlord_sign_method ENUM('esign','manual') NOT NULL DEFAULT 'esign'
+    ADD COLUMN landlord_sign_method ENUM('esign','manual') NOT NULL DEFAULT 'esign'
         COMMENT 'landlord''s choice, set when it is their turn to sign'
         AFTER landlord_sign_ip;
 
