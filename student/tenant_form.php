@@ -160,13 +160,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadySubmitted) {
 
     if (empty($errors)) {
         $durationType = match(true) {
-            $termMonths <= 5  => '1_semester',
-            $termMonths <= 10 => '2_semesters',
-            $termMonths <= 14 => '3_semesters',
-            $termMonths <= 20 => '4_semesters',
-            $termMonths <= 26 => '2_years',
-            $termMonths <= 38 => '3_years',
-            default           => 'custom',
+            $termMonths <= 5   => '1_semester',
+            $termMonths <= 10  => '2_semesters',
+            $termMonths === 12 => '1_year',
+            default            => 'custom',
         };
 
         try {
