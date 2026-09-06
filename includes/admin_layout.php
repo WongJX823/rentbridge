@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Admin layout wrapper — sticky sidebar + sticky tab bar + filter drawer.
  *

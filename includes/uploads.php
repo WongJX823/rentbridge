@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * File upload helpers
  * Centralizes validation + safe filename generation.

@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once __DIR__ . '/auth.php';
 
 const ASSIGNMENT_TIMEOUT_HOURS = 24;

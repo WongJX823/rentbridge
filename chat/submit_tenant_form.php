@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once __DIR__ . '/../includes/auth.php';
 require_login();  // any logged-in user; we verify role-specific access below
 $userRole = current_role();

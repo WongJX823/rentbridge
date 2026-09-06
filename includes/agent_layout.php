@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Agent layout wrapper — sticky sidebar + sticky tab bar.
  */

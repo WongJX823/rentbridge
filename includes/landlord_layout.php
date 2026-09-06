@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Landlord layout wrapper — sticky sidebar + sticky tab bar.
  *

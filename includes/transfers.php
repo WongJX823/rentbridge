@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once __DIR__ . '/auth.php';
 
 const TRANSFER_BATCH_SIZE = 5;

@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Notification bell dropdown.
  * Requires: $userId (int), db() and e() available.

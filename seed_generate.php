@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * RentBridge Seed Data Generator
  * Outputs valid SQL INSERT statements to stdout.
