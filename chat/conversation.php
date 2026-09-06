@@ -97,12 +97,25 @@ $pageTitle     = $isGroupChat ? 'Housemate Group Chat' : ('Chat with ' . $other[
 $showPageTitle = false;
 $activeNav = 'chat';
 
+require_once __DIR__ . '/../includes/case_status_banner.php';
+$caseStage = null;
+if (!$isGroupChat && $currentRole === 'agent' && !empty($convo['property_id']) && !empty($otherUserId)
+    && ($other['primary_role'] ?? '') === 'student'
+) {
+    $caseStage = agent_student_case_stage(
+        (int)$convo['property_id'], (int)$otherUserId, $userId, $conversationId
+    );
+}
+
 ob_start();
 ?>
 
-<a href="<?= BASE_PATH ?>/message.php" class="small text-secondary text-decoration-none mb-2 d-inline-block">
-    <i class="bi bi-arrow-left"></i> Back to messages
-</a>
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+    <a href="<?= BASE_PATH ?>/message.php" class="small text-secondary text-decoration-none d-inline-block">
+        <i class="bi bi-arrow-left"></i> Back to messages
+    </a>
+    <?php if ($caseStage): render_case_progress_stepper($caseStage); endif; ?>
+</div>
 
 <div class="chat-shell">
 
@@ -283,62 +296,8 @@ if (
             </div>
         </div>
     <?php endif; ?>
-<?php
-// Agent-led: agent can send tenant info form directly to student
-$showAgentSendFormBtn = false;
-if (
-    current_role() === 'agent' &&
-    !empty($propId) &&
-    !empty($otherId) &&
-    $otherRole === 'student'
-) {
-    // Verify this is an agent-led property AND I am the assigned agent
-    $stmt = $pdo->prepare("
-        SELECT viewing_mode, assigned_agent_id, agent_status, monthly_rent, deposit
-          FROM properties
-         WHERE id = ?
-    ");
-    $stmt->execute([$propId]);
-    $propRow = $stmt->fetch();
-    
-    if (
-        $propRow &&
-        in_array($propRow['viewing_mode'], ['landlord_led', 'agent_led', 'either'], true) &&
-        (int)$propRow['assigned_agent_id'] === current_user_id() &&
-        $propRow['agent_status'] === 'accepted'
-    ) {
-        $showAgentSendFormBtn = true;
-    }
-}
-?>
 
-<?php if ($showAgentSendFormBtn): ?>
-    <div class="agent-send-form-bar p-3 mb-2"
-         style="background:#E4F2EA; border:1px solid #2E8B57; border-radius:10px;">
-        <div class="d-flex gap-3 align-items-start">
-            <i class="bi bi-clipboard-data fs-4 text-success"></i>
-            <div class="flex-grow-1">
-                <strong>Ready to start tenant paperwork?</strong>
-                <p class="small text-secondary mb-2">
-                    When you've agreed with the student to proceed, send them the
-                    tenant info form. The student will fill their details and
-                    co-tenants, then you generate the contract PDF.
-                </p>
-                <button type="button" id="agentSendFormBtn"
-                        class="btn btn-success fw-semibold"
-                        data-bs-toggle="modal" data-bs-target="#agentTermsModal"
-                        data-conv-id="<?= (int)$convData['id'] ?>"
-                        data-property-id="<?= (int)$propId ?>"
-                        data-student-id="<?= (int)$otherId ?>"
-                        data-monthly-rent="<?= (float)($propRow['monthly_rent'] ?? 0) ?>"
-                        data-deposit="<?= (float)($propRow['deposit'] ?? 0) ?>">
-                    <i class="bi bi-send me-1"></i>
-                    Send tenant info form to student
-                </button>
-            </div>
-        </div>
-    </div>
-<?php endif; ?>
+<?php if ($caseStage): render_case_status_banner($caseStage, $conversationId, (int)$convo['property_id'], (int)$otherUserId); endif; ?>
 
 <?php
 // Show inspection schedule button if agent↔landlord for an 'inspecting' property
@@ -1753,6 +1712,40 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
+// ============================================================
+// CASE STATUS BANNER — cancel a pending tenant info form request
+// ============================================================
+document.addEventListener('DOMContentLoaded', function () {
+    const btn = document.querySelector('.cancel-tenant-form-btn');
+    if (!btn) return;
+    btn.addEventListener('click', async function () {
+        if (!confirm('Cancel this tenant info form request? The student will no longer be able to fill it in.')) return;
+        btn.disabled = true;
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+        try {
+            const formData = new FormData();
+            formData.append('form_id', btn.dataset.formId);
+            formData.append('conversation_id', btn.dataset.convId);
+            formData.append('_csrf', '<?= csrf_token() ?>');
+            const resp = await fetch('<?= BASE_PATH ?>/chat/cancel_tenant_form.php', {
+                method: 'POST', body: formData
+            });
+            const data = await resp.json();
+            if (data.ok) {
+                location.reload();
+            } else {
+                alert(data.error || 'Failed to cancel the request.');
+                btn.disabled = false;
+                btn.innerHTML = originalHTML;
+            }
+        } catch (err) {
+            alert('Network error: ' + err.message);
+            btn.disabled = false;
+            btn.innerHTML = originalHTML;
+        }
+    });
+});
 
 // ============================================================
 // CHAT FORM — send message via AJAX
