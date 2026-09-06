@@ -156,24 +156,22 @@ ob_start();
                     <?php endif; ?>
                 </div>
                 <div class="flex-grow-1">
-                    <div class="d-flex align-items-center gap-2">
+                    <div class="fw-semibold"><?= e($property['title']) ?></div>
+                    <div class="small d-flex align-items-center flex-wrap gap-1 mt-1">
+                        <span style="color:#C62828; font-weight:600;">
+                            RM <?= number_format((float)$property['monthly_rent']) ?>
+                        </span>
+                        <span class="text-secondary">per month · <?= e($property['city']) ?> ·</span>
                         <?php
                         require_once __DIR__ . '/../includes/avatar.php';
                         $_otherAvatar = get_avatar_path((int)$otherUserId, $other['primary_role']);
                         ?>
-                        <?php render_avatar($_otherAvatar, $other['name'], 44); ?>
-                        <strong class="small"><?= e($other['name']) ?></strong>
-                        <span class="badge bg-light text-dark small fw-normal">
-                            <?= e(ucfirst($other['primary_role'])) ?>
-                        </span>
-                    </div>
-                    <div class="mt-1 fw-semibold"><?= e($property['title']) ?></div>
-                    <div class="small">
-                        <span style="color:#C62828; font-weight:600;">
-                            RM <?= number_format((float)$property['monthly_rent']) ?>
-                        </span>
-                        <span class="text-secondary">
-                            per month · <?= e($property['city']) ?>
+                        <span class="d-inline-flex align-items-center gap-1">
+                            <?php render_avatar($_otherAvatar, $other['name'], 18); ?>
+                            <strong><?= e($other['name']) ?></strong>
+                            <span class="badge bg-light text-dark fw-normal" style="font-size:.68rem;">
+                                <?= e(ucfirst($other['primary_role'])) ?>
+                            </span>
                         </span>
                     </div>
                 </div>
