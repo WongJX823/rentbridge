@@ -11,16 +11,23 @@ foreach ($vars as $v) {
 }
 
 echo "\n--- CA cert file check ---\n";
+echo "running as: " . get_current_user() . " (uid=" . getmyuid() . ")\n";
 $ca = getenv('RB_DB_SSL_CA');
 if ($ca === false) {
     echo "RB_DB_SSL_CA not set, nothing to check\n";
 } elseif (!file_exists($ca)) {
     echo "$ca : DOES NOT EXIST\n";
 } else {
-    echo "$ca : exists, size=" . filesize($ca) . " bytes\n";
-    $fh = fopen($ca, 'r');
-    echo "first line: " . trim(fgets($fh)) . "\n";
-    fclose($fh);
+    echo "$ca : exists, size=" . filesize($ca) . " bytes, perms=" . substr(sprintf('%o', fileperms($ca)), -4) . "\n";
+    echo "is_readable: " . (is_readable($ca) ? 'yes' : 'NO') . "\n";
+    $contents = @file_get_contents($ca);
+    if ($contents === false) {
+        $err = error_get_last();
+        echo "file_get_contents FAILED: " . ($err['message'] ?? 'unknown error') . "\n";
+    } else {
+        $firstLine = strtok($contents, "\n");
+        echo "first line: " . trim($firstLine) . "\n";
+    }
 }
 
 echo "\n--- raw PDO connect attempt ---\n";
