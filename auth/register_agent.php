@@ -42,6 +42,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($password !== $confirm)
         $errors['password_confirm'] = 'Passwords do not match.';
 
+    if (empty($_POST['agree_terms']))
+        $errors['agree_terms'] = 'You must agree to the Terms & Conditions and Privacy Policy.';
+
     // DB uniqueness check
     if (empty($errors)) {
         try {
@@ -254,6 +257,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     <div class="invalid-feedback"><?= e($errors['password_confirm']) ?></div>
                                 <?php endif; ?>
                             </div>
+                        </div>
+
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input <?= isset($errors['agree_terms']) ? 'is-invalid' : '' ?>"
+                                   id="agreeTerms" name="agree_terms" value="1"
+                                   <?= !empty($_POST['agree_terms']) ? 'checked' : '' ?> required>
+                            <label class="form-check-label small" for="agreeTerms">
+                                I agree to RentBridge's <a href="../legal.php" target="_blank">Terms &amp; Conditions</a>
+                                and <a href="../privacy.php" target="_blank">Privacy Policy</a>.
+                                <span class="text-danger">*</span>
+                            </label>
+                            <?php if (isset($errors['agree_terms'])): ?>
+                                <div class="invalid-feedback d-block"><?= e($errors['agree_terms']) ?></div>
+                            <?php endif; ?>
                         </div>
 
                         <button type="submit" class="btn btn-success w-100">
