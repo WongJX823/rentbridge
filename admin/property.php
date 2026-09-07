@@ -129,23 +129,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
     try {
-        if ($action === 'approve' && $property['status'] === 'pending_approval') {
-            $stmt = $pdo->prepare("UPDATE properties SET status = 'available' WHERE id = ?");
-            $stmt->execute([$propertyId]);
-
-            notify(
-                (int)$property['landlord_id'],
-                'property_approved',
-                'Property listing approved',
-                'Your property "' . $property['title'] . '" is now live on RentBridge.',
-                '' . BASE_PATH . '/landlord/properties.php'
-            );
-
-            set_flash('success', 'Property approved and now visible to students.');
-            header('Location: ' . BASE_PATH . '/admin/property.php?id=' . $propertyId);
-            exit;
-        }
-
         if ($action === 'reject' && $property['status'] === 'pending_approval') {
             $reason = trim($_POST['reject_reason'] ?? '');
             if ($reason === '') {
@@ -180,6 +163,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $pdo->prepare("UPDATE properties SET status = 'available' WHERE id = ?");
             $stmt->execute([$propertyId]);
             set_flash('success', 'Property is visible again.');
+            header('Location: ' . BASE_PATH . '/admin/property.php?id=' . $propertyId);
+            exit;
+        }
+
+        if ($action === 'send_for_inspection'
+            && in_array($property['status'], ['available', 'reserved', 'rented'], true)
+            && empty($property['agent_verified_at'])) {
+            // Data that predates the agent-verification pipeline (or was force-set) can end up
+            // live without ever being inspected. This pulls it back into the normal pipeline —
+            // there's no other path back to 'pending_approval' from an already-live status.
+            $stmt = $pdo->prepare("
+                UPDATE properties
+                   SET status = 'pending_approval',
+                       assigned_agent_id = NULL,
+                       agent_status = NULL,
+                       agent_assigned_at = NULL,
+                       inspection_completed_at = NULL
+                 WHERE id = ?
+            ");
+            $stmt->execute([$propertyId]);
+
+            $assignResult = assign_agent_to_property($propertyId);
+
+            set_flash(
+                $assignResult['ok'] ? 'success' : 'warning',
+                $assignResult['ok']
+                    ? 'Property pulled from listings and sent for a real agent inspection.'
+                    : 'Property pulled from listings, but no agent is currently available — escalated to admin.'
+            );
             header('Location: ' . BASE_PATH . '/admin/property.php?id=' . $propertyId);
             exit;
         }
@@ -267,18 +279,11 @@ render_property_status_bar($property);
     <div class="bg-white border rounded-3 p-4 mb-4" style="border-left: 4px solid #D4A017 !important;">
         <h5 class="mb-3">Review this listing</h5>
         <p class="text-secondary small mb-3">
-            Verify the listing photos, address, and landlord details look legitimate before approving.
-            The agent's physical inspection will happen later at tenancy time.
+            This listing can only go live once the assigned agent completes a physical inspection —
+            admin cannot approve it directly. Reject it now if the photos, address, or landlord
+            details already look illegitimate; otherwise wait for the agent's inspection outcome.
         </p>
         <div class="d-flex gap-2 flex-wrap">
-            <form method="POST" class="d-inline">
-                <?= csrf_field() ?>
-                <input type="hidden" name="action" value="approve">
-                <button type="submit" class="btn btn-success"
-                        onclick="return confirm('Approve this listing? It will be visible to students.');">
-                    <i class="bi bi-check2-circle me-1"></i> Approve listing
-                </button>
-            </form>
             <button type="button" class="btn btn-outline-danger" data-bs-toggle="collapse" data-bs-target="#rejectForm">
                 <i class="bi bi-x-circle me-1"></i> Reject…
             </button>
@@ -297,6 +302,24 @@ render_property_status_bar($property);
         </div>
     </div>
 <?php elseif (in_array($property['status'], ['available','reserved','rented'], true)): ?>
+    <?php if (empty($property['agent_verified_at'])): ?>
+        <div class="bg-white border rounded-3 p-4 mb-4" style="border-left: 4px solid #dc3545 !important;">
+            <h5 class="mb-2 text-danger"><i class="bi bi-exclamation-triangle-fill me-1"></i> Live but never inspected</h5>
+            <p class="text-secondary small mb-3">
+                This listing is visible to students without ever having passed an agent's physical
+                inspection. Send it back into the pipeline so a real agent can verify it — it will
+                disappear from listings until they do.
+            </p>
+            <form method="POST" class="d-inline">
+                <?= csrf_field() ?>
+                <input type="hidden" name="action" value="send_for_inspection">
+                <button type="submit" class="btn btn-danger btn-sm"
+                        onclick="return confirm('Pull this property from listings and send it for a real agent inspection?');">
+                    <i class="bi bi-arrow-repeat me-1"></i> Send for inspection
+                </button>
+            </form>
+        </div>
+    <?php endif; ?>
     <div class="d-flex gap-2 mb-4 flex-wrap">
         <form method="POST" class="d-inline">
             <?= csrf_field() ?>

@@ -82,6 +82,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $perPersonEst = (float)$property['monthly_rent'] / (int)($old['housemates_needed'] + 1);
 
+require_once __DIR__ . '/../includes/academic_terms.php';
+$upcomingTerms = get_upcoming_single_terms();
+
+$semesterDateRanges = [];
+for ($n = 3; $n <= 6; $n++) {
+    if (count($upcomingTerms) >= $n) {
+        $rangeStart = $upcomingTerms[0]['start_date'];
+        $rangeEnd   = $upcomingTerms[$n - 1]['end_date'];
+        $semesterDateRanges[$n] = date('d M Y', strtotime($rangeStart)) . ' – ' . date('d M Y', strtotime($rangeEnd));
+    } else {
+        $semesterDateRanges[$n] = null;
+    }
+}
+$initialSemesterRange = $semesterDateRanges[(int)$old['semesters_needed']] ?? null;
+
 $pageTitle = 'Find Housemates';
 $activeNav = 'partners';
 
@@ -110,7 +125,7 @@ ob_start();
                 <label class="form-label fw-semibold">
                     How many more housemates do you need? <small class="text-danger">*</small>
                 </label>
-                <select name="housemates_needed" class="form-select">
+                <select name="housemates_needed" id="housematesSelect" class="form-select">
                     <?php for ($i = 1; $i <= 5; $i++): ?>
                         <option value="<?= $i ?>" <?= (int)$old['housemates_needed']===$i?'selected':'' ?>>
                             <?= $i ?> more <?= $i === 1 ? 'housemate' : 'housemates' ?>
@@ -119,7 +134,7 @@ ob_start();
                     <?php endfor; ?>
                 </select>
                 <small class="text-secondary">
-                    Per-person estimate: <strong>RM <?= number_format($perPersonEst) ?> / month</strong>
+                    Per-person estimate: <strong>RM <span id="perPersonEst"><?= number_format($perPersonEst) ?></span> / month</strong>
                 </small>
             </div>
 
@@ -127,7 +142,7 @@ ob_start();
                 <label class="form-label fw-semibold">
                     How many semesters do you plan to rent? <small class="text-danger">*</small>
                 </label>
-                <select name="semesters_needed"
+                <select name="semesters_needed" id="semestersSelect"
                         class="form-select <?= isset($errors['semesters_needed']) ? 'is-invalid' : '' ?>">
                     <?php for ($i = 3; $i <= 6; $i++): ?>
                         <option value="<?= $i ?>" <?= (int)$old['semesters_needed']===$i?'selected':'' ?>>
@@ -138,7 +153,12 @@ ob_start();
                 <?php if (isset($errors['semesters_needed'])): ?>
                     <div class="invalid-feedback"><?= e($errors['semesters_needed']) ?></div>
                 <?php endif; ?>
-                <small class="text-secondary">Minimum 3 semesters. 1 semester ≈ 4–5 months (UTeM academic calendar).</small>
+                <small class="text-secondary d-block">Minimum 3 semesters. 1 semester ≈ 4–5 months (UTeM academic calendar).</small>
+                <small class="text-secondary d-block" id="semesterDateHint">
+                    <?= $initialSemesterRange
+                        ? 'Estimated: <strong>' . e($initialSemesterRange) . '</strong> (based on the next upcoming semester).'
+                        : 'Exact dates aren\'t published yet for that many semesters ahead.' ?>
+                </small>
             </div>
 
             <div class="row g-3 mb-3">
@@ -219,6 +239,35 @@ ob_start();
         </div>
     </div>
 </div>
+
+<script>
+(function () {
+    const monthlyRent    = <?= (float)$property['monthly_rent'] ?>;
+    const semesterRanges = <?= json_encode($semesterDateRanges) ?>;
+
+    const housematesSelect = document.getElementById('housematesSelect');
+    const semestersSelect  = document.getElementById('semestersSelect');
+    const perPersonEl      = document.getElementById('perPersonEst');
+    const semesterHintEl   = document.getElementById('semesterDateHint');
+
+    function updatePerPerson() {
+        const needed = parseInt(housematesSelect.value, 10) || 1;
+        const perPerson = Math.round(monthlyRent / (needed + 1));
+        perPersonEl.textContent = perPerson.toLocaleString('en-MY');
+    }
+
+    function updateSemesterHint() {
+        const n = semestersSelect.value;
+        const range = semesterRanges[n];
+        semesterHintEl.innerHTML = range
+            ? 'Estimated: <strong>' + range + '</strong> (based on the next upcoming semester).'
+            : 'Exact dates aren\'t published yet for that many semesters ahead.';
+    }
+
+    housematesSelect.addEventListener('change', updatePerPerson);
+    semestersSelect.addEventListener('change', updateSemesterHint);
+})();
+</script>
 
 <?php
 $pageContent = ob_get_clean();
