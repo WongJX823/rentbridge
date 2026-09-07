@@ -337,6 +337,22 @@ ob_start();
                 </a>
                 <?php endif; endif; ?>
             </td></tr>
+            <tr><th class="text-secondary">Gender</th><td>
+                <?= match($student['gender'] ?? '') {
+                    'male'   => 'Male',
+                    'female' => 'Female',
+                    default  => '<span class="text-secondary">Prefer not to say</span>',
+                } ?>
+            </td></tr>
+            <tr><th class="text-secondary">Race</th><td>
+                <?= match($student['race'] ?? '') {
+                    'malay'   => 'Malay',
+                    'chinese' => 'Chinese',
+                    'indian'  => 'Indian',
+                    'others'  => 'Others',
+                    default   => '<span class="text-secondary">Prefer not to say</span>',
+                } ?>
+            </td></tr>
         </table>
     </div>
 
