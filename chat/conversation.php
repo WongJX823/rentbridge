@@ -38,6 +38,7 @@ if (!empty($convo['property_id'])) {
     $pdo = db();
     $stmt = $pdo->prepare("
         SELECT p.id, p.title, p.city, p.monthly_rent, p.property_type, p.landlord_id,
+               p.assigned_agent_id, p.agent_status,
                (SELECT image_path FROM property_images
                  WHERE property_id = p.id
                  ORDER BY is_primary DESC, id LIMIT 1) AS image_path
@@ -146,7 +147,25 @@ ob_start();
                 </div>
             </div>
         <?php elseif ($property): ?>
-            <a href="<?= BASE_PATH ?>/property.php?id=<?= (int)$property['id'] ?>"
+            <?php
+            // property.php is the public listing page and only shows
+            // status='available' properties — a landlord or agent viewing
+            // their own pending/inspecting listing there gets a 404. Route
+            // each to their own management page instead (same authorization
+            // rule agent/property_review.php itself enforces), and fall back
+            // to the public page for everyone else.
+            if ($currentRole === 'landlord' && (int)$property['landlord_id'] === $userId) {
+                $propertyLink = BASE_PATH . '/landlord/property.php?id=' . (int)$property['id'];
+            } elseif ($currentRole === 'agent'
+                   && ((int)($property['assigned_agent_id'] ?? 0) === $userId
+                       || ($property['agent_status'] ?? '') === 'accepted')
+            ) {
+                $propertyLink = BASE_PATH . '/agent/property_review.php?id=' . (int)$property['id'];
+            } else {
+                $propertyLink = BASE_PATH . '/property.php?id=' . (int)$property['id'];
+            }
+            ?>
+            <a href="<?= $propertyLink ?>"
                class="d-flex gap-3 align-items-start text-decoration-none text-dark">
                 <div style="width:60px; height:60px; border-radius:8px; overflow:hidden; flex-shrink:0;
                             background: linear-gradient(135deg,#E6ECF4,#E4F2EA);">
