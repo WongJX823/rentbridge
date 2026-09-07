@@ -5,4 +5,4 @@
 # this works the same whether R2 is configured or not.
 RewriteEngine On
 RewriteCond %{REQUEST_FILENAME} !-f
-RewriteRule ^(.*)$ RB_R2_PUBLIC_URL_PLACEHOLDER/uploads/properties/$1 [R=302,L]
+RewriteRule ^(.*)$ https://pub-d1e3932ca6864c7792937da039167eac.r2.dev/uploads/properties/$1 [R=302,L]

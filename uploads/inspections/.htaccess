@@ -4,4 +4,4 @@
 # not.
 RewriteEngine On
 RewriteCond %{REQUEST_FILENAME} !-f
-RewriteRule ^(.*)$ RB_R2_PUBLIC_URL_PLACEHOLDER/uploads/inspections/$1 [R=302,L]
+RewriteRule ^(.*)$ https://pub-d1e3932ca6864c7792937da039167eac.r2.dev/uploads/inspections/$1 [R=302,L]
