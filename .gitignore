@@ -9,7 +9,6 @@ credentials.json
 # Local API keys / credentials
 config/openai.php
 config/google.php
-config/storage.php
 includes/mail_config.php
 appPassword.txt
 
