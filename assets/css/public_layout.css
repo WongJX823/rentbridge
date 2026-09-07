@@ -22,3 +22,11 @@
 }
 .public-tab:hover  { color: #0F2C52; }
 .public-tab.active { color: #2E8B57; border-bottom-color: #2E8B57; }
+
+/* ---- Topbar auth buttons ---- */
+/* Force Log in / Register to share the same pill size — btn-outline-secondary
+   doesn't get the custom padding that style.css applies to btn-primary,
+   so it was rendering smaller than the Log in button next to it. */
+.topbar-right .btn {
+    padding: 0.55rem 1.4rem;
+}
