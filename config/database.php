@@ -46,6 +46,12 @@ function db(): PDO {
             );
         } catch (PDOException $e) {
             error_log('Database connection failed: ' . $e->getMessage());
+            // 503 (not the default 200) so uptime monitors and browsers see
+            // this as actually down, not a normal page — a DB outage
+            // previously returned HTTP 200 on the "something went wrong"
+            // text, which any status-code-based monitor would have missed.
+            http_response_code(503);
+            header('Retry-After: 60');
             // RB_DEBUG=1 shows the real error for local troubleshooting; production
             // (RB_DEBUG unset) shows a generic message instead of DB/host details.
             die(getenv('RB_DEBUG') ? 'Database connection failed: ' . $e->getMessage()
