@@ -3,6 +3,7 @@ ini_set('error_log', __DIR__ . '/../debug.log');
 ini_set('log_errors', '1');
 ini_set('display_errors', '0');
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/academic_terms.php';
 require_role('agent');
 
 header('Content-Type: application/json');
@@ -109,14 +110,13 @@ try {
             exit;
         }
 
-        $startDt = new DateTime($startDate);
-        $endDt   = (clone $startDt)->modify('+' . $termMonths . ' months');
+        $resolved = resolve_term_end_date($startDate, $termMonths);
         $agentTerms = [
             'monthly_rent' => $monthlyRent,
             'deposit'      => $deposit,
             'term_months'  => $termMonths,
             'start_date'   => $startDate,
-            'end_date'     => $endDt->format('Y-m-d'),
+            'end_date'     => $resolved['end_date'],
             'notes'        => $notes,
         ];
     }

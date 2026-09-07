@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/academic_terms.php';
 require_login();  // any logged-in user; we verify role-specific access below
 $userRole = current_role();
 if (!in_array($userRole, ['landlord', 'student'], true)) {
@@ -121,23 +122,18 @@ foreach ($coNames as $i => $name) {
     $coTenants[] = ['name' => $name, 'ic' => $ic];
 }
 
-// Compute end_date from start_date + termMonths
+// Compute end_date the same way everywhere: chain real academic_terms rows
+// when termMonths is a standard semester-aligned length, otherwise fall back
+// to calendar-month arithmetic (see includes/academic_terms.php).
 try {
-    $startDt = new DateTime($startDate);
-    $endDt   = (clone $startDt)->modify('+' . $termMonths . ' months');
-    $endDate = $endDt->format('Y-m-d');
+    new DateTime($startDate); // validates the date is parseable
+    $endDate = resolve_term_end_date($startDate, $termMonths)['end_date'];
 } catch (Exception $e) {
     echo json_encode(['ok' => false, 'error' => 'Invalid start date']);
     exit;
 }
 
-// Map term_months to duration_type
-$durationType = match(true) {
-    $termMonths === 4 || $termMonths === 5  => '1_semester',
-    $termMonths === 8 || $termMonths === 10 => '2_semesters',
-    $termMonths === 12                       => '1_year',
-    default                                  => 'custom',
-};
+$durationType = term_months_to_duration_type($termMonths);
 
 try {
     $pdo->beginTransaction();

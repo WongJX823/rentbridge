@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/academic_terms.php';
 require_role('student');
 
 $pdo    = db();
@@ -150,21 +151,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadySubmitted) {
 
     if (empty($errors)) {
         try {
-            $startDt = new DateTime($startDate);
-            $endDt   = (clone $startDt)->modify('+' . $termMonths . ' months');
-            $endDate = $endDt->format('Y-m-d');
+            new DateTime($startDate); // validates the date is parseable
+            $endDate = resolve_term_end_date($startDate, $termMonths)['end_date'];
         } catch (Exception) {
             $errors['start_date'] = 'Invalid start date in form.';
         }
     }
 
     if (empty($errors)) {
-        $durationType = match(true) {
-            $termMonths <= 5   => '1_semester',
-            $termMonths <= 10  => '2_semesters',
-            $termMonths === 12 => '1_year',
-            default            => 'custom',
-        };
+        $durationType = term_months_to_duration_type($termMonths);
 
         try {
             $pdo->beginTransaction();
