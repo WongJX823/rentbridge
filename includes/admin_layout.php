@@ -256,7 +256,10 @@ $pageContent   = $pageContent   ?? '';
         }
         updateTooltip();
     }
-    if (localStorage.getItem('rb-admin-sidebar') === 'collapsed') {
+    const savedSidebarPref = localStorage.getItem('rb-admin-sidebar');
+    const startsCollapsed = savedSidebarPref === 'collapsed'
+        || (savedSidebarPref === null && window.matchMedia('(max-width: 768px)').matches);
+    if (startsCollapsed) {
         body.classList.add('sidebar-collapsed');
     }
     updateTooltip();

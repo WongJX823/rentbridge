@@ -175,7 +175,10 @@ $pageTabs  = $pageTabs  ?? [];
         }
         updateTooltip();
     }
-    if (localStorage.getItem('rb-user-sidebar') === 'collapsed') {
+    const savedSidebarPref = localStorage.getItem('rb-user-sidebar');
+    const startsCollapsed = savedSidebarPref === 'collapsed'
+        || (savedSidebarPref === null && window.matchMedia('(max-width: 768px)').matches);
+    if (startsCollapsed) {
         body.classList.add('sidebar-collapsed');
     }
     updateTooltip();

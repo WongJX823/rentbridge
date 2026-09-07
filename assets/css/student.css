@@ -708,6 +708,11 @@ body.sidebar-collapsed .sidebar-edge-btn .bi-chevron-left  { display: none; }
     .user-content { padding: 16px; }
     .user-tabbar { padding: 0 16px; }
     .sidebar-edge-btn { display: none; }
+
+    /* Log in / Register / Dashboard don't fit next to the brand at phone
+       widths and force horizontal scroll — the same actions are already
+       reachable via the hamburger → sidebar, so hide the duplicates. */
+    .topbar-right .btn { display: none; }
 }
 
 .existing-photo-card {
