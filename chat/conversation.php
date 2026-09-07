@@ -975,8 +975,7 @@ if (
 
                 <div id="isr_confirm_section">
                     <label class="form-label fw-semibold">Confirmed date/time <small class="text-danger">*</small></label>
-                    <input type="text" name="slot_picked" class="form-control mb-3"
-                           placeholder="e.g. Monday 23 Jun 2026, 10:00 AM" required>
+                    <input type="datetime-local" name="slot_picked" id="isr_slot_picked" class="form-control mb-3" required>
 
                     <label class="form-label fw-semibold">Access method <small class="text-danger">*</small></label>
                     <select name="access_method" class="form-select mb-2" id="isr_access_method" required>
@@ -1519,6 +1518,11 @@ if (
         document.getElementById('isr_conv_id').value    = btn.dataset.convId || '';
         document.getElementById('isr_form_msg_id').value = btn.dataset.formMsgId || '';
         document.getElementById('isr_slots').textContent = btn.dataset.slots || '';
+        const slotPickedInput = document.getElementById('isr_slot_picked');
+        slotPickedInput.value = '';
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        slotPickedInput.min = now.toISOString().slice(0, 16);
         document.getElementById('isrError').classList.add('d-none');
         document.getElementById('isr_reschedule_section').classList.add('d-none');
         document.getElementById('isr_confirm_section').classList.remove('d-none');

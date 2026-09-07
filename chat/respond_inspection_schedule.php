@@ -56,7 +56,7 @@ $propTitle  = $meta['property_title'] ?? "property #{$propertyId}";
 
 if ($decision === 'confirm') {
     if ($slotPicked === '') {
-        echo json_encode(['ok' => false, 'error' => 'Please enter the confirmed date/time.']);
+        echo json_encode(['ok' => false, 'error' => 'Please choose the confirmed date/time.']);
         exit;
     }
     if (!in_array($accessMethod, ['landlord_present', 'lockbox_code', 'other'], true)) {
@@ -68,11 +68,23 @@ if ($decision === 'confirm') {
         exit;
     }
 
+    // The <input type="datetime-local"> sends "Y-m-dTH:i" in the browser's
+    // local time zone. Parse it strictly rather than trusting it verbatim —
+    // inspection_scheduled_at is a real DATETIME column.
+    $slotDt = DateTime::createFromFormat('Y-m-d\TH:i', $slotPicked)
+        ?: DateTime::createFromFormat('Y-m-d\TH:i:s', $slotPicked);
+    if (!$slotDt) {
+        echo json_encode(['ok' => false, 'error' => 'That date/time is not valid.']);
+        exit;
+    }
+    $scheduledAt = $slotDt->format('Y-m-d H:i:s');
+    $slotLabel   = $slotDt->format('D, j M Y, g:i A');
+
     $payload = json_encode([
         'source_form_id'  => $formMsgId,
         'property_id'     => $propertyId,
         'property_title'  => $propTitle,
-        'slot_confirmed'  => $slotPicked,
+        'slot_confirmed'  => $slotLabel,
         'access_method'   => $accessMethod,
         'access_detail'   => $accessDetail,
         'consent_given'   => true,
@@ -84,8 +96,8 @@ if ($decision === 'confirm') {
         'other'            => 'other arrangement',
         default            => $accessMethod,
     };
-    $noticeBody = "Inspection confirmed: {$slotPicked}, access: {$methodLabel}.";
-    $bodyText   = "Inspection confirmed for {$slotPicked} (access: {$methodLabel})";
+    $noticeBody = "Inspection confirmed: {$slotLabel}, access: {$methodLabel}.";
+    $bodyText   = "Inspection confirmed for {$slotLabel} (access: {$methodLabel})";
 
     try {
         $pdo->beginTransaction();
@@ -97,7 +109,7 @@ if ($decision === 'confirm') {
                    inspection_access_method = ?,
                    inspection_access_detail = ?
              WHERE id = ?
-        ")->execute([$slotPicked, $accessMethod, $accessDetail, $propertyId]);
+        ")->execute([$scheduledAt, $accessMethod, $accessDetail, $propertyId]);
 
         // Post the response message
         $pdo->prepare("
@@ -120,7 +132,7 @@ if ($decision === 'confirm') {
                 $agentId,
                 'inspection_confirmed',
                 'Inspection time confirmed',
-                "The landlord confirmed the inspection for \"{$propTitle}\" on {$slotPicked}.",
+                "The landlord confirmed the inspection for \"{$propTitle}\" on {$slotLabel}.",
                 "" . BASE_PATH . "/chat/conversation.php?id={$convId}"
             );
         }
