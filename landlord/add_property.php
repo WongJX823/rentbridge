@@ -3,6 +3,7 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/uploads.php';
 require_once __DIR__ . '/../includes/gender.php';
 require_once __DIR__ . '/../includes/race.php';
+require_once __DIR__ . '/../includes/pricing.php';
 require_role('landlord');
 
 $pdo = db();
@@ -87,11 +88,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     foreach (array_keys($old) as $f) {
+        if ($f === 'race_preference') continue; // posts as an array of checkboxes
         $old[$f] = trim($_POST[$f] ?? '');
     }
     $old['state'] = 'Melaka';
     $old['gender_preference'] = rb_gender_norm($old['gender_preference']);
-    $old['race_preference']   = rb_race_norm($old['race_preference']);
+    $old['race_preference']   = rb_race_norm($_POST['race_preference'] ?? []);
 
     // Validate
     if ($old['title'] === '')        $errors['title'] = 'Title is required.';
@@ -558,28 +560,15 @@ ob_start();
             </div>
             <div class="col-md-6">
                 <label class="form-label fw-semibold">Preferred tenant race</label>
-                <select name="race_preference" class="form-select">
-                    <?php foreach (rb_race_options() as $rv => $rlabel): ?>
-                        <option value="<?= $rv ?>" <?= $old['race_preference'] === $rv ? 'selected' : '' ?>>
-                            <?= e($rlabel) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-                <small class="text-secondary">Choose "Any" for no restriction.</small>
+                <?php rb_race_checkboxes_field('race_preference', $old['race_preference']); ?>
+                <small class="text-secondary">Leave all unchecked for no restriction. Select more than one to allow any of them.</small>
             </div>
         </div>
 
         <div class="mb-3 mt-3">
             <label class="form-label fw-semibold">Facilities</label>
-            <textarea name="facilities" rows="3" class="form-control"
-                      placeholder="WiFi, aircond, washing machine, parking, etc."><?= e($old['facilities']) ?></textarea>
-            <small class="text-secondary">
-            List one per line or comma-separated. Common items recognized:
-            <code>wifi</code>, <code>aircond</code>, <code>parking</code>, <code>washing machine</code>, 
-            <code>fridge</code>, <code>kitchen</code>, <code>attached bath</code>, <code>balcony</code>, 
-            <code>security</code>, <code>gym</code>, <code>pool</code>, <code>cctv</code>, <code>tv</code>.
-            </small>
-        </div>  
+            <?php rb_facilities_field('facilities', $old['facilities']); ?>
+        </div>
 
         <div>
             <label class="form-label fw-semibold">

@@ -52,7 +52,7 @@ if ($genderMatch && $myGender) {
     $params[] = $myGender;
 }
 if ($raceMatch && $myRace) {
-    $where .= " AND (p.race_preference = 'any' OR p.race_preference = ?)";
+    $where .= " AND (p.race_preference = '' OR FIND_IN_SET(?, p.race_preference))";
     $params[] = $myRace;
 }
 

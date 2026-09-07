@@ -52,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $old['housemates_needed'] = (int)($_POST['housemates_needed'] ?? 1);
     $old['semesters_needed']  = (int)($_POST['semesters_needed'] ?? 3);
     $old['gender_preference'] = rb_gender_norm($_POST['gender_preference'] ?? 'any');
-    $old['race_preference']   = rb_race_norm($_POST['race_preference'] ?? 'any');
+    $old['race_preference']   = rb_race_norm($_POST['race_preference'] ?? []);
 
     if ($old['message'] === '') {
         $errors['message'] = 'Tell others why they should join you.';
@@ -155,14 +155,8 @@ ob_start();
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">Preferred housemate race</label>
-                    <select name="race_preference" class="form-select">
-                        <?php foreach (rb_race_options() as $rv => $rlabel): ?>
-                            <option value="<?= $rv ?>" <?= ($old['race_preference'] ?? 'any') === $rv ? 'selected' : '' ?>>
-                                <?= e($rlabel) ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                    <small class="text-secondary">Choose "Any" for no preference.</small>
+                    <?php rb_race_checkboxes_field('race_preference', $old['race_preference'] ?? ''); ?>
+                    <small class="text-secondary">Leave all unchecked for no preference. Select more than one to allow any of them.</small>
                 </div>
             </div>
 

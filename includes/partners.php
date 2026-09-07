@@ -16,8 +16,7 @@ function post_matches_identity(array $viewer, array $post): bool {
     if ($pg !== 'any' && !empty($viewer['gender']) && $pg !== $viewer['gender']) {
         return false;
     }
-    $pr = $post['race_preference'] ?? 'any';
-    if ($pr !== 'any' && !empty($viewer['race']) && $pr !== $viewer['race']) {
+    if (!rb_race_matches($post['race_preference'] ?? '', $viewer['race'] ?? null)) {
         return false;
     }
     return true;
@@ -189,7 +188,7 @@ function list_co_tenancy_posts(int $viewerId, array $filters = []): array {
     }
     // Race-match: hide posts the viewer isn't eligible for (viewer race must be set).
     if (!empty($filters['race_match']) && !empty($viewer['race'])) {
-        $where .= " AND (ctp.race_preference = 'any' OR ctp.race_preference = ?)";
+        $where .= " AND (ctp.race_preference = '' OR FIND_IN_SET(?, ctp.race_preference))";
         $params[] = $viewer['race'];
     }
 
@@ -225,9 +224,8 @@ function list_co_tenancy_posts(int $viewerId, array $filters = []): array {
             // Viewer's gender/race doesn't meet this post's restriction.
             $bits = [];
             $pg = $post['gender_preference'] ?? 'any';
-            $pr = $post['race_preference'] ?? 'any';
             if ($pg !== 'any' && !empty($viewer['gender']) && $pg !== $viewer['gender']) $bits[] = 'gender';
-            if ($pr !== 'any' && !empty($viewer['race'])   && $pr !== $viewer['race'])   $bits[] = 'race';
+            if (!rb_race_matches($post['race_preference'] ?? '', $viewer['race'] ?? null)) $bits[] = 'race';
             $post['compatibility'] = [
                 'label'       => 'Not eligible',
                 'color'       => 'secondary',

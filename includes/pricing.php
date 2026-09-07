@@ -101,6 +101,82 @@ function score_amenities(?string $facilitiesText): array {
     return ['premium' => $premium, 'matched' => $matched];
 }
 
+/** Canonical facility labels offered as toggle buttons (mirrors AMENITY_PREMIUMS keywords). */
+function rb_facility_options(): array
+{
+    return [
+        'WiFi', 'Aircond', 'Washing machine', 'Kitchen', 'Fridge', 'Parking',
+        'Gym', 'Swimming pool', 'Security', 'CCTV', 'Attached bath', 'Balcony',
+        'Garden', 'TV',
+    ];
+}
+
+/**
+ * Render a button-toggle facility picker + an "Others" free-text field for
+ * anything not in the canonical list, backed by a hidden textarea so the
+ * field still posts under $name as one comma-separated string — same shape
+ * consumed by score_amenities() and every facilities display elsewhere.
+ * Existing live-pricing JS that listens for `input` on
+ * `textarea[name="$name"]` keeps working unchanged since the hidden textarea
+ * dispatches that same event on every toggle.
+ */
+function rb_facilities_field(string $name, string $value): void
+{
+    $options  = rb_facility_options();
+    $existing = array_filter(array_map('trim', explode(',', $value)), fn($v) => $v !== '');
+    $active   = [];
+    $others   = [];
+    foreach ($existing as $item) {
+        $match = null;
+        foreach ($options as $opt) {
+            if (strcasecmp($opt, $item) === 0) { $match = $opt; break; }
+        }
+        if ($match !== null) {
+            $active[$match] = true;
+        } else {
+            $others[] = $item;
+        }
+    }
+    $othersValue = implode(', ', $others);
+    $uid = 'facilities_' . substr(md5($name), 0, 6);
+    ?>
+    <div class="d-flex flex-wrap gap-2 mb-2" id="<?= $uid ?>_buttons">
+        <?php foreach ($options as $opt): ?>
+            <button type="button"
+                    class="btn btn-sm <?= isset($active[$opt]) ? 'btn-primary active-facility' : 'btn-outline-secondary' ?> rb-facility-btn"
+                    data-facility="<?= e($opt) ?>"><?= e($opt) ?></button>
+        <?php endforeach; ?>
+    </div>
+    <input type="text" class="form-control form-control-sm" id="<?= $uid ?>_others"
+           placeholder="Other facilities (comma-separated)" value="<?= e($othersValue) ?>">
+    <textarea name="<?= e($name) ?>" id="<?= $uid ?>_hidden" class="d-none"><?= e($value) ?></textarea>
+    <small class="text-secondary d-block mt-1">Click to toggle, or list anything else in "Other facilities".</small>
+    <script>
+    (function() {
+        const wrap   = document.getElementById('<?= $uid ?>_buttons');
+        const others = document.getElementById('<?= $uid ?>_others');
+        const hidden = document.getElementById('<?= $uid ?>_hidden');
+        function sync() {
+            const active = Array.from(wrap.querySelectorAll('.rb-facility-btn.active-facility'))
+                .map(function(b) { return b.dataset.facility; });
+            const extra = others.value.split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+            hidden.value = active.concat(extra).join(', ');
+            hidden.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        wrap.querySelectorAll('.rb-facility-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                this.classList.toggle('active-facility');
+                this.classList.toggle('btn-primary');
+                this.classList.toggle('btn-outline-secondary');
+                sync();
+            });
+        });
+        others.addEventListener('input', sync);
+    })();
+    </script>
+    <?php
+}
+
 /**
  * Furnishing premium per month (RM).
  */
