@@ -6,7 +6,11 @@
 # PDFs, signatures, and documents to uploads/ at runtime. Render's default
 # disk is EPHEMERAL — anything written there is lost on every redeploy and
 # on every restart (including free-tier spin-down after inactivity). This
-# blueprint does not attach a persistent disk. See docker/README.md.
+# blueprint does not attach a persistent disk; instead uploads/ is backed by
+# Cloudflare R2 (see the RB_R2_* vars below and includes/storage.php) — set
+# those and uploads survive restarts. Leaving them unset makes the app fall
+# back to the ephemeral local disk (fine for a quick test deploy, not for
+# real use). See docker/README.md.
 services:
   - type: web
     name: rentbridge
@@ -56,3 +60,17 @@ services:
         sync: false
       - key: OPENAI_MODEL
         value: gpt-4o
+      - key: RB_R2_ACCOUNT_ID
+        sync: false
+      - key: RB_R2_ACCESS_KEY
+        sync: false
+      - key: RB_R2_SECRET_KEY
+        sync: false
+      - key: RB_R2_BUCKET
+        sync: false
+      - key: RB_R2_PUBLIC_URL
+        # The bucket's public base URL (R2's own r2.dev subdomain, or a
+        # custom domain attached to it). Not a secret — safe as a plain
+        # value — but there's nothing to default it to until the bucket
+        # exists, so it's left for the dashboard like the others above.
+        sync: false

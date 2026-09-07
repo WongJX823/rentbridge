@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/storage.php';
 require_role('landlord');
 
 header('Content-Type: application/json');
@@ -62,12 +63,9 @@ try {
 
     $pdo->commit();
 
-    // Delete file from disk (skip placeholder)
+    // Delete file from storage (skip placeholder)
     if ($img['image_path'] !== 'uploads/properties/placeholder.jpg') {
-        $absPath = __DIR__ . '/../' . $img['image_path'];
-        if (file_exists($absPath)) {
-            @unlink($absPath);
-        }
+        rb_storage_delete($img['image_path']);
     }
 
     echo json_encode(['ok' => true]);

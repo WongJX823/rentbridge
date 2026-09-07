@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/storage.php';
 require_once __DIR__ . '/../includes/agent_assignment.php';
 require_role('agent');
 
@@ -85,13 +86,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 $ext      = ['image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp'][$mime];
                 $filename = 'reject_' . $propertyId . '_' . $agentId . '_' . time() . '.' . $ext;
-                $dest     = __DIR__ . '/../uploads/property_docs/' . $filename;
-                if (!move_uploaded_file($file['tmp_name'], $dest)) {
+                $evidencePath = 'uploads/property_docs/' . $filename;
+                if (!rb_storage_put_file($file['tmp_name'], $evidencePath)) {
                     set_flash('danger', 'Failed to save evidence photo.');
                     header('Location: ' . BASE_PATH . '/agent/property_review.php?id=' . $propertyId);
                     exit;
                 }
-                $evidencePath = 'uploads/property_docs/' . $filename;
             }
 
             $result = agent_reject_listing($propertyId, $agentId, $reason, $evidencePath);

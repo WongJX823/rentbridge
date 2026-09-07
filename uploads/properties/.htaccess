@@ -1,0 +1,8 @@
+# Property photos are public. Locally-checked-in fixtures (placeholder.jpg,
+# img1-5.png, etc.) exist on disk and are served normally below. Anything
+# genuinely uploaded at runtime lives in R2 instead (Render's disk is
+# ephemeral) — redirect to it only when the file isn't present locally, so
+# this works the same whether R2 is configured or not.
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^(.*)$ RB_R2_PUBLIC_URL_PLACEHOLDER/uploads/properties/$1 [R=302,L]

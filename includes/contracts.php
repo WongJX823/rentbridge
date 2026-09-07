@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/storage.php';
 
 /* ============================================================
  *  Contract helpers
@@ -347,20 +348,11 @@ function save_signature_image(string $dataUrl, int $contractId, string $role): s
         throw new RuntimeException('Signature image too large (>2 MB).');
     }
 
-    // Ensure target folder exists (auto-create if missing)
-    $absDir = __DIR__ . '/../uploads/signatures';
-    if (!is_dir($absDir)) {
-        if (!mkdir($absDir, 0755, true) && !is_dir($absDir)) {
-            throw new RuntimeException('Failed to create signatures directory.');
-        }
-    }
-
     // Filename: sig_{contract}_{role}_{uniq}.png
     $filename = sprintf('sig_%d_%s_%s.png', $contractId, $role, bin2hex(random_bytes(4)));
     $relPath  = 'uploads/signatures/' . $filename;
-    $absPath  = __DIR__ . '/../' . $relPath;
 
-    if (file_put_contents($absPath, $binary) === false) {
+    if (!rb_storage_put_contents($binary, $relPath)) {
         throw new RuntimeException('Failed to save signature file.');
     }
 
@@ -884,13 +876,12 @@ function rb_render_agreement_pdf(string $html, string $contractCode, string $sub
         $mpdf->SetHTMLFooter('<div style="text-align: center; font-size: 8pt; color: #999;">Page {PAGENO} of {nbpg} · ' . htmlspecialchars($contractCode) . '</div>');
         $mpdf->WriteHTML($html);
 
-        $absDir = __DIR__ . '/../uploads/' . $subDir;
-        if (!is_dir($absDir) && !mkdir($absDir, 0755, true) && !is_dir($absDir)) {
-            throw new RuntimeException('Could not create output directory: ' . $absDir);
-        }
         $filename = $contractCode . '_' . time() . '.pdf';
         $relPath  = 'uploads/' . $subDir . '/' . $filename;
-        $mpdf->Output(__DIR__ . '/../' . $relPath, \Mpdf\Output\Destination::FILE);
+        $pdfBytes = $mpdf->Output('', \Mpdf\Output\Destination::STRING_RETURN);
+        if (!rb_storage_put_contents($pdfBytes, $relPath)) {
+            throw new RuntimeException('Could not save the rendered PDF.');
+        }
         return $relPath;
     } catch (Throwable $e) {
         error_log('Agreement PDF render failed: ' . $e->getMessage());
@@ -942,13 +933,11 @@ function generate_contract_pdf(int $contractId): ?string {
     $ctStmt->execute([(int)$c['tenancy_id']]);
     $coTenants = $ctStmt->fetchAll();
 
-    $base = realpath(__DIR__ . '/..') . '/';
-
-    // Helper: resolve a stored relative path to an absolute file path mPDF can read.
-    $absSig = function (?string $rel) use ($base): ?string {
+    // Helper: resolve a stored signature path to a data: URI mPDF can embed
+    // directly — works whether the file lives on local disk or in R2.
+    $absSig = function (?string $rel): ?string {
         if (empty($rel)) return null;
-        $abs = $base . ltrim($rel, '/');
-        return file_exists($abs) ? $abs : null;
+        return rb_storage_data_uri($rel, 'image/png');
     };
 
     // === Build the same data structure rb_agreement_html() expects ===
@@ -1027,14 +1016,10 @@ function generate_contract_pdf(int $contractId): ?string {
         $mpdf->SetHTMLFooter('<div style="text-align: center; font-size: 8pt; color: #999;">Page {PAGENO} of {nbpg} · ' . htmlspecialchars($c['contract_code']) . '</div>');
         $mpdf->WriteHTML($html);
 
-        $absDir = __DIR__ . '/../uploads/contracts';
-        if (!is_dir($absDir) && !mkdir($absDir, 0755, true) && !is_dir($absDir)) return null;
-
         $filename = $c['contract_code'] . '.pdf';
         $relPath  = 'uploads/contracts/' . $filename;
-        $absPath  = __DIR__ . '/../' . $relPath;
-
-        $mpdf->Output($absPath, \Mpdf\Output\Destination::FILE);
+        $pdfBytes = $mpdf->Output('', \Mpdf\Output\Destination::STRING_RETURN);
+        if (!rb_storage_put_contents($pdfBytes, $relPath)) return null;
 
         $pdo->prepare('UPDATE contracts SET contract_pdf_path = ? WHERE id = ?')
             ->execute([$relPath, $contractId]);

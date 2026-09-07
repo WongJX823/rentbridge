@@ -375,7 +375,7 @@ $documents = get_property_documents($propertyId);
             $icon = strpos($d['mime_type'], 'pdf') !== false ? 'bi-file-pdf' : 'bi-file-image';
         ?>
             <div class="col-md-6">
-                <a href="<?= BASE_PATH ?>/<?= e($d['file_path']) ?>" target="_blank"
+                <a href="<?= BASE_PATH ?>/documents/property_doc.php?id=<?= (int)$d['id'] ?>" target="_blank"
                    class="d-flex gap-2 align-items-center p-3 border rounded-3 text-decoration-none text-dark"
                    style="transition: background 0.1s;"
                    onmouseover="this.style.background='#FAF8F3'"

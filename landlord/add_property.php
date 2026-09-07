@@ -265,17 +265,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     // Save under uploads/properties/N_TIMESTAMP_RAND.ext
                     $newName = $propertyId . '_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
-                    $dest = __DIR__ . '/../uploads/properties/' . $newName;
-                    if (!is_dir(__DIR__ . '/../uploads/properties')) {
-                        mkdir(__DIR__ . '/../uploads/properties', 0755, true);
-                    }
-                    if (move_uploaded_file($tmpName, $dest)) {
+                    $relPath = 'uploads/properties/' . $newName;
+                    if (rb_storage_put_file($tmpName, $relPath)) {
                         $isPrimary = $i === 0 && !$isEdit ? 1 : 0;
                         $stmt = $pdo->prepare("
                             INSERT INTO property_images (property_id, image_path, is_primary)
                             VALUES (?, ?, ?)
                         ");
-                        $stmt->execute([$propertyId, 'uploads/properties/' . $newName, $isPrimary]);
+                        $stmt->execute([$propertyId, $relPath, $isPrimary]);
                     }
                 }
             }

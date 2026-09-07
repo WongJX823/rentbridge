@@ -175,10 +175,13 @@ try {
     if (!$relativePath) {
         throw new RuntimeException('Failed to render the contract PDF.');
     }
-    $absolutePath = __DIR__ . '/../' . $relativePath;
+    $pdfBytes = rb_storage_get_contents($relativePath);
+    if ($pdfBytes === null) {
+        throw new RuntimeException('Rendered PDF could not be read back.');
+    }
 
     // Hash for integrity
-    $docHash = hash_file('sha256', $absolutePath);
+    $docHash = hash('sha256', $pdfBytes);
 
     // Update contract record
     $stmt = $pdo->prepare("
@@ -216,8 +219,8 @@ try {
     // Stream the PDF to the agent for download
     header('Content-Type: application/pdf');
     header('Content-Disposition: attachment; filename="' . $contractCode . '.pdf"');
-    header('Content-Length: ' . filesize($absolutePath));
-    readfile($absolutePath);
+    header('Content-Length: ' . strlen($pdfBytes));
+    echo $pdfBytes;
     exit;
 
 } catch (Throwable $e) {

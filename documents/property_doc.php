@@ -30,15 +30,15 @@ if (!can_view_property_documents((int)$doc['property_id'], current_user_id(), cu
     die('You are not authorized to view this document.');
 }
 
-$absolutePath = __DIR__ . '/../' . $doc['file_path'];
-if (!is_file($absolutePath)) {
+$bytes = rb_storage_get_contents($doc['file_path']);
+if ($bytes === null) {
     http_response_code(404);
     die('File missing on disk.');
 }
 
-$mime = $doc['mime_type'] ?: (new finfo(FILEINFO_MIME_TYPE))->file($absolutePath);
+$mime = $doc['mime_type'] ?: (new finfo(FILEINFO_MIME_TYPE))->buffer($bytes);
 header('Content-Type: ' . $mime);
 header('Content-Disposition: inline; filename="' . basename($doc['original_name'] ?: $doc['file_path']) . '"');
-header('Content-Length: ' . filesize($absolutePath));
+header('Content-Length: ' . strlen($bytes));
 header('X-Content-Type-Options: nosniff');
-readfile($absolutePath);
+echo $bytes;

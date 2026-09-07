@@ -3,6 +3,7 @@
  * File upload helpers
  * Centralizes validation + safe filename generation.
  */
+require_once __DIR__ . '/storage.php';
 
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_UPLOAD_BYTES    = 5 * 1024 * 1024;  // 5 MB
@@ -46,17 +47,8 @@ function save_property_image(array $file): string {
 
     $filename = uniqid('prop_', true) . '.' . $ext;
     $relPath  = 'uploads/properties/' . $filename;
-    $absPath  = __DIR__ . '/../' . $relPath;
-    $absDir   = dirname($absPath);
 
-    // Ensure target folder exists (create recursively if missing)
-    if (!is_dir($absDir)) {
-        if (!mkdir($absDir, 0755, true) && !is_dir($absDir)) {
-            throw new RuntimeException('Failed to create upload directory: ' . $absDir);
-        }
-    }
-
-    if (!move_uploaded_file($file['tmp_name'], $absPath)) {
+    if (!rb_storage_put_file($file['tmp_name'], $relPath)) {
         throw new RuntimeException('Failed to save uploaded file.');
     }
 
@@ -68,24 +60,19 @@ function save_property_image(array $file): string {
  * Returns the relative path (e.g. uploads/inspections/insp_abc123.jpg)
  */
 function save_inspection_photo(array $file): string {
-    $dir = __DIR__ . '/../uploads/inspections';
-    if (!is_dir($dir)) {
-        mkdir($dir, 0775, true);
-    }
-
     $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
     if (!in_array($ext, ['jpg','jpeg','png','webp'], true)) {
         throw new RuntimeException('Unsupported file type.');
     }
 
     $filename = 'insp_' . bin2hex(random_bytes(8)) . '.' . $ext;
-    $fullPath = $dir . '/' . $filename;
+    $relPath  = 'uploads/inspections/' . $filename;
 
-    if (!move_uploaded_file($file['tmp_name'], $fullPath)) {
+    if (!rb_storage_put_file($file['tmp_name'], $relPath)) {
         throw new RuntimeException('Failed to save photo.');
     }
 
-    return 'uploads/inspections/' . $filename;
+    return $relPath;
 }
 
 /**
@@ -130,14 +117,9 @@ function save_property_document(
 
     // Build safe filename
     $newName = $propertyId . '_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
-    $destDir = __DIR__ . '/../uploads/property_docs';
-    $destPath = $destDir . '/' . $newName;
+    $relPath = 'uploads/property_docs/' . $newName;
 
-    if (!is_dir($destDir)) {
-        mkdir($destDir, 0755, true);
-    }
-
-    if (!move_uploaded_file($fileUpload['tmp_name'], $destPath)) {
+    if (!rb_storage_put_file($fileUpload['tmp_name'], $relPath)) {
         return ['ok' => false, 'error' => 'Failed to save file', 'doc_id' => null];
     }
 
@@ -151,7 +133,7 @@ function save_property_document(
     $stmt->execute([
         $propertyId,
         $documentType,
-        'uploads/property_docs/' . $newName,
+        $relPath,
         substr($fileUpload['name'], 0, 150),
         $fileUpload['size'],
         $mime,
@@ -173,10 +155,7 @@ function delete_property_document(int $docId): bool {
     $doc = $stmt->fetch();
     if (!$doc) return false;
 
-    $fullPath = __DIR__ . '/../' . $doc['file_path'];
-    if (file_exists($fullPath)) {
-        @unlink($fullPath);
-    }
+    rb_storage_delete($doc['file_path']);
 
     $stmt = $pdo->prepare("DELETE FROM property_documents WHERE id = ?");
     return $stmt->execute([$docId]);

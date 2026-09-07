@@ -58,13 +58,13 @@ if (!$relPath) {
     die('Signature not found.');
 }
 
-$absolutePath = __DIR__ . '/../' . $relPath;
-if (!is_file($absolutePath)) {
+$bytes = rb_storage_get_contents($relPath);
+if ($bytes === null) {
     http_response_code(404);
     die('File missing on disk.');
 }
 
 header('Content-Type: image/png');
-header('Content-Length: ' . filesize($absolutePath));
+header('Content-Length: ' . strlen($bytes));
 header('X-Content-Type-Options: nosniff');
-readfile($absolutePath);
+echo $bytes;

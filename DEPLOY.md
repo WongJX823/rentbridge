@@ -87,6 +87,29 @@ whichever your host supports):
   PDF).
 - The web server user needs write access to `uploads/` (and its
   subdirectories) and to `backups/` if you enable the backup script there.
+- **Persistent storage (Cloudflare R2).** On any host with an ephemeral disk
+  (Render's free tier, most PaaS free tiers) uploaded files vanish on every
+  restart/redeploy unless `includes/storage.php` is pointed at real object
+  storage. Set these env vars to enable it — leaving any unset falls back to
+  the local `uploads/` folder (fine for local dev, not for a real deploy):
+  - `RB_R2_ACCOUNT_ID`, `RB_R2_ACCESS_KEY`, `RB_R2_SECRET_KEY` — from a
+    Cloudflare R2 API token scoped to the bucket (R2 dashboard → Manage API
+    Tokens).
+  - `RB_R2_BUCKET` — the bucket name.
+  - `RB_R2_PUBLIC_URL` — the bucket's public base URL (R2's `*.r2.dev`
+    subdomain, or a custom domain attached to it). Not a secret.
+  - Property photos, avatars, and inspection photos are served by
+    redirecting the whole folder to this public URL when the file isn't
+    present locally — see `uploads/properties/.htaccess`,
+    `uploads/avatars/.htaccess`, `uploads/inspections/.htaccess`
+    (`RewriteCond %{REQUEST_FILENAME} !-f` + `RewriteRule` to
+    `RB_R2_PUBLIC_URL`). These need the real public URL baked in — update
+    them if the bucket's public URL changes.
+  - Contracts, signatures, and property documents stay private — they're
+    never linked directly, always streamed through their existing
+    auth-gated PHP endpoints (`contracts/pdf.php`, `contracts/signature.php`,
+    `documents/property_doc.php`), which now read from R2 via
+    `rb_storage_get_contents()` instead of the local disk.
 
 ## 4. Backups
 

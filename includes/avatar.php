@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/storage.php';
 
-const AVATAR_DIR = __DIR__ . '/../uploads/avatars';
 const AVATAR_MAX_SIZE = 5 * 1024 * 1024; // 5MB
 const AVATAR_ALLOWED_MIMES = [
     'image/jpeg' => 'jpg',
@@ -30,19 +30,12 @@ function save_avatar(array $file, int $userId, string $role): array {
 
     $ext = AVATAR_ALLOWED_MIMES[$mime];
 
-    if (!is_dir(AVATAR_DIR)) {
-        mkdir(AVATAR_DIR, 0755, true);
-    }
-
     $filename = $role . '_' . $userId . '_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
-    $destAbs = AVATAR_DIR . '/' . $filename;
+    $relPath  = 'uploads/avatars/' . $filename;
 
-    if (!move_uploaded_file($file['tmp_name'], $destAbs)) {
+    if (!rb_storage_put_file($file['tmp_name'], $relPath)) {
         return ['ok' => false, 'path' => null, 'error' => 'Could not save file'];
     }
-
-    // Path relative to project root, for use in <img src="">
-    $relPath = 'uploads/avatars/' . $filename;
 
     // Update the role table
     $tableMap = [
@@ -51,7 +44,7 @@ function save_avatar(array $file, int $userId, string $role): array {
         'agent'    => 'agents',
     ];
     if (!isset($tableMap[$role])) {
-        @unlink($destAbs);
+        rb_storage_delete($relPath);
         return ['ok' => false, 'path' => null, 'error' => 'Invalid role'];
     }
 
@@ -62,8 +55,7 @@ function save_avatar(array $file, int $userId, string $role): array {
     $stmt->execute([$userId]);
     $oldPath = $stmt->fetchColumn();
     if ($oldPath) {
-        $oldAbs = __DIR__ . '/../' . $oldPath;
-        if (file_exists($oldAbs)) @unlink($oldAbs);
+        rb_storage_delete($oldPath);
     }
 
     // Save new path

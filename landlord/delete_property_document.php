@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/storage.php';
 require_role('landlord');
 
 header('Content-Type: application/json');
@@ -35,12 +36,9 @@ try {
     $stmt = $pdo->prepare("DELETE FROM property_documents WHERE id = ?");
     $stmt->execute([$docId]);
 
-    // Delete file from disk (skip placeholder)
+    // Delete file from storage (skip placeholder)
     if ($doc['file_path'] !== 'uploads/property_docs/placeholder.pdf') {
-        $absPath = __DIR__ . '/../' . $doc['file_path'];
-        if (file_exists($absPath)) {
-            @unlink($absPath);
-        }
+        rb_storage_delete($doc['file_path']);
     }
 
     echo json_encode(['ok' => true]);

@@ -55,16 +55,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if (empty($errors)) {
-        $signedDir = __DIR__ . '/../uploads/contracts/signed';
-        if (!is_dir($signedDir)) {
-            mkdir($signedDir, 0755, true);
-        }
-
         $newName = 'signed_' . $tenancyId . '_' . time() . '_' . bin2hex(random_bytes(4)) . '.pdf';
-        $destAbs = $signedDir . '/' . $newName;
         $destRel = 'uploads/contracts/signed/' . $newName;
 
-        if (!move_uploaded_file($tmpName, $destAbs)) {
+        if (!rb_storage_put_file($tmpName, $destRel)) {
             $errors[] = 'Failed to save file.';
         } else {
             try {
