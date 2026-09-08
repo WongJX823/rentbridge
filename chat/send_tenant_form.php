@@ -3,7 +3,7 @@ ini_set('error_log', __DIR__ . '/../debug.log');
 ini_set('log_errors', '1');
 ini_set('display_errors', '0');
 require_once __DIR__ . '/../includes/auth.php';
-require_once __DIR__ . '/../includes/academic_terms.php';
+require_once __DIR__ . '/../includes/storage.php';
 require_role('agent');
 
 header('Content-Type: application/json');
@@ -82,6 +82,81 @@ try {
             ->execute([json_encode($oldMeta), $old['id']]);
     }
 
+    // Resending terms after the student already submitted (e.g. the agent typed
+    // the wrong rent/deposit/dates) — void the stale tenancy this conversation
+    // already produced so the resend creates one clean record instead of a
+    // duplicate. Only safe when nothing has been signed yet.
+    if ($recipientRole === 'student') {
+        $stmt = $pdo->prepare("
+            SELECT id, metadata FROM messages
+             WHERE conversation_id = ?
+               AND message_type = 'tenant_info_response'
+               AND (JSON_EXTRACT(metadata, '$.voided') IS NULL OR JSON_EXTRACT(metadata, '$.voided') = false)
+             ORDER BY id DESC LIMIT 1
+        ");
+        $stmt->execute([$convId]);
+        $priorResponse = $stmt->fetch();
+
+        if ($priorResponse) {
+            $priorMeta      = json_decode($priorResponse['metadata'], true) ?? [];
+            $priorTenancyId = (int)($priorMeta['tenancy_id'] ?? 0);
+            $priorFormId    = (int)($priorMeta['source_form_id'] ?? 0);
+
+            if ($priorTenancyId > 0) {
+                $sigStmt = $pdo->prepare("
+                    SELECT
+                        (SELECT COUNT(*) FROM co_tenants WHERE tenancy_id = ? AND status = 'signed') AS signed_tenants,
+                        (SELECT landlord_signed_at FROM contracts WHERE tenancy_id = ? LIMIT 1) AS landlord_signed_at
+                ");
+                $sigStmt->execute([$priorTenancyId, $priorTenancyId]);
+                $sigCheck = $sigStmt->fetch();
+
+                if ((int)($sigCheck['signed_tenants'] ?? 0) > 0 || !empty($sigCheck['landlord_signed_at'])) {
+                    $pdo->rollBack();
+                    echo json_encode([
+                        'ok' => false,
+                        'error' => 'This tenancy already has at least one signature on its contract, so it can\'t be replaced automatically. It needs to be voided manually before resending.',
+                    ]);
+                    exit;
+                }
+
+                // Nothing signed yet — safe to remove the stale contract/tenancy.
+                $oldContractStmt = $pdo->prepare("
+                    SELECT id, generated_pdf_path, signed_pdf_path, contract_pdf_path
+                      FROM contracts WHERE tenancy_id = ? LIMIT 1
+                ");
+                $oldContractStmt->execute([$priorTenancyId]);
+                $oldContract = $oldContractStmt->fetch();
+                if ($oldContract) {
+                    foreach (['generated_pdf_path', 'signed_pdf_path', 'contract_pdf_path'] as $col) {
+                        if (!empty($oldContract[$col])) {
+                            rb_storage_delete($oldContract[$col]);
+                        }
+                    }
+                    $pdo->prepare("DELETE FROM agent_commissions WHERE contract_id = ?")->execute([(int)$oldContract['id']]);
+                    $pdo->prepare("DELETE FROM contracts WHERE id = ?")->execute([(int)$oldContract['id']]);
+                }
+                $pdo->prepare("DELETE FROM co_tenants WHERE tenancy_id = ?")->execute([$priorTenancyId]);
+                $pdo->prepare("DELETE FROM tenancies WHERE id = ?")->execute([$priorTenancyId]);
+
+                // Mark the old response (and the form that produced it) as
+                // superseded so the chat shows them as replaced, not live.
+                $priorMeta['voided'] = true;
+                $pdo->prepare("UPDATE messages SET metadata = ? WHERE id = ?")
+                    ->execute([json_encode($priorMeta), $priorResponse['id']]);
+
+                if ($priorFormId > 0) {
+                    $formMetaStmt = $pdo->prepare("SELECT metadata FROM messages WHERE id = ?");
+                    $formMetaStmt->execute([$priorFormId]);
+                    $oldFormMeta = json_decode((string)$formMetaStmt->fetchColumn(), true) ?? [];
+                    $oldFormMeta['cancelled'] = true;
+                    $pdo->prepare("UPDATE messages SET metadata = ? WHERE id = ?")
+                        ->execute([json_encode($oldFormMeta), $priorFormId]);
+                }
+            }
+        }
+    }
+
     // Pre-fetch student info for pre-fill
     $stmt = $pdo->prepare("
         SELECT s.full_name, s.preferred_name, s.matric_no, s.phone, u.email
@@ -97,8 +172,8 @@ try {
     if ($recipientRole === 'student') {
         $monthlyRent = (float)($_POST['monthly_rent'] ?? $prop['monthly_rent']);
         $deposit     = (float)($_POST['deposit']      ?? $prop['deposit']);
-        $termMonths  = (int)($_POST['term_months']    ?? 12);
         $startDate   = trim($_POST['start_date']      ?? '');
+        $endDate     = trim($_POST['end_date']        ?? '');
         $notes       = trim($_POST['notes']           ?? '');
 
         if ($monthlyRent <= 0) {
@@ -109,14 +184,26 @@ try {
             echo json_encode(['ok' => false, 'error' => 'A valid start date is required.']);
             exit;
         }
+        if ($endDate === '' || !strtotime($endDate)) {
+            echo json_encode(['ok' => false, 'error' => 'A valid end date is required.']);
+            exit;
+        }
+        if (strtotime($endDate) <= strtotime($startDate)) {
+            echo json_encode(['ok' => false, 'error' => 'End date must be after the start date.']);
+            exit;
+        }
 
-        $resolved = resolve_term_end_date($startDate, $termMonths);
+        // Term length is derived from the dates the agent typed in (used only
+        // to classify the contract's duration_type label) — the academic
+        // calendar is shown in the UI purely as a reference, it no longer
+        // computes the end date itself.
+        $termMonths = max(1, (int)round((strtotime($endDate) - strtotime($startDate)) / (30.44 * 86400)));
         $agentTerms = [
             'monthly_rent' => $monthlyRent,
             'deposit'      => $deposit,
             'term_months'  => $termMonths,
             'start_date'   => $startDate,
-            'end_date'     => $resolved['end_date'],
+            'end_date'     => $endDate,
             'notes'        => $notes,
         ];
     }

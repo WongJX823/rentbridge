@@ -32,12 +32,20 @@ $tenantPhone = trim($_POST['tenant_phone'] ?? '');
 $tenantEmail = trim($_POST['tenant_email'] ?? '');
 $monthlyRent = (float)($_POST['monthly_rent'] ?? 0);
 $deposit     = (float)($_POST['deposit'] ?? 0);
-$termMonths  = (int)($_POST['term_months'] ?? 12);
 $startDate   = trim($_POST['start_date'] ?? '');
+$endDate     = trim($_POST['end_date'] ?? '');
 $notes       = trim($_POST['notes'] ?? '');
 
-if ($tenantName === '' || $tenantIC === '' || $startDate === '' || $monthlyRent <= 0) {
+if ($tenantName === '' || $tenantIC === '' || $startDate === '' || $endDate === '' || $monthlyRent <= 0) {
     echo json_encode(['ok' => false, 'error' => 'Please fill in all required fields.']);
+    exit;
+}
+if (!strtotime($startDate) || !strtotime($endDate)) {
+    echo json_encode(['ok' => false, 'error' => 'Invalid start or end date.']);
+    exit;
+}
+if (strtotime($endDate) <= strtotime($startDate)) {
+    echo json_encode(['ok' => false, 'error' => 'End date must be after the start date.']);
     exit;
 }
 
@@ -122,17 +130,11 @@ foreach ($coNames as $i => $name) {
     $coTenants[] = ['name' => $name, 'ic' => $ic];
 }
 
-// Compute end_date the same way everywhere: chain real academic_terms rows
-// when termMonths is a standard semester-aligned length, otherwise fall back
-// to calendar-month arithmetic (see includes/academic_terms.php).
-try {
-    new DateTime($startDate); // validates the date is parseable
-    $endDate = resolve_term_end_date($startDate, $termMonths)['end_date'];
-} catch (Exception $e) {
-    echo json_encode(['ok' => false, 'error' => 'Invalid start date']);
-    exit;
-}
-
+// Start/end dates are typed in directly (the academic calendar is shown as
+// a reference in the UI, not used to compute the end date here). Term length
+// is derived from the dates purely to classify the contract's duration_type
+// label (see includes/academic_terms.php).
+$termMonths   = max(1, (int)round((strtotime($endDate) - strtotime($startDate)) / (30.44 * 86400)));
 $durationType = term_months_to_duration_type($termMonths);
 
 try {

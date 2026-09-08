@@ -141,20 +141,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadySubmitted) {
         $coTenants[] = ['name' => $coName, 'ic' => $coIC, 'phone' => $coPhone, 'email' => $coEmail, 'student_id' => $coStudentId];
     }
 
-    // Use agent-set terms from metadata (student cannot change these)
+    // Use agent-set terms from metadata (student cannot change these). The
+    // agent typed both dates directly, so use end_date as-is rather than
+    // re-deriving it — recomputing from term_months would not necessarily
+    // reproduce the exact date the student was shown.
     $terms      = $meta['terms'] ?? [];
     $monthlyRent = (float)($terms['monthly_rent'] ?? $prop['monthly_rent']);
     $deposit     = (float)($terms['deposit']      ?? $prop['deposit']);
     $termMonths  = (int)($terms['term_months']    ?? 12);
     $startDate   = $terms['start_date']           ?? date('Y-m-d');
+    $endDate     = $terms['end_date']             ?? '';
     $notes       = $terms['notes']                ?? '';
 
     if (empty($errors)) {
-        try {
-            new DateTime($startDate); // validates the date is parseable
-            $endDate = resolve_term_end_date($startDate, $termMonths)['end_date'];
-        } catch (Exception) {
-            $errors['start_date'] = 'Invalid start date in form.';
+        if (!strtotime($startDate) || !strtotime($endDate)) {
+            $errors['start_date'] = 'Invalid start/end date in form.';
         }
     }
 

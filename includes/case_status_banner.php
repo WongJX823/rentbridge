@@ -32,7 +32,7 @@ function agent_student_case_stage(int $propertyId, int $studentId, int $agentId,
 
     // Most recent tenancy for this exact property+student+agent triple.
     $stmt = $pdo->prepare("
-        SELECT t.id AS tenancy_id,
+        SELECT t.id AS tenancy_id, t.monthly_rent, t.deposit, t.start_date, t.end_date,
                c.id AS contract_id, c.contract_code, c.landlord_signed_at,
                c.contract_pdf_path, c.signed_pdf_path, c.generated_pdf_path
           FROM tenancies t
@@ -67,14 +67,21 @@ function agent_student_case_stage(int $propertyId, int $studentId, int $agentId,
             ];
         }
         return [
-            'stage'       => 'contract_out',
-            'step'        => 'contract',
-            'color'       => 'blue',
-            'heading'     => 'Contract ' . $case['contract_code'] . ' out for signature',
-            'sub'         => 'Resend the signing link or regenerate the PDF if anything needs to change.',
-            'metric'      => "{$signed} of {$total} signed",
-            'tenancy_id'  => (int)$case['tenancy_id'],
-            'contract_id' => (int)$case['contract_id'],
+            'stage'          => 'contract_out',
+            'step'           => 'contract',
+            'color'          => 'blue',
+            'heading'        => 'Contract ' . $case['contract_code'] . ' out for signature',
+            'sub'            => 'Resend the signing link or regenerate the PDF if anything needs to change.',
+            'metric'         => "{$signed} of {$total} signed",
+            'tenancy_id'     => (int)$case['tenancy_id'],
+            'contract_id'    => (int)$case['contract_id'],
+            // Fixing a wrong rent/deposit/date voids and replaces the tenancy —
+            // only offer that while nothing has actually been signed yet.
+            'can_fix_terms'  => $signed === 0 && empty($case['landlord_signed_at']),
+            'monthly_rent'   => (float)$case['monthly_rent'],
+            'deposit'        => (float)$case['deposit'],
+            'start_date'     => $case['start_date'],
+            'end_date'       => $case['end_date'],
         ];
     }
 
@@ -84,13 +91,18 @@ function agent_student_case_stage(int $propertyId, int $studentId, int $agentId,
         $stmt->execute([$case['tenancy_id']]);
         $tenants = (int)$stmt->fetchColumn();
         return [
-            'stage'      => 'form_returned',
-            'step'       => 'info_form',
-            'color'      => 'green',
-            'heading'    => 'Tenant info received — ready for contract',
-            'sub'        => 'All required fields are in. Generate the contract PDF and send it for signing.',
-            'metric'     => $tenants . ' tenant' . ($tenants === 1 ? '' : 's'),
-            'tenancy_id' => (int)$case['tenancy_id'],
+            'stage'        => 'form_returned',
+            'step'         => 'info_form',
+            'color'        => 'green',
+            'heading'      => 'Tenant info received — ready for contract',
+            'sub'          => 'All required fields are in. Generate the contract PDF and send it for signing.',
+            'metric'       => $tenants . ' tenant' . ($tenants === 1 ? '' : 's'),
+            'tenancy_id'   => (int)$case['tenancy_id'],
+            'can_fix_terms'=> true,
+            'monthly_rent' => (float)$case['monthly_rent'],
+            'deposit'      => (float)$case['deposit'],
+            'start_date'   => $case['start_date'],
+            'end_date'     => $case['end_date'],
         ];
     }
 
@@ -210,12 +222,36 @@ function render_case_status_banner(array $stage, int $convId, int $propertyId, i
                 case 'form_returned': ?>
                     <a href="<?= BASE_PATH ?>/agent/case.php?id=<?= (int)$stage['tenancy_id'] ?>"
                        class="btn btn-sm btn-outline-secondary">View submitted info</a>
+                    <?php if (!empty($stage['can_fix_terms'])): ?>
+                        <button type="button" class="btn btn-outline-warning btn-sm fw-semibold"
+                                data-bs-toggle="modal" data-bs-target="#agentTermsModal"
+                                data-conv-id="<?= (int)$convId ?>" data-property-id="<?= (int)$propertyId ?>"
+                                data-student-id="<?= (int)$studentId ?>"
+                                data-monthly-rent="<?= (float)$stage['monthly_rent'] ?>"
+                                data-deposit="<?= (float)$stage['deposit'] ?>"
+                                data-start-date="<?= e((string)$stage['start_date']) ?>"
+                                data-end-date="<?= e((string)$stage['end_date']) ?>">
+                            Fix terms &amp; resend
+                        </button>
+                    <?php endif; ?>
                     <a href="<?= BASE_PATH ?>/agent/generate_contract.php?tenancy_id=<?= (int)$stage['tenancy_id'] ?>"
                        class="btn btn-success btn-sm fw-semibold" target="_blank">Generate contract PDF</a>
                     <?php break;
                 case 'contract_out': ?>
                     <a href="<?= BASE_PATH ?>/agent/generate_contract.php?tenancy_id=<?= (int)$stage['tenancy_id'] ?>"
                        class="btn btn-sm btn-outline-secondary" target="_blank">Regenerate PDF</a>
+                    <?php if (!empty($stage['can_fix_terms'])): ?>
+                        <button type="button" class="btn btn-outline-warning btn-sm fw-semibold"
+                                data-bs-toggle="modal" data-bs-target="#agentTermsModal"
+                                data-conv-id="<?= (int)$convId ?>" data-property-id="<?= (int)$propertyId ?>"
+                                data-student-id="<?= (int)$studentId ?>"
+                                data-monthly-rent="<?= (float)$stage['monthly_rent'] ?>"
+                                data-deposit="<?= (float)$stage['deposit'] ?>"
+                                data-start-date="<?= e((string)$stage['start_date']) ?>"
+                                data-end-date="<?= e((string)$stage['end_date']) ?>">
+                            Fix terms &amp; resend
+                        </button>
+                    <?php endif; ?>
                     <form method="POST" action="<?= BASE_PATH ?>/contracts/view.php?id=<?= (int)$stage['contract_id'] ?>" class="d-inline">
                         <?= csrf_field() ?>
                         <input type="hidden" name="action" value="send_sign_links">

@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/chat.php';
+require_once __DIR__ . '/../includes/academic_terms.php';
 require_login();
 
 $conversationId = (int)($_GET['id'] ?? 0);
@@ -47,6 +48,35 @@ if (!empty($convo['property_id'])) {
     ");
     $stmt->execute([(int)$convo['property_id']]);
     $property = $stmt->fetch();
+}
+
+// Reference list of official UTeM semester dates, shown next to the tenancy
+// start/end date fields below as a lookup aid — it no longer drives the
+// dates directly, so whoever fills these forms types the real dates in.
+$academicTermsRef = [];
+if (in_array($currentRole, ['agent', 'landlord'], true)) {
+    $academicTermsRef = db()->query("
+        SELECT session, label, start_date, end_date
+          FROM academic_terms
+         ORDER BY start_date ASC
+    ")->fetchAll();
+}
+
+function render_academic_terms_reference(array $terms): void {
+    if (!$terms) return;
+    ?>
+    <div class="small text-secondary p-2 border rounded bg-light mb-3">
+        <i class="bi bi-calendar3 me-1"></i><strong>UTeM semester dates (for reference)</strong>
+        <ul class="mb-0 ps-3">
+            <?php foreach ($terms as $t): ?>
+                <li>
+                    <?= e($t['session']) ?> <?= e($t['label']) ?>:
+                    <?= e(date('d M Y', strtotime($t['start_date']))) ?> – <?= e(date('d M Y', strtotime($t['end_date']))) ?>
+                </li>
+            <?php endforeach; ?>
+        </ul>
+    </div>
+    <?php
 }
 
 // Mark unread as read
@@ -915,17 +945,15 @@ if (
                         <input type="number" name="deposit" id="atm_deposit" class="form-control" min="0" step="1">
                     </div>
                     <div class="col-6">
-                        <label class="form-label fw-semibold">Term <small class="text-danger">*</small></label>
-                        <select name="term_months" class="form-select" required>
-                            <option value="13">13 months (3 semesters)</option>
-                            <option value="18">18 months (4 semesters)</option>
-                            <option value="24" selected>24 months (2 years)</option>
-                            <option value="36">36 months (3 years)</option>
-                        </select>
-                    </div>
-                    <div class="col-6">
                         <label class="form-label fw-semibold">Start date <small class="text-danger">*</small></label>
                         <input type="date" name="start_date" id="atm_start_date" class="form-control" required>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label fw-semibold">End date <small class="text-danger">*</small></label>
+                        <input type="date" name="end_date" id="atm_end_date" class="form-control" required>
+                    </div>
+                    <div class="col-12">
+                        <?php render_academic_terms_reference($academicTermsRef); ?>
                     </div>
                     <div class="col-12">
                         <label class="form-label fw-semibold">Special terms / notes</label>
@@ -1187,15 +1215,18 @@ if (
                         <input type="number" name="deposit" id="tf_deposit"
                                class="form-control form-control-sm" min="0" step="1">
                     </div>
-                    <div class="col-md-4">
-                        <label class="form-label small fw-semibold">Term (months) <small class="text-danger">*</small></label>
-                        <input type="number" name="term_months" id="tf_term_months"
-                               class="form-control form-control-sm" min="1" max="60" value="12" required>
-                    </div>
                     <div class="col-md-6">
                         <label class="form-label small fw-semibold">Start date <small class="text-danger">*</small></label>
                         <input type="date" name="start_date" id="tf_start_date"
                                class="form-control form-control-sm" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">End date <small class="text-danger">*</small></label>
+                        <input type="date" name="end_date" id="tf_end_date"
+                               class="form-control form-control-sm" required>
+                    </div>
+                    <div class="col-12 mt-2">
+                        <?php render_academic_terms_reference($academicTermsRef); ?>
                     </div>
                     <div class="col-12 mt-2">
                         <label class="form-label small fw-semibold">Special terms / notes (optional)</label>
@@ -1372,6 +1403,7 @@ if (
             document.getElementById('tf_deposit').value      = prefill.deposit || '';
 
             document.getElementById('tf_start_date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('tf_end_date').value   = '';
 
             // Reset co-tenants list when reopening
             document.getElementById('tfCoTenantsList').innerHTML = '';
@@ -1698,7 +1730,10 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('atm_student_id').value  = btn.dataset.studentId  || '';
         document.getElementById('atm_monthly_rent').value = btn.dataset.monthlyRent || '';
         document.getElementById('atm_deposit').value      = btn.dataset.deposit     || '';
-        document.getElementById('atm_start_date').value   = new Date().toISOString().slice(0, 10);
+        // When reopened via "Fix terms & resend" the button carries the
+        // tenancy's current dates so the agent edits them, not blanks.
+        document.getElementById('atm_start_date').value   = btn.dataset.startDate || new Date().toISOString().slice(0, 10);
+        document.getElementById('atm_end_date').value     = btn.dataset.endDate   || '';
         document.getElementById('atmError').classList.add('d-none');
     });
 
