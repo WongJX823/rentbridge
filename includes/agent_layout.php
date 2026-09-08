@@ -92,17 +92,12 @@ $urgentCases = (int)$stmt->fetchColumn();
         <ul class="dropdown-menu dropdown-menu-end shadow-sm">
             <li class="px-3 py-2">
                 <div class="fw-semibold"><?= e($myName) ?></div>
-                <small class="text-secondary">Landlord</small>
+                <small class="text-secondary">Agent</small>
             </li>
             <li><hr class="dropdown-divider"></li>
             <li>
-                <a class="dropdown-item" href="<?= BASE_PATH ?>/landlord/profile.php">
+                <a class="dropdown-item" href="<?= BASE_PATH ?>/agent/profile.php">
                     <i class="bi bi-person-circle me-2"></i> Profile
-                </a>
-            </li>
-            <li>
-                <a class="dropdown-item" href="<?= BASE_PATH ?>/landlord/properties.php">
-                    <i class="bi bi-buildings me-2"></i> My properties
                 </a>
             </li>
             <li><hr class="dropdown-divider"></li>
