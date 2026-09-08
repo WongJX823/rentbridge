@@ -320,6 +320,24 @@ function choose_manual_signing(int $contractId, int $userId): array {
         );
     }
 
+    // The queue advances past this party (contract_next_signer() skips
+    // sign_method='manual' rows) — re-check and notify whoever is now next,
+    // same as apply_signature() does after an e-sign. Without this, the next
+    // co-tenant/landlord in line is never told it's their turn.
+    $stmt = $pdo->prepare('SELECT * FROM contracts WHERE id = ? LIMIT 1');
+    $stmt->execute([$contractId]);
+    $refreshed = $stmt->fetch();
+    $following = contract_next_signer($refreshed);
+    if (function_exists('notify') && $following['user_id'] !== null) {
+        notify(
+            $following['user_id'],
+            'contract_your_turn',
+            'It is your turn to sign',
+            'Contract ' . $contract['contract_code'] . ' is ready for your signature.',
+            '' . BASE_PATH . '/contracts/view.php?id=' . $contractId
+        );
+    }
+
     return ['success' => true, 'message' => 'Noted — you\'ll sign a physical copy instead. Your agent has been notified.'];
 }
 
@@ -473,6 +491,173 @@ function apply_signature(int $contractId, int $userId, string $dataUrl): array {
                     'Contract ' . $contract['contract_code'] . ' is ready for your signature.',
                     '' . BASE_PATH . '/contracts/view.php?id=' . $contractId
                 );
+            } elseif ($next['role'] === 'awaiting_manual' && !empty($contract['agent_id'])) {
+                // Everyone e-signing is done — only physical signature(s)
+                // remain, which this signature completion just unblocked.
+                notify(
+                    (int)$contract['agent_id'],
+                    'contract_awaiting_manual',
+                    'E-signing complete — physical signature needed',
+                    'All e-signing parties have signed contract ' . $contract['contract_code']
+                        . '. Collect the remaining physical signature(s) and upload the scanned page(s).',
+                    '' . BASE_PATH . '/agent/upload_signed_contract.php?tenancy_id=' . (int)$contract['tenancy_id']
+                );
+            }
+        }
+
+        return [
+            'success'    => true,
+            'all_signed' => $allSigned,
+            'message'    => $allSigned ? 'Contract activated!' : 'Signature saved.',
+        ];
+
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        @unlink(__DIR__ . '/../' . $sigPath);
+        return ['success' => false, 'all_signed' => false, 'message' => 'Database error: ' . $e->getMessage()];
+    }
+}
+
+/**
+ * List everyone on a contract who chose to sign physically and hasn't been
+ * resolved yet — what the agent picks from when applying a cropped signature.
+ * Each entry: ['target' => 'landlord' | 'tenant_<co_tenant_id>', 'name' => string].
+ */
+function contract_pending_manual_signers(int $contractId): array {
+    $pdo = db();
+    $stmt = $pdo->prepare('SELECT * FROM contracts WHERE id = ? LIMIT 1');
+    $stmt->execute([$contractId]);
+    $contract = $stmt->fetch();
+    if (!$contract) return [];
+
+    $out = [];
+    $stmt = $pdo->prepare("
+        SELECT id, full_name FROM co_tenants
+         WHERE tenancy_id = ? AND status != 'signed' AND status != 'removed' AND sign_method = 'manual'
+         ORDER BY sign_order ASC
+    ");
+    $stmt->execute([(int)$contract['tenancy_id']]);
+    foreach ($stmt->fetchAll() as $row) {
+        $out[] = ['target' => 'tenant_' . $row['id'], 'name' => $row['full_name']];
+    }
+    if (($contract['landlord_sign_method'] ?? 'esign') === 'manual' && empty($contract['landlord_signed_at'])) {
+        $out[] = ['target' => 'landlord', 'name' => 'Landlord'];
+    }
+    return $out;
+}
+
+/**
+ * Apply a physical signer's signature, cropped by the agent from a scanned
+ * page, to a contract. Mirrors apply_signature() (same save-image / all-
+ * signed / activate / notify logic) but is invoked BY THE AGENT on behalf of
+ * whichever party chose to sign physically, instead of by the signer
+ * themselves via the live canvas pad — the resulting image is stored and
+ * treated identically either way, so the final PDF always regenerates from
+ * complete, current data rather than an imported snapshot of an old page.
+ *
+ * @param string $target 'landlord' or 'tenant_<co_tenant_id>' (see
+ *                        contract_pending_manual_signers()).
+ */
+function apply_manual_signature(int $contractId, int $agentId, string $target, string $dataUrl): array {
+    $pdo = db();
+
+    $stmt = $pdo->prepare('SELECT * FROM contracts WHERE id = ? LIMIT 1');
+    $stmt->execute([$contractId]);
+    $contract = $stmt->fetch();
+
+    if (!$contract) {
+        return ['success' => false, 'all_signed' => false, 'message' => 'Contract not found.'];
+    }
+    if ((int)$contract['agent_id'] !== $agentId) {
+        return ['success' => false, 'all_signed' => false, 'message' => 'You are not the assigned agent for this contract.'];
+    }
+    if ($contract['status'] !== 'pending_signatures') {
+        return ['success' => false, 'all_signed' => false, 'message' => 'Contract is no longer accepting signatures.'];
+    }
+
+    $isTenant   = str_starts_with($target, 'tenant_');
+    $coTenantId = $isTenant ? (int)substr($target, strlen('tenant_')) : null;
+
+    if ($isTenant) {
+        $stmt = $pdo->prepare("
+            SELECT id FROM co_tenants
+             WHERE id = ? AND tenancy_id = ? AND status != 'signed' AND status != 'removed' AND sign_method = 'manual'
+             LIMIT 1
+        ");
+        $stmt->execute([$coTenantId, (int)$contract['tenancy_id']]);
+        if (!$stmt->fetchColumn()) {
+            return ['success' => false, 'all_signed' => false, 'message' => 'That tenant is not awaiting a physical signature.'];
+        }
+    } else {
+        if (($contract['landlord_sign_method'] ?? 'esign') !== 'manual' || !empty($contract['landlord_signed_at'])) {
+            return ['success' => false, 'all_signed' => false, 'message' => 'The landlord is not awaiting a physical signature.'];
+        }
+    }
+
+    $role = $isTenant ? 'tenant_' . $coTenantId : 'landlord';
+
+    try {
+        $sigPath = save_signature_image($dataUrl, $contractId, $role);
+    } catch (RuntimeException $e) {
+        return ['success' => false, 'all_signed' => false, 'message' => $e->getMessage()];
+    }
+
+    try {
+        $pdo->beginTransaction();
+
+        if ($isTenant) {
+            $pdo->prepare("
+                UPDATE co_tenants
+                   SET status = 'signed', signed_at = NOW(), signature_data = ?
+                 WHERE id = ?
+            ")->execute([$sigPath, $coTenantId]);
+        } else {
+            $pdo->prepare("
+                UPDATE contracts
+                   SET landlord_signature = ?, landlord_signed_at = NOW()
+                 WHERE id = ?
+            ")->execute([$sigPath, $contractId]);
+        }
+
+        $stmt = $pdo->prepare('SELECT * FROM contracts WHERE id = ? LIMIT 1');
+        $stmt->execute([$contractId]);
+        $contract = $stmt->fetch();
+
+        $stmt = $pdo->prepare("
+            SELECT COUNT(*) FROM co_tenants
+             WHERE tenancy_id = ? AND status != 'signed' AND status != 'removed'
+        ");
+        $stmt->execute([(int)$contract['tenancy_id']]);
+        $unsignedTenants = (int)$stmt->fetchColumn();
+
+        $allSigned = ($unsignedTenants === 0) && !empty($contract['landlord_signed_at']);
+
+        if ($allSigned) {
+            $pdo->prepare("UPDATE contracts SET status = 'active', activated_at = NOW() WHERE id = ?")
+                ->execute([$contractId]);
+            $pdo->prepare("UPDATE tenancies SET status = 'active' WHERE id = ?")
+                ->execute([(int)$contract['tenancy_id']]);
+            $pdo->prepare("UPDATE properties SET status = 'rented' WHERE id = ?")
+                ->execute([(int)$contract['property_id']]);
+            ensure_agent_commission_for_contract($contractId, 'earned');
+        }
+
+        $pdo->commit();
+
+        if ($allSigned) {
+            $pdfPath = generate_contract_pdf($contractId);
+            $msg = 'Tenancy contract ' . $contract['contract_code'] . ' is now active!'
+                . ($pdfPath ? ' The signed PDF is now downloadable.' : '');
+
+            foreach ([(int)$contract['student_id'], (int)$contract['landlord_id']] as $uid) {
+                notify($uid, 'contract_active', 'Contract activated', $msg,
+                    '' . BASE_PATH . '/contracts/view.php?id=' . $contractId);
+            }
+            $stmt = $pdo->prepare("SELECT student_id FROM co_tenants WHERE tenancy_id = ? AND student_id IS NOT NULL");
+            $stmt->execute([(int)$contract['tenancy_id']]);
+            foreach ($stmt->fetchAll() as $ct) {
+                notify((int)$ct['student_id'], 'contract_active', 'Contract activated', $msg,
+                    '' . BASE_PATH . '/contracts/view.php?id=' . $contractId);
             }
         }
 
@@ -663,6 +848,121 @@ function apply_signature_by_token(string $token, string $dataUrl): array {
         @unlink(__DIR__ . '/../' . $sigPath);
         return ['success'=>false,'all_signed'=>false,'message'=>'Database error: ' . $e->getMessage()];
     }
+}
+
+/* ============================================================
+ *  Content fingerprint (staleness/integrity check)
+ * ============================================================ */
+
+/**
+ * Build the rb_agreement_html() input array for a tenancy's contract right
+ * now — embedding whatever real e-signatures currently exist (blank line for
+ * anyone who hasn't signed, or chose physical signing). This is the single
+ * source of truth for "what should the contract PDF contain", used both to
+ * actually render it (agent/generate_contract.php) and to fingerprint its
+ * content for the mixed-signing merge's staleness check, without needing to
+ * render anything.
+ *
+ * @return array|null null if the tenancy or its contract don't exist yet.
+ */
+function build_contract_agreement_data(int $tenancyId): ?array {
+    require_once __DIR__ . '/co_tenants.php';
+    $pdo = db();
+
+    $stmt = $pdo->prepare("
+        SELECT b.*,
+               p.address AS property_address, p.city AS property_city,
+               p.state AS property_state, p.postcode AS property_postcode,
+               p.property_type AS property_type,
+               l.full_name AS landlord_name, l.ic_no AS landlord_ic, l.phone AS landlord_phone
+          FROM tenancies b
+          JOIN properties p ON p.id = b.property_id
+          JOIN landlords l  ON l.user_id = b.landlord_id
+         WHERE b.id = ?
+         LIMIT 1
+    ");
+    $stmt->execute([$tenancyId]);
+    $tenancy = $stmt->fetch();
+    if (!$tenancy) return null;
+
+    $stmt = $pdo->prepare("
+        SELECT id, contract_code, landlord_signature, landlord_signed_at
+          FROM contracts WHERE tenancy_id = ? LIMIT 1
+    ");
+    $stmt->execute([$tenancyId]);
+    $contract = $stmt->fetch();
+    if (!$contract) return null;
+
+    $coTenants = get_co_tenants($tenancyId);
+
+    $startTs    = strtotime($tenancy['start_date']);
+    $endTs      = strtotime($tenancy['end_date']);
+    $termMonths = max(1, (int)round(($endTs - $startTs) / (30.44 * 86400)));
+    $termLabel  = match($tenancy['duration_type']) {
+        'three_semesters' => '13 months (3 semesters)',
+        'four_semesters'  => '18 months (4 semesters)',
+        'two_years'       => '24 months (2 years)',
+        'three_years'     => '36 months (3 years)',
+        '1_semester'      => '5 months (1 semester)',
+        '2_semesters'     => '10 months (2 semesters)',
+        '1_year'          => '12 months (1 year)',
+        'custom'          => $termMonths . ' months',
+        default           => $termMonths . ' months',
+    };
+    $propertyAddress = $tenancy['property_address'] . ', ' . $tenancy['property_city'] . ' '
+        . $tenancy['property_postcode'] . ', ' . $tenancy['property_state'];
+
+    $absSig = function (?string $rel): ?string {
+        if (empty($rel)) return null;
+        return rb_storage_data_uri($rel, 'image/png');
+    };
+
+    $coTenantsData = [];
+    foreach ($coTenants as $ct) {
+        $coTenantsData[] = [
+            'full_name'  => $ct['full_name'],
+            'ic_number'  => $ct['ic_number'],
+            'phone'      => $ct['phone'] ?? '',
+            'is_primary' => (int)$ct['is_primary'],
+            'sig_img'    => $absSig($ct['signature_data'] ?? null),
+            'sig_date'   => !empty($ct['signed_at']) ? date('d M Y', strtotime($ct['signed_at'])) : null,
+        ];
+    }
+
+    return [
+        'contract_code'    => $contract['contract_code'],
+        'today'            => date('jS \\d\\a\\y \\o\\f F Y'),
+        'landlord_name'    => $tenancy['landlord_name'],
+        'landlord_ic'      => $tenancy['landlord_ic'],
+        'landlord_phone'   => $tenancy['landlord_phone'] ?? '',
+        'property_type'    => $tenancy['property_type'],
+        'property_address' => $propertyAddress,
+        'term_label'       => $termLabel,
+        'start_short'      => date('d/m/Y', $startTs),
+        'end_short'        => date('d/m/Y', $endTs),
+        'monthly_rent'     => number_format((float)$tenancy['monthly_rent'], 2),
+        'security_deposit' => number_format((float)$tenancy['deposit'], 2),
+        'utility_deposit'  => number_format((float)$tenancy['deposit'] * 0.3, 2),
+        'tenancy_label'    => 'TENANTS',
+        'landlord_sig_img' => $absSig($contract['landlord_signature'] ?? null),
+        'landlord_sig_date'=> !empty($contract['landlord_signed_at'])
+                                ? date('d M Y', strtotime($contract['landlord_signed_at']))
+                                : null,
+        'co_tenants'       => $coTenantsData,
+    ];
+}
+
+/**
+ * A stable content fingerprint of what a contract PDF would contain right
+ * now. Excludes 'today' (deliberately just the render timestamp — comparing
+ * raw PDF bytes doesn't work for this because mPDF embeds its own creation
+ * timestamp in every render, which differs on every call even when nothing
+ * meaningful changed). Two calls with identical rent/dates/parties/signatures
+ * produce the same fingerprint regardless of when they're rendered.
+ */
+function contract_agreement_fingerprint(array $data): string {
+    unset($data['today']);
+    return hash('sha256', json_encode($data));
 }
 
 /* ============================================================
@@ -1000,8 +1300,15 @@ function generate_contract_pdf(int $contractId): ?string {
     try {
         $html = rb_agreement_html($data);
 
+        // sys_get_temp_dir() can point somewhere unwritable on shared hosts
+        // (see rb_render_agreement_pdf()'s equivalent fix) — use the app's
+        // own writable uploads tree instead.
+        $mpdfTempDir = __DIR__ . '/../uploads/mpdf_tmp';
+        if (!is_dir($mpdfTempDir)) {
+            mkdir($mpdfTempDir, 0755, true);
+        }
         $mpdf = new \Mpdf\Mpdf([
-            'tempDir'      => sys_get_temp_dir(),
+            'tempDir'      => $mpdfTempDir,
             'format'       => 'A4',
             'margin_left'  => 20, 'margin_right' => 20,
             'margin_top'   => 25, 'margin_bottom' => 25,
@@ -1030,7 +1337,6 @@ function generate_contract_pdf(int $contractId): ?string {
         return null;
     }
 }
-
 
 /**
  * Lazy check — send contract expiry notifications.

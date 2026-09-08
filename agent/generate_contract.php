@@ -79,9 +79,36 @@ if (empty($tenancy['landlord_ic'])) {
 }
 
 // === Determine contract code (reuse if exists, generate if new) ===
-$stmt = $pdo->prepare("SELECT id, contract_code FROM contracts WHERE tenancy_id = ? LIMIT 1");
+$stmt = $pdo->prepare("
+    SELECT id, contract_code, status, landlord_signature, landlord_signed_at,
+           contract_pdf_path, signed_pdf_path, generated_pdf_path
+      FROM contracts WHERE tenancy_id = ? LIMIT 1
+");
 $stmt->execute([$tenancyId]);
 $existingContract = $stmt->fetch();
+
+// Once a contract is active/completed, regenerating it must never reset it
+// back to pending_signatures — that would silently un-activate a fully
+// signed tenancy. Just hand back the real final PDF instead.
+if ($existingContract && in_array($existingContract['status'], ['active', 'completed'], true)) {
+    $finalPath = $existingContract['contract_pdf_path']
+        ?? $existingContract['signed_pdf_path']
+        ?? $existingContract['generated_pdf_path']
+        ?? null;
+    if ($finalPath) {
+        $bytes = rb_storage_get_contents($finalPath);
+        if ($bytes !== null) {
+            header('Content-Type: application/pdf');
+            header('Content-Disposition: attachment; filename="' . $existingContract['contract_code'] . '.pdf"');
+            header('Content-Length: ' . strlen($bytes));
+            echo $bytes;
+            exit;
+        }
+    }
+    set_flash('info', 'This contract is already ' . $existingContract['status'] . ' — it cannot be regenerated.');
+    header('Location: ' . BASE_PATH . '/agent/case.php?id=' . $tenancyId);
+    exit;
+}
 
 if ($existingContract) {
     $contractId = (int)$existingContract['id'];
@@ -119,54 +146,14 @@ if ($existingContract) {
     $contractId = (int)$pdo->lastInsertId();
 }
 
-// === Generate the PDF ===
-$startTs    = strtotime($tenancy['start_date']);
-$endTs      = strtotime($tenancy['end_date']);
-$termMonths = max(1, (int)round(($endTs - $startTs) / (30.44 * 86400)));
-$termLabel  = match($tenancy['duration_type']) {
-    'three_semesters' => '13 months (3 semesters)',
-    'four_semesters'  => '18 months (4 semesters)',
-    'two_years'       => '24 months (2 years)',
-    'three_years'     => '36 months (3 years)',
-    '1_semester'      => '5 months (1 semester)',
-    '2_semesters'     => '10 months (2 semesters)',
-    '1_year'          => '12 months (1 year)',
-    'custom'          => $termMonths . ' months',
-    default           => $termMonths . ' months',
-};
-$propertyAddress = $tenancy['property_address'] . ', ' . $tenancy['property_city'] . ' ' . $tenancy['property_postcode'] . ', ' . $tenancy['property_state'];
-
-$coTenantsData = [];
-foreach ($coTenants as $ct) {
-    $coTenantsData[] = [
-        'full_name'  => $ct['full_name'],
-        'ic_number'  => $ct['ic_number'],
-        'phone'      => $ct['phone'] ?? '',
-        'is_primary' => (int)$ct['is_primary'],
-        'sig_img'    => null,
-        'sig_date'   => null,
-    ];
+// === Build the contract content (embeds whatever real e-signatures already
+// exist, blank line for anyone who hasn't signed / chose physical) ===
+$data = build_contract_agreement_data($tenancyId);
+if ($data === null) {
+    set_flash('danger', 'Could not load contract data.');
+    header('Location: ' . BASE_PATH . '/agent/case.php?id=' . $tenancyId);
+    exit;
 }
-
-$data = [
-    'contract_code'    => $contractCode,
-    'today'            => date('jS \\d\\a\\y \\o\\f F Y'),
-    'landlord_name'    => $tenancy['landlord_name'],
-    'landlord_ic'      => $tenancy['landlord_ic'],
-    'landlord_phone'   => $tenancy['landlord_phone'] ?? '',
-    'property_type'    => $tenancy['property_type'],
-    'property_address' => $propertyAddress,
-    'term_label'       => $termLabel,
-    'start_short'      => date('d/m/Y', $startTs),
-    'end_short'        => date('d/m/Y', $endTs),
-    'monthly_rent'     => number_format((float)$tenancy['monthly_rent'], 2),
-    'security_deposit' => number_format((float)$tenancy['deposit'], 2),
-    'utility_deposit'  => number_format((float)$tenancy['deposit'] * 0.3, 2),
-    'tenancy_label'    => 'TENANTS',
-    'landlord_sig_img' => null,
-    'landlord_sig_date'=> null,
-    'co_tenants'       => $coTenantsData,
-];
 
 // === Generate PDF with mPDF ===
 try {
@@ -180,8 +167,11 @@ try {
         throw new RuntimeException('Rendered PDF could not be read back.');
     }
 
-    // Hash for integrity
-    $docHash = hash('sha256', $pdfBytes);
+    // Content fingerprint (NOT a hash of the PDF bytes — mPDF embeds its own
+    // creation timestamp on every render, so byte-hashes never match twice
+    // even with identical content). Lets the merge feature detect whether
+    // anything meaningful changed since this PDF was generated.
+    $docHash = contract_agreement_fingerprint($data);
 
     // Update contract record
     $stmt = $pdo->prepare("
@@ -200,21 +190,25 @@ try {
     $stmt = $pdo->prepare("UPDATE tenancies SET status = 'contract_pending' WHERE id = ?");
     $stmt->execute([$tenancyId]);
 
-    // Notify all parties
-    notify(
-        (int)$tenancy['student_id'],
-        'contract_generated',
-        'Tenancy contract generated',
-        'Agent has generated contract ' . $contractCode . '. The agent will send it to you for signing.',
-        '' . BASE_PATH . '/student/tenancy.php?id=' . $tenancyId
-    );
-    notify(
-        (int)$tenancy['landlord_id'],
-        'contract_generated',
-        'Tenancy contract generated',
-        'Agent has generated contract ' . $contractCode . '. You will receive it from the agent for signing.',
-        '' . BASE_PATH . '/landlord/tenancy.php?id=' . $tenancyId
-    );
+    // Notify all parties — only on the first generation. Regenerate is now a
+    // normal, repeatable action (e.g. to refresh embedded signatures mid-
+    // signing), so it shouldn't re-fire "contract generated" every time.
+    if (!$existingContract) {
+        notify(
+            (int)$tenancy['student_id'],
+            'contract_generated',
+            'Tenancy contract generated',
+            'Agent has generated contract ' . $contractCode . '. The agent will send it to you for signing.',
+            '' . BASE_PATH . '/student/tenancy.php?id=' . $tenancyId
+        );
+        notify(
+            (int)$tenancy['landlord_id'],
+            'contract_generated',
+            'Tenancy contract generated',
+            'Agent has generated contract ' . $contractCode . '. You will receive it from the agent for signing.',
+            '' . BASE_PATH . '/landlord/tenancy.php?id=' . $tenancyId
+        );
+    }
 
     // Stream the PDF to the agent for download
     header('Content-Type: application/pdf');

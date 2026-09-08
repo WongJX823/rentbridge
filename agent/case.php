@@ -497,6 +497,7 @@ foreach ($coTenants as $ct) {
           enctype="multipart/form-data">
         <?= csrf_field() ?>
         <input type="hidden" name="tenancy_id" value="<?= (int)$case['id'] ?>">
+        <input type="hidden" name="action" value="upload_whole">
 
         <div class="mb-3">
             <input type="file" name="signed_pdf" class="form-control"
@@ -509,6 +510,12 @@ foreach ($coTenants as $ct) {
             <i class="bi bi-upload me-1"></i> Upload signed contract
         </button>
     </form>
+    <p class="small text-secondary mt-2 mb-0">
+        Have just a wet-signature page but everyone else already e-signed?
+        <a href="<?= BASE_PATH ?>/agent/upload_signed_contract.php?tenancy_id=<?= (int)$case['id'] ?>">
+            Extract the signature instead
+        </a> — crop it from the scan and the final contract is generated automatically.
+    </p>
 <?php elseif (!empty($contract['signed_pdf_path'])): ?>
     <!-- Signed copy already uploaded -->
     <hr class="my-3">
