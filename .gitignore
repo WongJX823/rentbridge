@@ -28,6 +28,11 @@ uploads/contracts/*.pdf
 uploads/contracts/signed/*.pdf
 uploads/generated_contracts/*.pdf
 
+# Orphaned leftovers from the removed whole-page-merge flow (fe834f9) + mPDF's
+# regenerated font-metrics cache — neither is source, never commit
+uploads/contracts/pending_merge/
+uploads/mpdf_tmp/
+
 # Debug/test log noise
 debug.log
 
@@ -37,4 +42,8 @@ uploads/properties/*.jpg
 uploads/properties/*.png
 uploads/property_docs/*.jpg
 uploads/property_docs/*.pdf
+uploads/property_docs/*.png
 uploads/signatures/*.png
+
+# Seeded E2E test accounts — plaintext test passwords, never commit
+tests/seeded_test_accounts.txt

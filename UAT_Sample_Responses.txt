@@ -1,0 +1,604 @@
+==========================================================================
+  RentBridge - USER ACCEPTANCE TESTING (UAT) & USABILITY RESPONSES
+  *** SAMPLE / SIMULATED DATA - for pilot & scoring-sheet setup only ***
+  Replace with real participant responses before the final report.
+  Participants: 6 Tenants (students) | 4 Landlords | 4 Agents | 1 Admin
+  Scales: UAT = Completed / Stuck / Skipped | SUS = 1-5 (10 items)
+==========================================================================
+
+--------------------------------------------------------------------------
+PARTICIPANT P01   |   Acting role: Tenant
+--------------------------------------------------------------------------
+[Section 1] Participant background
+  Gender ............... Female
+  Age group ........... 21-23
+  Best describes you .. UTeM student
+  Rented before? ...... No, first time
+  Sites used before ... Facebook / WhatsApp groups
+  Comfort with apps ... 4/5
+  Device tested on .... Phone
+
+[Section 2] UAT tasks (Tenant)
+  1. [Completed               ] Search / browse listings and open a property's details
+  2. [Completed               ] Set your gender and race in your profile
+  3. [Completed               ] Turn on "Matching my gender / race" and confirm restricted listings disappear
+  4. [Completed               ] Start a chat with the property's agent / landlord
+  5. [Completed               ] Create a "Find housemates" post (choose preferred housemate gender & race)
+  6. [Completed               ] Browse housemate posts and apply to one
+  7. [Completed               ] Fill in the tenant information form (IC, phone, etc.)
+  8. [Completed               ] Open the generated contract and sign it (draw e-signature)
+  9. [Completed               ] Confirm the tenancy shows as active on your dashboard
+     -> Completed 9/9 tasks
+
+[Section 3] SUS (1=Strongly disagree ... 5=Strongly agree)
+  Q1  [4]  I would like to use this system frequently.
+  Q2  [2]  I found the system unnecessarily complex.
+  Q3  [4]  I thought the system was easy to use.
+  Q4  [2]  I would need support of a technical person to use this system.
+  Q5  [4]  I found the various functions well integrated.
+  Q6  [2]  I thought there was too much inconsistency in this system.
+  Q7  [5]  Most people would learn to use this system very quickly.
+  Q8  [2]  I found the system very cumbersome to use.
+  Q9  [4]  I felt very confident using the system.
+  Q10 [2]  I needed to learn a lot before I could get going.
+     -> SUS score = 77.5 / 100
+
+[Section 4] Final thoughts
+  Feedback: The map pin made adding my area easy. Liked seeing only rooms that fit me.
+  Would use again: Probably
+
+--------------------------------------------------------------------------
+PARTICIPANT P02   |   Acting role: Tenant
+--------------------------------------------------------------------------
+[Section 1] Participant background
+  Gender ............... Male
+  Age group ........... 18-20
+  Best describes you .. UTeM student
+  Rented before? ...... Yes, once
+  Sites used before ... Mudah.my; iBilik
+  Comfort with apps ... 5/5
+  Device tested on .... Laptop / desktop
+
+[Section 2] UAT tasks (Tenant)
+  1. [Completed               ] Search / browse listings and open a property's details
+  2. [Completed               ] Set your gender and race in your profile
+  3. [Completed               ] Turn on "Matching my gender / race" and confirm restricted listings disappear
+  4. [Completed               ] Start a chat with the property's agent / landlord
+  5. [Completed               ] Create a "Find housemates" post (choose preferred housemate gender & race)
+  6. [Completed               ] Browse housemate posts and apply to one
+  7. [Completed               ] Fill in the tenant information form (IC, phone, etc.)
+  8. [Completed               ] Open the generated contract and sign it (draw e-signature)
+  9. [Completed               ] Confirm the tenancy shows as active on your dashboard
+     -> Completed 9/9 tasks
+
+[Section 3] SUS (1=Strongly disagree ... 5=Strongly agree)
+  Q1  [5]  I would like to use this system frequently.
+  Q2  [1]  I found the system unnecessarily complex.
+  Q3  [5]  I thought the system was easy to use.
+  Q4  [1]  I would need support of a technical person to use this system.
+  Q5  [5]  I found the various functions well integrated.
+  Q6  [1]  I thought there was too much inconsistency in this system.
+  Q7  [5]  Most people would learn to use this system very quickly.
+  Q8  [2]  I found the system very cumbersome to use.
+  Q9  [5]  I felt very confident using the system.
+  Q10 [2]  I needed to learn a lot before I could get going.
+     -> SUS score = 95.0 / 100
+
+[Section 4] Final thoughts
+  Feedback: Very smooth. E-signing was the best part - no printing.
+  Would use again: Definitely
+
+--------------------------------------------------------------------------
+PARTICIPANT P03   |   Acting role: Tenant
+--------------------------------------------------------------------------
+[Section 1] Participant background
+  Gender ............... Female
+  Age group ........... 21-23
+  Best describes you .. UTeM student
+  Rented before? ...... Yes, several times
+  Sites used before ... iBilik
+  Comfort with apps ... 3/5
+  Device tested on .... Phone
+
+[Section 2] UAT tasks (Tenant)
+  1. [Completed               ] Search / browse listings and open a property's details
+  2. [Completed               ] Set your gender and race in your profile
+  3. [Attempted but got stuck ] Turn on "Matching my gender / race" and confirm restricted listings disappear
+  4. [Completed               ] Start a chat with the property's agent / landlord
+  5. [Attempted but got stuck ] Create a "Find housemates" post (choose preferred housemate gender & race)
+  6. [Completed               ] Browse housemate posts and apply to one
+  7. [Completed               ] Fill in the tenant information form (IC, phone, etc.)
+  8. [Completed               ] Open the generated contract and sign it (draw e-signature)
+  9. [Completed               ] Confirm the tenancy shows as active on your dashboard
+     -> Completed 7/9 tasks
+
+[Section 3] SUS (1=Strongly disagree ... 5=Strongly agree)
+  Q1  [4]  I would like to use this system frequently.
+  Q2  [2]  I found the system unnecessarily complex.
+  Q3  [3]  I thought the system was easy to use.
+  Q4  [3]  I would need support of a technical person to use this system.
+  Q5  [3]  I found the various functions well integrated.
+  Q6  [2]  I thought there was too much inconsistency in this system.
+  Q7  [4]  Most people would learn to use this system very quickly.
+  Q8  [2]  I found the system very cumbersome to use.
+  Q9  [4]  I felt very confident using the system.
+  Q10 [2]  I needed to learn a lot before I could get going.
+     -> SUS score = 67.5 / 100
+
+[Section 4] Final thoughts
+  Feedback: On my phone the map drawer took a moment to understand, but it worked.
+  Would use again: Probably
+
+--------------------------------------------------------------------------
+PARTICIPANT P04   |   Acting role: Tenant
+--------------------------------------------------------------------------
+[Section 1] Participant background
+  Gender ............... Male
+  Age group ........... 24-26
+  Best describes you .. UTeM student
+  Rented before? ...... No, first time
+  Sites used before ... None
+  Comfort with apps ... 2/5
+  Device tested on .... Phone
+
+[Section 2] UAT tasks (Tenant)
+  1. [Completed               ] Search / browse listings and open a property's details
+  2. [Attempted but got stuck ] Set your gender and race in your profile
+  3. [Attempted but got stuck ] Turn on "Matching my gender / race" and confirm restricted listings disappear
+  4. [Completed               ] Start a chat with the property's agent / landlord
+  5. [Skipped / not applicable] Create a "Find housemates" post (choose preferred housemate gender & race)
+  6. [Completed               ] Browse housemate posts and apply to one
+  7. [Completed               ] Fill in the tenant information form (IC, phone, etc.)
+  8. [Completed               ] Open the generated contract and sign it (draw e-signature)
+  9. [Completed               ] Confirm the tenancy shows as active on your dashboard
+     -> Completed 6/9 tasks
+
+[Section 3] SUS (1=Strongly disagree ... 5=Strongly agree)
+  Q1  [3]  I would like to use this system frequently.
+  Q2  [3]  I found the system unnecessarily complex.
+  Q3  [3]  I thought the system was easy to use.
+  Q4  [3]  I would need support of a technical person to use this system.
+  Q5  [3]  I found the various functions well integrated.
+  Q6  [3]  I thought there was too much inconsistency in this system.
+  Q7  [3]  Most people would learn to use this system very quickly.
+  Q8  [4]  I found the system very cumbersome to use.
+  Q9  [3]  I felt very confident using the system.
+  Q10 [3]  I needed to learn a lot before I could get going.
+     -> SUS score = 47.5 / 100
+
+[Section 4] Final thoughts
+  Feedback: Needed a bit of guidance for the housemate post, but the chat helped.
+  Would use again: Not sure
+
+--------------------------------------------------------------------------
+PARTICIPANT P05   |   Acting role: Tenant
+--------------------------------------------------------------------------
+[Section 1] Participant background
+  Gender ............... Female
+  Age group ........... 18-20
+  Best describes you .. Other university student
+  Rented before? ...... Yes, once
+  Sites used before ... Facebook / WhatsApp groups
+  Comfort with apps ... 4/5
+  Device tested on .... Laptop / desktop
+
+[Section 2] UAT tasks (Tenant)
+  1. [Completed               ] Search / browse listings and open a property's details
+  2. [Completed               ] Set your gender and race in your profile
+  3. [Completed               ] Turn on "Matching my gender / race" and confirm restricted listings disappear
+  4. [Completed               ] Start a chat with the property's agent / landlord
+  5. [Completed               ] Create a "Find housemates" post (choose preferred housemate gender & race)
+  6. [Completed               ] Browse housemate posts and apply to one
+  7. [Completed               ] Fill in the tenant information form (IC, phone, etc.)
+  8. [Completed               ] Open the generated contract and sign it (draw e-signature)
+  9. [Completed               ] Confirm the tenancy shows as active on your dashboard
+     -> Completed 9/9 tasks
+
+[Section 3] SUS (1=Strongly disagree ... 5=Strongly agree)
+  Q1  [4]  I would like to use this system frequently.
+  Q2  [2]  I found the system unnecessarily complex.
+  Q3  [5]  I thought the system was easy to use.
+  Q4  [2]  I would need support of a technical person to use this system.
+  Q5  [5]  I found the various functions well integrated.
+  Q6  [2]  I thought there was too much inconsistency in this system.
+  Q7  [4]  Most people would learn to use this system very quickly.
+  Q8  [2]  I found the system very cumbersome to use.
+  Q9  [4]  I felt very confident using the system.
+  Q10 [2]  I needed to learn a lot before I could get going.
+     -> SUS score = 80.0 / 100
+
+[Section 4] Final thoughts
+  Feedback: Clean and simple. The gender/race filter is a nice touch.
+  Would use again: Definitely
+
+--------------------------------------------------------------------------
+PARTICIPANT P06   |   Acting role: Tenant
+--------------------------------------------------------------------------
+[Section 1] Participant background
+  Gender ............... Male
+  Age group ........... 21-23
+  Best describes you .. UTeM student
+  Rented before? ...... Yes, several times
+  Sites used before ... Mudah.my
+  Comfort with apps ... 5/5
+  Device tested on .... Laptop / desktop
+
+[Section 2] UAT tasks (Tenant)
+  1. [Completed               ] Search / browse listings and open a property's details
+  2. [Completed               ] Set your gender and race in your profile
+  3. [Completed               ] Turn on "Matching my gender / race" and confirm restricted listings disappear
+  4. [Completed               ] Start a chat with the property's agent / landlord
+  5. [Completed               ] Create a "Find housemates" post (choose preferred housemate gender & race)
+  6. [Completed               ] Browse housemate posts and apply to one
+  7. [Completed               ] Fill in the tenant information form (IC, phone, etc.)
+  8. [Completed               ] Open the generated contract and sign it (draw e-signature)
+  9. [Completed               ] Confirm the tenancy shows as active on your dashboard
+     -> Completed 9/9 tasks
+
+[Section 3] SUS (1=Strongly disagree ... 5=Strongly agree)
+  Q1  [4]  I would like to use this system frequently.
+  Q2  [2]  I found the system unnecessarily complex.
+  Q3  [4]  I thought the system was easy to use.
+  Q4  [1]  I would need support of a technical person to use this system.
+  Q5  [5]  I found the various functions well integrated.
+  Q6  [2]  I thought there was too much inconsistency in this system.
+  Q7  [4]  Most people would learn to use this system very quickly.
+  Q8  [1]  I found the system very cumbersome to use.
+  Q9  [4]  I felt very confident using the system.
+  Q10 [1]  I needed to learn a lot before I could get going.
+     -> SUS score = 85.0 / 100
+
+[Section 4] Final thoughts
+  Feedback: Fast. Found a place and applied within minutes.
+  Would use again: Definitely
+
+--------------------------------------------------------------------------
+PARTICIPANT P07   |   Acting role: Landlord
+--------------------------------------------------------------------------
+[Section 1] Participant background
+  Gender ............... Male
+  Age group ........... Over 26
+  Best describes you .. Landlord / property owner
+  Rented before? ...... Yes, several times
+  Sites used before ... PropertyGuru
+  Comfort with apps ... 3/5
+  Device tested on .... Laptop / desktop
+
+[Section 2] UAT tasks (Landlord)
+  1. [Completed               ] Register a landlord account and log in
+  2. [Completed               ] List a property with >=1 photo and 1 ownership document
+  3. [Attempted but got stuck ] Pin the exact location on the map (or paste a Google Maps link)
+  4. [Completed               ] Set a preferred tenant gender and race for the listing
+  5. [Completed               ] Track the listing's status through inspection
+  6. [Completed               ] Reply in chat when the agent proposes an inspection time
+  7. [Completed               ] Sign the tenancy contract once a student applies
+     -> Completed 6/7 tasks
+
+[Section 3] SUS (1=Strongly disagree ... 5=Strongly agree)
+  Q1  [4]  I would like to use this system frequently.
+  Q2  [2]  I found the system unnecessarily complex.
+  Q3  [4]  I thought the system was easy to use.
+  Q4  [2]  I would need support of a technical person to use this system.
+  Q5  [4]  I found the various functions well integrated.
+  Q6  [3]  I thought there was too much inconsistency in this system.
+  Q7  [3]  Most people would learn to use this system very quickly.
+  Q8  [2]  I found the system very cumbersome to use.
+  Q9  [4]  I felt very confident using the system.
+  Q10 [2]  I needed to learn a lot before I could get going.
+     -> SUS score = 70.0 / 100
+
+[Section 4] Final thoughts
+  Feedback: Listing flow is clear. Pin dropping felt slightly fiddly at first.
+  Would use again: Probably
+
+--------------------------------------------------------------------------
+PARTICIPANT P08   |   Acting role: Landlord
+--------------------------------------------------------------------------
+[Section 1] Participant background
+  Gender ............... Female
+  Age group ........... 24-26
+  Best describes you .. Landlord / property owner
+  Rented before? ...... Yes, once
+  Sites used before ... Mudah.my
+  Comfort with apps ... 4/5
+  Device tested on .... Laptop / desktop
+
+[Section 2] UAT tasks (Landlord)
+  1. [Completed               ] Register a landlord account and log in
+  2. [Completed               ] List a property with >=1 photo and 1 ownership document
+  3. [Completed               ] Pin the exact location on the map (or paste a Google Maps link)
+  4. [Completed               ] Set a preferred tenant gender and race for the listing
+  5. [Completed               ] Track the listing's status through inspection
+  6. [Completed               ] Reply in chat when the agent proposes an inspection time
+  7. [Completed               ] Sign the tenancy contract once a student applies
+     -> Completed 7/7 tasks
+
+[Section 3] SUS (1=Strongly disagree ... 5=Strongly agree)
+  Q1  [4]  I would like to use this system frequently.
+  Q2  [2]  I found the system unnecessarily complex.
+  Q3  [4]  I thought the system was easy to use.
+  Q4  [2]  I would need support of a technical person to use this system.
+  Q5  [5]  I found the various functions well integrated.
+  Q6  [1]  I thought there was too much inconsistency in this system.
+  Q7  [5]  Most people would learn to use this system very quickly.
+  Q8  [2]  I found the system very cumbersome to use.
+  Q9  [5]  I felt very confident using the system.
+  Q10 [1]  I needed to learn a lot before I could get going.
+     -> SUS score = 87.5 / 100
+
+[Section 4] Final thoughts
+  Feedback: Pricing suggestion and the map were helpful when listing.
+  Would use again: Definitely
+
+--------------------------------------------------------------------------
+PARTICIPANT P09   |   Acting role: Landlord
+--------------------------------------------------------------------------
+[Section 1] Participant background
+  Gender ............... Male
+  Age group ........... Over 26
+  Best describes you .. Landlord / property owner
+  Rented before? ...... Yes, several times
+  Sites used before ... None
+  Comfort with apps ... 2/5
+  Device tested on .... Phone
+
+[Section 2] UAT tasks (Landlord)
+  1. [Completed               ] Register a landlord account and log in
+  2. [Completed               ] List a property with >=1 photo and 1 ownership document
+  3. [Attempted but got stuck ] Pin the exact location on the map (or paste a Google Maps link)
+  4. [Attempted but got stuck ] Set a preferred tenant gender and race for the listing
+  5. [Completed               ] Track the listing's status through inspection
+  6. [Completed               ] Reply in chat when the agent proposes an inspection time
+  7. [Completed               ] Sign the tenancy contract once a student applies
+     -> Completed 5/7 tasks
+
+[Section 3] SUS (1=Strongly disagree ... 5=Strongly agree)
+  Q1  [3]  I would like to use this system frequently.
+  Q2  [3]  I found the system unnecessarily complex.
+  Q3  [3]  I thought the system was easy to use.
+  Q4  [3]  I would need support of a technical person to use this system.
+  Q5  [3]  I found the various functions well integrated.
+  Q6  [3]  I thought there was too much inconsistency in this system.
+  Q7  [3]  Most people would learn to use this system very quickly.
+  Q8  [3]  I found the system very cumbersome to use.
+  Q9  [3]  I felt very confident using the system.
+  Q10 [3]  I needed to learn a lot before I could get going.
+     -> SUS score = 50.0 / 100
+
+[Section 4] Final thoughts
+  Feedback: I usually avoid apps, but I managed the listing with some effort.
+  Would use again: Not sure
+
+--------------------------------------------------------------------------
+PARTICIPANT P10   |   Acting role: Landlord
+--------------------------------------------------------------------------
+[Section 1] Participant background
+  Gender ............... Female
+  Age group ........... Over 26
+  Best describes you .. Landlord / property owner
+  Rented before? ...... Yes, once
+  Sites used before ... PropertyGuru; Mudah.my
+  Comfort with apps ... 4/5
+  Device tested on .... Laptop / desktop
+
+[Section 2] UAT tasks (Landlord)
+  1. [Completed               ] Register a landlord account and log in
+  2. [Completed               ] List a property with >=1 photo and 1 ownership document
+  3. [Completed               ] Pin the exact location on the map (or paste a Google Maps link)
+  4. [Completed               ] Set a preferred tenant gender and race for the listing
+  5. [Completed               ] Track the listing's status through inspection
+  6. [Completed               ] Reply in chat when the agent proposes an inspection time
+  7. [Completed               ] Sign the tenancy contract once a student applies
+     -> Completed 7/7 tasks
+
+[Section 3] SUS (1=Strongly disagree ... 5=Strongly agree)
+  Q1  [4]  I would like to use this system frequently.
+  Q2  [2]  I found the system unnecessarily complex.
+  Q3  [4]  I thought the system was easy to use.
+  Q4  [2]  I would need support of a technical person to use this system.
+  Q5  [5]  I found the various functions well integrated.
+  Q6  [2]  I thought there was too much inconsistency in this system.
+  Q7  [4]  Most people would learn to use this system very quickly.
+  Q8  [1]  I found the system very cumbersome to use.
+  Q9  [4]  I felt very confident using the system.
+  Q10 [1]  I needed to learn a lot before I could get going.
+     -> SUS score = 82.5 / 100
+
+[Section 4] Final thoughts
+  Feedback: Document upload and status tracking were reassuring.
+  Would use again: Definitely
+
+--------------------------------------------------------------------------
+PARTICIPANT P11   |   Acting role: Agent
+--------------------------------------------------------------------------
+[Section 1] Participant background
+  Gender ............... Male
+  Age group ........... 24-26
+  Best describes you .. Property agent
+  Rented before? ...... Yes, several times
+  Sites used before ... PropertyGuru; Mudah.my
+  Comfort with apps ... 5/5
+  Device tested on .... Laptop / desktop
+
+[Section 2] UAT tasks (Agent)
+  1. [Completed               ] Accept a property case assigned to you
+  2. [Completed               ] Propose inspection time slots to the landlord in chat
+  3. [Completed               ] Complete the inspection checklist and approve / reject the listing
+  4. [Completed               ] Generate a tenancy contract after a student's form is submitted
+  5. [Completed               ] Collect a physical signature and upload the merged PDF
+     -> Completed 5/5 tasks
+
+[Section 3] SUS (1=Strongly disagree ... 5=Strongly agree)
+  Q1  [5]  I would like to use this system frequently.
+  Q2  [1]  I found the system unnecessarily complex.
+  Q3  [5]  I thought the system was easy to use.
+  Q4  [2]  I would need support of a technical person to use this system.
+  Q5  [4]  I found the various functions well integrated.
+  Q6  [1]  I thought there was too much inconsistency in this system.
+  Q7  [4]  Most people would learn to use this system very quickly.
+  Q8  [1]  I found the system very cumbersome to use.
+  Q9  [5]  I felt very confident using the system.
+  Q10 [2]  I needed to learn a lot before I could get going.
+     -> SUS score = 90.0 / 100
+
+[Section 4] Final thoughts
+  Feedback: As an agent this saves real time - contract generation is great.
+  Would use again: Definitely
+
+--------------------------------------------------------------------------
+PARTICIPANT P12   |   Acting role: Agent
+--------------------------------------------------------------------------
+[Section 1] Participant background
+  Gender ............... Female
+  Age group ........... 21-23
+  Best describes you .. Property agent
+  Rented before? ...... Yes, several times
+  Sites used before ... iBilik
+  Comfort with apps ... 4/5
+  Device tested on .... Laptop / desktop
+
+[Section 2] UAT tasks (Agent)
+  1. [Completed               ] Accept a property case assigned to you
+  2. [Completed               ] Propose inspection time slots to the landlord in chat
+  3. [Completed               ] Complete the inspection checklist and approve / reject the listing
+  4. [Completed               ] Generate a tenancy contract after a student's form is submitted
+  5. [Completed               ] Collect a physical signature and upload the merged PDF
+     -> Completed 5/5 tasks
+
+[Section 3] SUS (1=Strongly disagree ... 5=Strongly agree)
+  Q1  [4]  I would like to use this system frequently.
+  Q2  [2]  I found the system unnecessarily complex.
+  Q3  [4]  I thought the system was easy to use.
+  Q4  [2]  I would need support of a technical person to use this system.
+  Q5  [4]  I found the various functions well integrated.
+  Q6  [2]  I thought there was too much inconsistency in this system.
+  Q7  [5]  Most people would learn to use this system very quickly.
+  Q8  [2]  I found the system very cumbersome to use.
+  Q9  [4]  I felt very confident using the system.
+  Q10 [2]  I needed to learn a lot before I could get going.
+     -> SUS score = 77.5 / 100
+
+[Section 4] Final thoughts
+  Feedback: Inspection scheduling in chat is convenient.
+  Would use again: Definitely
+
+--------------------------------------------------------------------------
+PARTICIPANT P13   |   Acting role: Agent
+--------------------------------------------------------------------------
+[Section 1] Participant background
+  Gender ............... Male
+  Age group ........... 24-26
+  Best describes you .. Property agent
+  Rented before? ...... Yes, once
+  Sites used before ... Mudah.my
+  Comfort with apps ... 4/5
+  Device tested on .... Laptop / desktop
+
+[Section 2] UAT tasks (Agent)
+  1. [Completed               ] Accept a property case assigned to you
+  2. [Completed               ] Propose inspection time slots to the landlord in chat
+  3. [Completed               ] Complete the inspection checklist and approve / reject the listing
+  4. [Completed               ] Generate a tenancy contract after a student's form is submitted
+  5. [Attempted but got stuck ] Collect a physical signature and upload the merged PDF
+     -> Completed 4/5 tasks
+
+[Section 3] SUS (1=Strongly disagree ... 5=Strongly agree)
+  Q1  [4]  I would like to use this system frequently.
+  Q2  [2]  I found the system unnecessarily complex.
+  Q3  [4]  I thought the system was easy to use.
+  Q4  [2]  I would need support of a technical person to use this system.
+  Q5  [4]  I found the various functions well integrated.
+  Q6  [2]  I thought there was too much inconsistency in this system.
+  Q7  [4]  Most people would learn to use this system very quickly.
+  Q8  [2]  I found the system very cumbersome to use.
+  Q9  [4]  I felt very confident using the system.
+  Q10 [2]  I needed to learn a lot before I could get going.
+     -> SUS score = 75.0 / 100
+
+[Section 4] Final thoughts
+  Feedback: Uploading the merged signed PDF wasn't obvious at first, otherwise good.
+  Would use again: Probably
+
+--------------------------------------------------------------------------
+PARTICIPANT P14   |   Acting role: Agent
+--------------------------------------------------------------------------
+[Section 1] Participant background
+  Gender ............... Female
+  Age group ........... Over 26
+  Best describes you .. Property agent
+  Rented before? ...... Yes, several times
+  Sites used before ... PropertyGuru
+  Comfort with apps ... 5/5
+  Device tested on .... Laptop / desktop
+
+[Section 2] UAT tasks (Agent)
+  1. [Completed               ] Accept a property case assigned to you
+  2. [Completed               ] Propose inspection time slots to the landlord in chat
+  3. [Completed               ] Complete the inspection checklist and approve / reject the listing
+  4. [Completed               ] Generate a tenancy contract after a student's form is submitted
+  5. [Completed               ] Collect a physical signature and upload the merged PDF
+     -> Completed 5/5 tasks
+
+[Section 3] SUS (1=Strongly disagree ... 5=Strongly agree)
+  Q1  [4]  I would like to use this system frequently.
+  Q2  [1]  I found the system unnecessarily complex.
+  Q3  [4]  I thought the system was easy to use.
+  Q4  [1]  I would need support of a technical person to use this system.
+  Q5  [5]  I found the various functions well integrated.
+  Q6  [1]  I thought there was too much inconsistency in this system.
+  Q7  [4]  Most people would learn to use this system very quickly.
+  Q8  [2]  I found the system very cumbersome to use.
+  Q9  [5]  I felt very confident using the system.
+  Q10 [2]  I needed to learn a lot before I could get going.
+     -> SUS score = 87.5 / 100
+
+[Section 4] Final thoughts
+  Feedback: Everything an agent needs in one place.
+  Would use again: Definitely
+
+--------------------------------------------------------------------------
+PARTICIPANT P15   |   Acting role: Admin
+--------------------------------------------------------------------------
+[Section 1] Participant background
+  Gender ............... Female
+  Age group ........... 24-26
+  Best describes you .. Other
+  Rented before? ...... Yes, several times
+  Sites used before ... Mudah.my; iBilik
+  Comfort with apps ... 5/5
+  Device tested on .... Laptop / desktop
+
+[Section 2] UAT tasks (Admin)
+  1. [Completed               ] Review the dashboard summary counts (users, properties, tenancies)
+  2. [Completed               ] Search for a user and open their profile
+  3. [Completed               ] Open a property's detail page and check its tenancy record
+  4. [Completed               ] Process an agent transfer request end to end
+  5. [Completed               ] Look up a fake contract reference on the verify page (expect clean "not found")
+     -> Completed 5/5 tasks
+
+[Section 3] SUS (1=Strongly disagree ... 5=Strongly agree)
+  Q1  [5]  I would like to use this system frequently.
+  Q2  [2]  I found the system unnecessarily complex.
+  Q3  [4]  I thought the system was easy to use.
+  Q4  [2]  I would need support of a technical person to use this system.
+  Q5  [5]  I found the various functions well integrated.
+  Q6  [1]  I thought there was too much inconsistency in this system.
+  Q7  [5]  Most people would learn to use this system very quickly.
+  Q8  [2]  I found the system very cumbersome to use.
+  Q9  [4]  I felt very confident using the system.
+  Q10 [2]  I needed to learn a lot before I could get going.
+     -> SUS score = 85.0 / 100
+
+[Section 4] Final thoughts
+  Feedback: Admin dashboard gives a clear overview. Verify page handled a bad code cleanly.
+  Would use again: Definitely
+
+==========================================================================
+  AGGREGATE SUMMARY (sample)
+==========================================================================
+  Participants ................. 15  (6 Tenant, 4 Landlord, 4 Agent, 1 Admin)
+  Task completion rate ........ 98/107 = 91.6%
+  Mean SUS score .............. 77.2 / 100  (benchmark 68)
+  SUS range ................... 47.5 - 95.0
+  SUS adjective rating ........ B (Good)
+==========================================================================

@@ -29,7 +29,9 @@ $stmt = $pdo->prepare("
            a.department     AS agent_department,
            au.email         AS agent_email,
            ua.full_name     AS uploaded_by_name,
-           c.id             AS contract_id
+           c.id             AS contract_id,
+           c.status         AS contract_status,
+           c.activated_at   AS contract_activated_at
       FROM tenancies b
       JOIN properties p ON p.id = b.property_id
       JOIN users su ON su.id = b.student_id
@@ -314,31 +316,43 @@ ob_start();
 <div class="bg-white border rounded-3 p-4 mb-4">
     <h5 class="mb-3"><i class="bi bi-file-earmark-text me-2"></i>Contract</h5>
 
-    <?php if (empty($tenancy['signed_contract_path']) && $tenancy['status'] !== 'contract_pending'): ?>
+    <?php if (empty($tenancy['contract_id'])): ?>
         <p class="text-secondary mb-0">
             Contract not yet generated.
             <small>(Will be available once tenant info is submitted.)</small>
         </p>
 
-    <?php elseif (empty($tenancy['signed_contract_path']) && $tenancy['status'] === 'contract_pending'): ?>
+    <?php elseif ($tenancy['contract_status'] !== 'active'): ?>
         <div class="alert alert-warning mb-0">
             <i class="bi bi-hourglass-split me-1"></i>
             <strong>Awaiting signatures.</strong>
-            Contract has been generated. Parties need to wet-sign offline,
-            then the agent uploads the signed PDF.
+            Contract has been generated. Parties can e-sign, sign a physical
+            copy for the agent to merge in, or wet-sign offline and have the
+            agent upload the signed PDF.
         </div>
 
     <?php else: ?>
-        <!-- Signed contract on file -->
+        <!-- Contract fully signed and active — reached via e-signing,
+             the agent's physical-signature merge (upload_signed_contract.php /
+             apply_manual_signature()), or a whole wet-signed PDF upload
+             (finalize_signed_contract()). Only the last of those sets
+             tenancies.signed_contract_path/signed_uploaded_at, so this
+             branch must key off contracts.status = 'active', not those
+             columns, and fall back gracefully when they're empty. -->
         <div class="row g-3">
             <div class="col-md-4">
                 <small class="text-secondary text-uppercase">Status</small>
                 <div><span class="badge bg-success">✓ Signed &amp; Active</span></div>
             </div>
             <div class="col-md-4">
-                <small class="text-secondary text-uppercase">Signed uploaded</small>
+                <small class="text-secondary text-uppercase">
+                    <?= !empty($tenancy['signed_uploaded_at']) ? 'Signed copy uploaded' : 'Activated' ?>
+                </small>
                 <div class="fw-semibold">
-                    <?= e(date('d M Y, H:i', strtotime($tenancy['signed_uploaded_at']))) ?>
+                    <?php
+                    $activatedDisplay = $tenancy['signed_uploaded_at'] ?? $tenancy['contract_activated_at'];
+                    echo $activatedDisplay ? e(date('d M Y, H:i', strtotime($activatedDisplay))) : '—';
+                    ?>
                 </div>
             </div>
             <div class="col-md-4 text-md-end">
@@ -353,9 +367,14 @@ ob_start();
 
         <div class="row g-3 small">
             <div class="col-md-6">
-                <span class="text-secondary">Uploaded by agent:</span><br>
-                <strong><?= e($tenancy['uploaded_by_name'] ?? '—') ?></strong>
-                <code class="text-secondary">(Agent ID: <?= (int)$tenancy['signed_uploaded_by'] ?>)</code>
+                <?php if (!empty($tenancy['signed_uploaded_by'])): ?>
+                    <span class="text-secondary">Uploaded by agent:</span><br>
+                    <strong><?= e($tenancy['uploaded_by_name'] ?? '—') ?></strong>
+                    <code class="text-secondary">(Agent ID: <?= (int)$tenancy['signed_uploaded_by'] ?>)</code>
+                <?php else: ?>
+                    <span class="text-secondary">Signing method:</span><br>
+                    <strong>Digital e-signature / physical-signature merge</strong>
+                <?php endif; ?>
             </div>
             <div class="col-md-6">
                 <span class="text-secondary">All tenants signed:</span><br>
